@@ -10,7 +10,7 @@ import { heroBackgroundImage } from "@/utils/images";
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[90vh] items-center overflow-hidden">
+    <section className="relative flex min-h-[100vh] items-center overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Image
           src={heroBackgroundImage}

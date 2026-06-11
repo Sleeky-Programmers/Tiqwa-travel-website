@@ -106,12 +106,16 @@ export function Navbar() {
                 )}
 
                 <div className="hidden sm:flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="rounded-full">
-                    Login
-                  </Button>
-                  <Button size="sm" className="rounded-full">
-                    Sign Up
-                  </Button>
+                  <Link href="/login">
+                    <Button variant="outline" size="sm" className="rounded-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/signup">
+                    <Button size="sm" className="rounded-full">
+                      Sign Up
+                    </Button>
+                  </Link>
                 </div>
 
                 {/* Sidebar Toggle Button (Mobile) */}
@@ -203,19 +207,14 @@ export function Navbar() {
 
               {/* Auth Buttons */}
               <div className="p-4 space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full rounded-xl"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Login
-                </Button>
-                <Button
-                  className="w-full rounded-xl"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  Sign Up
-                </Button>
+                <Link href="/login" onClick={() => setSidebarOpen(false)}>
+                  <Button variant="outline" className="w-full rounded-xl">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/signup" onClick={() => setSidebarOpen(false)}>
+                  <Button className="w-full rounded-xl">Sign Up</Button>
+                </Link>
               </div>
 
               {/* Theme Toggle in Sidebar (mobile) */}

@@ -31,7 +31,6 @@ const CABIN_LABELS: Record<CabinClass, string> = {
   premium_economy: "Premium Economy",
   business: "Business",
   first: "First Class",
-};
 
 function parseCabin(value: string | null): CabinClass {
   const cabins: CabinClass[] = [
@@ -89,8 +88,6 @@ function paramsMatchCache(
 const FLIGHTS_PER_PAGE = 100;
 
 function ResultsContent() {
-  const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
   const departure = searchParams.get("departure") ?? "";
   const returnDate = searchParams.get("returnDate") ?? "";

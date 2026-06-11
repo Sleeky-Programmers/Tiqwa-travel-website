@@ -11,4 +11,5 @@ export type {
   FlightDeal,
   PopularAirport,
   HeroBanner,
+  Airport,
 } from "./whitelabel";

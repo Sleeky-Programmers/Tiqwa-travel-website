@@ -21,6 +21,10 @@ function SearchContent() {
     departure: searchParams.get("departure") ?? undefined,
     returnDate: searchParams.get("returnDate") ?? undefined,
     passengers: searchParams.get("passengers") ?? undefined,
+    adults: searchParams.get("adults") ?? undefined,
+    children: searchParams.get("children") ?? undefined,
+    infants: searchParams.get("infants") ?? undefined,
+    cabin: searchParams.get("cabin") ?? undefined,
     tripType,
   };
 

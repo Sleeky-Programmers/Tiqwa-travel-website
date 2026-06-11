@@ -53,6 +53,16 @@ export interface PopularAirport {
   [key: string]: unknown;
 }
 
+export interface Airport {
+  id?: number;
+  iata_code: string;
+  city: string;
+  city_code?: string | null;
+  country: string;
+  name: string;
+  popular?: number;
+}
+
 export interface AirportSegment {
   airline_details?: { code: string; name: string; logo?: string };
   airport_from?: string;

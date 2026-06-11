@@ -5,6 +5,7 @@ import type {
   FlightDeal,
   HomepageData,
   PopularAirport,
+  Airport,
   WhitelabelFlightItem,
   WhitelabelResponse,
 } from "@/types/whitelabel";
@@ -17,13 +18,24 @@ export const API_BASE =
 export const FLIGHT_RESULTS_KEY = "flightResults_v2";
 export const SEARCH_PARAMS_KEY = "searchParams_v2";
 
+export type CabinClass = "economy" | "premium_economy" | "business" | "first";
+
 export interface FlightSearchParams {
   from: string;
   to: string;
   departure: string;
   returnDate?: string;
-  passengers: number;
   tripType: "oneway" | "roundtrip";
+  adults: number;
+  children: number;
+  infants: number;
+  cabin: CabinClass;
+}
+
+export function getTotalPassengers(
+  params: Pick<FlightSearchParams, "adults" | "children" | "infants">
+): number {
+  return params.adults + params.children + params.infants;
 }
 
 type FetchOptions = RequestInit & { next?: { revalidate?: number } };
@@ -53,6 +65,32 @@ export function extractAirportCode(input: string): string {
   if (/^[A-Za-z]{3}$/.test(trimmed)) return trimmed.toUpperCase();
 
   return trimmed;
+}
+
+export function parseAirportValue(input?: string): {
+  display: string;
+  code: string;
+} {
+  if (!input?.trim()) return { display: "", code: "" };
+
+  const trimmed = input.trim();
+  const parenMatch = trimmed.match(/^(.+?)\s*\(([A-Za-z]{3})\)\s*$/);
+  if (parenMatch) {
+    return {
+      display: parenMatch[1].trim(),
+      code: parenMatch[2].toUpperCase(),
+    };
+  }
+
+  if (/^[A-Za-z]{3}$/.test(trimmed)) {
+    return { display: trimmed.toUpperCase(), code: trimmed.toUpperCase() };
+  }
+
+  return { display: trimmed, code: extractAirportCode(trimmed) };
+}
+
+export function formatAirportLabel(airport: Airport): string {
+  return `${airport.city} (${airport.iata_code})`;
 }
 
 function formatDuration(minutes: number): string {
@@ -156,6 +194,17 @@ export async function getPopularAirports(): Promise<PopularAirport[]> {
   return fetchAPI<PopularAirport[]>("/get/popular-airports");
 }
 
+export async function getAirports(keyword: string): Promise<Airport[]> {
+  const trimmed = keyword.trim();
+  if (trimmed.length < 2) return [];
+
+  const query = new URLSearchParams({ keyword: trimmed });
+  return fetchAPI<Airport[]>(`/get/airports?${query}`, {
+    cache: "no-store",
+    next: { revalidate: 0 },
+  });
+}
+
 export async function searchFlights(params: {
   origin: string;
   destination: string;
@@ -177,11 +226,6 @@ export async function searchFlights(params: {
     return_date: params.return_date ?? "",
   });
 
-  const v = await fetchAPI<FlightSearchData>(`/flight/search?${query}`, {
-    cache: "no-store",
-    next: { revalidate: 0 },
-  });
-
   return fetchAPI<FlightSearchData>(`/flight/search?${query}`, {
     cache: "no-store",
     next: { revalidate: 0 },
@@ -198,7 +242,10 @@ export async function searchFlightsForForm(
       departure_date: params.departure,
       return_date:
         params.tripType === "roundtrip" ? params.returnDate : "",
-      adults: params.passengers,
+      adults: params.adults,
+      children: params.children,
+      infants: params.infants,
+      cabin: params.cabin,
     });
 
     const validationError = getFlightSearchError(data);

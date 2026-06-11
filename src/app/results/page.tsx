@@ -16,23 +16,87 @@ import {
   type SortOption,
 } from "@/services/flightSearch";
 import {
+  extractAirportCode,
   formatFlightPrice,
+  getTotalPassengers,
   readCachedFlightSearch,
   searchFlightsForForm,
+  type CabinClass,
   type FlightSearchParams,
 } from "@/services/whitelabel-api";
 import type { Flight, StopsFilter } from "@/types/flight";
+
+const CABIN_LABELS: Record<CabinClass, string> = {
+  economy: "Economy",
+  premium_economy: "Premium Economy",
+  business: "Business",
+  first: "First Class",
+}
+
+function parseCabin(value: string | null): CabinClass {
+  const cabins: CabinClass[] = [
+    "economy",
+    "premium_economy",
+    "business",
+    "first",
+  ];
+  if (value && cabins.includes(value as CabinClass)) {
+    return value as CabinClass;
+  }
+  return "economy";
+}
+
+function parsePassengersFromUrl(searchParams: URLSearchParams) {
+  const adultsParam = searchParams.get("adults");
+  if (adultsParam) {
+    return {
+      adults: Math.max(1, Number(adultsParam) || 1),
+      children: Number(searchParams.get("children") ?? 0) || 0,
+      infants: Number(searchParams.get("infants") ?? 0) || 0,
+    };
+  }
+
+  const total = Number(searchParams.get("passengers") ?? "1") || 1;
+  return { adults: Math.max(1, total), children: 0, infants: 0 };
+}
+
+function paramsMatchCache(
+  cached: FlightSearchParams,
+  from: string,
+  to: string,
+  departure: string,
+  returnDate: string,
+  tripType: string,
+  adults: number,
+  children: number,
+  infants: number,
+  cabin: CabinClass
+): boolean {
+  return (
+    extractAirportCode(cached.from) === extractAirportCode(from) &&
+    extractAirportCode(cached.to) === extractAirportCode(to) &&
+    cached.departure === departure &&
+    (cached.returnDate ?? "") === returnDate &&
+    cached.tripType === (tripType === "roundtrip" ? "roundtrip" : "oneway") &&
+    cached.adults === adults &&
+    cached.children === children &&
+    cached.infants === infants &&
+    cached.cabin === cabin
+  );
+}
 
 // Pagination constants - set to a large number to effectively show all in scroll
 const FLIGHTS_PER_PAGE = 100;
 
 function ResultsContent() {
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
+  const from = searchParams.get("from") ?? "";
   const departure = searchParams.get("departure") ?? "";
   const returnDate = searchParams.get("returnDate") ?? "";
-  const passengers = Number(searchParams.get("passengers") ?? "1");
+  const { adults, children, infants } = parsePassengersFromUrl(searchParams);
+  const totalPassengers = getTotalPassengers({ adults, children, infants });
+  const cabin = parseCabin(searchParams.get("cabin"));
   const tripType = searchParams.get("tripType") ?? "oneway";
 
   const [baseFlights, setBaseFlights] = useState<Flight[]>([]);
@@ -54,7 +118,21 @@ function ResultsContent() {
     setCurrentPage(1);
 
     const cached = readCachedFlightSearch();
-    if (cached && cached.params.from === from && cached.params.to === to) {
+    if (
+      cached &&
+      paramsMatchCache(
+        cached.params,
+        from,
+        to,
+        departure,
+        returnDate,
+        tripType,
+        adults,
+        children,
+        infants,
+        cabin
+      )
+    ) {
       setBaseFlights(cached.flights);
       setIsLoading(false);
       return;
@@ -67,10 +145,13 @@ function ResultsContent() {
     }
 
     const params: FlightSearchParams = {
-      from,
-      to,
+      from: extractAirportCode(from),
+      to: extractAirportCode(to),
       departure,
-      passengers,
+      adults,
+      children,
+      infants,
+      cabin,
       tripType: tripType === "roundtrip" ? "roundtrip" : "oneway",
       ...(returnDate ? { returnDate } : {}),
     };
@@ -85,7 +166,7 @@ function ResultsContent() {
     }
 
     setIsLoading(false);
-  }, [from, to, departure, returnDate, passengers, tripType]);
+  }, [from, to, departure, returnDate, adults, children, infants, cabin, tripType]);
 
   useEffect(() => {
     loadFlights();
@@ -254,7 +335,8 @@ function ResultsContent() {
                 {departure && ` · ${departure}`}
                 {returnDate && ` · return ${returnDate}`}
                 {tripType && ` · ${tripType}`}
-                {` · ${passengers} passenger${passengers > 1 ? "s" : ""}`}
+                {` · ${totalPassengers} passenger${totalPassengers > 1 ? "s" : ""}`}
+                {` · ${CABIN_LABELS[cabin]}`}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -351,7 +433,7 @@ function ResultsContent() {
                       >
                         <FlightCard
                           flight={flight}
-                          passengers={passengers}
+                          passengers={totalPassengers}
                           departure={departure}
                         />
                       </motion.div>

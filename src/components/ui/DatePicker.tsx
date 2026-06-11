@@ -25,6 +25,11 @@ function parseDate(value: string | undefined): Date | undefined {
   return isValid(parsed) ? parsed : undefined;
 }
 
+// Compact date format - single line
+function formatCompactDate(date: Date): string {
+  return format(date, "MMM dd, yyyy");
+}
+
 export function DatePicker({
   label,
   value = "",
@@ -64,8 +69,9 @@ export function DatePicker({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
-        <label htmlFor={id} className="text-sm font-medium text-foreground">
+        <label htmlFor={id} className="text-xs font-medium text-foreground">
           {label}
+          {required && <span className="ml-1 text-primary">*</span>}
         </label>
       )}
       <Popover open={open} onOpenChange={setOpen}>
@@ -73,12 +79,14 @@ export function DatePicker({
           id={id}
           disabled={disabled}
           className={cn(
-            "inline-flex h-10 w-full items-center justify-start gap-2 rounded-xl border border-border bg-white/60 px-4 text-sm font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10",
+            "inline-flex h-9 w-full items-center justify-start gap-2 rounded-xl border border-border bg-white/60 px-3 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10",
             !selected && "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
-          {selected ? format(selected, "PPP") : <span>{placeholder}</span>}
+          <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="truncate">
+            {selected ? formatCompactDate(selected) : placeholder}
+          </span>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar

@@ -1,14 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Search, ArrowRightLeft } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search, ArrowRightLeft, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { Input } from "@/components/ui/Input";
+import { AirportCombobox } from "@/components/ui/AirportCombobox";
+import {
+  PassengerDropdown,
+  getTotalPassengers,
+  type PassengerCounts,
+} from "@/components/ui/PassengerDropdown";
+import { CabinDropdown } from "@/components/ui/CabinDropdown";
 import {
   cacheFlightSearch,
+  parseAirportValue,
   searchFlightsForForm,
+  type CabinClass,
   type FlightSearchParams,
 } from "@/services/whitelabel-api";
 
@@ -19,27 +28,129 @@ interface FlightSearchFormProps {
     departure?: string;
     returnDate?: string;
     passengers?: string;
+    adults?: string;
+    children?: string;
+    infants?: string;
+    cabin?: string;
     tripType?: "oneway" | "roundtrip";
   };
 }
 
+function formatAirportParam(display: string, code: string): string {
+  if (display && code) return `${display} (${code})`;
+  return code || display;
+}
+
+function parseCabin(value?: string): CabinClass {
+  const cabins: CabinClass[] = [
+    "economy",
+    "premium_economy",
+    "business",
+    "first",
+  ];
+  if (value && cabins.includes(value as CabinClass)) {
+    return value as CabinClass;
+  }
+  return "economy";
+}
+
+function parsePassengerDefaults(defaultValues?: FlightSearchFormProps["defaultValues"]): PassengerCounts {
+  if (defaultValues?.adults) {
+    return {
+      adults: Math.max(1, Number(defaultValues.adults) || 1),
+      children: Number(defaultValues.children ?? 0) || 0,
+      infants: Number(defaultValues.infants ?? 0) || 0,
+    };
+  }
+
+  const total = Number(defaultValues?.passengers ?? 1) || 1;
+  return { adults: Math.max(1, total), children: 0, infants: 0 };
+}
+
+// Trip Type Dropdown Component
+function TripTypeDropdown({ value, onChange }: { value: "oneway" | "roundtrip"; onChange: (type: "oneway" | "roundtrip") => void }) {
+  const [open, setOpen] = useState(false);
+
+  const options = [
+    { value: "oneway", label: "One Way" },
+    { value: "roundtrip", label: "Round Trip" },
+  ];
+
+  const selectedLabel = options.find(opt => opt.value === value)?.label || "One Way";
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-foreground">Trip Type</span>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex h-9 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5"
+        >
+          <span>{selectedLabel}</span>
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
+        </button>
+        {open && (
+          <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value as "oneway" | "roundtrip");
+                  setOpen(false);
+                }}
+                className={cn(
+                  "w-full px-3 py-2 text-left text-xs transition-colors hover:bg-primary/10",
+                  value === opt.value && "bg-primary/10 text-primary"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
   const router = useRouter();
+  const initialFrom = useMemo(
+    () => parseAirportValue(defaultValues?.from),
+    [defaultValues?.from]
+  );
+  const initialTo = useMemo(
+    () => parseAirportValue(defaultValues?.to),
+    [defaultValues?.to]
+  );
+
   const [tripType, setTripType] = useState<"oneway" | "roundtrip">(
     defaultValues?.tripType ?? "oneway"
   );
-  const [from, setFrom] = useState(defaultValues?.from ?? "");
-  const [to, setTo] = useState(defaultValues?.to ?? "");
+  const [fromCode, setFromCode] = useState(initialFrom.code);
+  const [toCode, setToCode] = useState(initialTo.code);
+  const [fromDisplay, setFromDisplay] = useState(initialFrom.display);
+  const [toDisplay, setToDisplay] = useState(initialTo.display);
   const [departure, setDeparture] = useState(defaultValues?.departure ?? "");
   const [returnDate, setReturnDate] = useState(defaultValues?.returnDate ?? "");
-  const [passengers, setPassengers] = useState(defaultValues?.passengers ?? "1");
+  const [passengers, setPassengers] = useState<PassengerCounts>(
+    () => parsePassengerDefaults(defaultValues)
+  );
+  const [cabin, setCabin] = useState<CabinClass>(
+    () => parseCabin(defaultValues?.cabin)
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSwap = () => {
-    const temp = from;
-    setFrom(to);
-    setTo(temp);
+    const tempDisplay = fromDisplay;
+    const tempCode = fromCode;
+    setFromDisplay(toDisplay);
+    setFromCode(toCode);
+    setToDisplay(tempDisplay);
+    setToCode(tempCode);
   };
 
   const handleTripTypeChange = (type: "oneway" | "roundtrip") => {
@@ -55,13 +166,22 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!fromCode || !toCode) {
+      setError("Please select departure and arrival airports from the list.");
+      return;
+    }
+
     setIsLoading(true);
 
     const searchParams: FlightSearchParams = {
-      from,
-      to,
+      from: fromCode,
+      to: toCode,
       departure,
-      passengers: parseInt(passengers, 10),
+      adults: passengers.adults,
+      children: passengers.children,
+      infants: passengers.infants,
+      cabin,
       tripType,
       ...(tripType === "roundtrip" && returnDate ? { returnDate } : {}),
     };
@@ -71,11 +191,16 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
     if (result.success && result.flights) {
       cacheFlightSearch(result.flights, searchParams);
 
+      const total = getTotalPassengers(passengers);
       const urlParams: Record<string, string> = {
-        from,
-        to,
+        from: formatAirportParam(fromDisplay, fromCode),
+        to: formatAirportParam(toDisplay, toCode),
         departure,
-        passengers,
+        adults: String(passengers.adults),
+        children: String(passengers.children),
+        infants: String(passengers.infants),
+        passengers: String(total),
+        cabin,
         tripType,
       };
       if (tripType === "roundtrip" && returnDate) {
@@ -94,99 +219,101 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="glossy rounded-2xl p-6 shadow-xl">
-      <div className="mb-6 flex gap-2 border-b border-border pb-4">
-        <button
-          type="button"
-          onClick={() => handleTripTypeChange("oneway")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            tripType === "oneway"
-              ? "bg-primary text-white shadow-md"
-              : "text-foreground/70 hover:bg-primary/10"
-          }`}
-        >
-          One Way
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTripTypeChange("roundtrip")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
-            tripType === "roundtrip"
-              ? "bg-primary text-white shadow-md"
-              : "text-foreground/70 hover:bg-primary/10"
-          }`}
-        >
-          Round Trip
-        </button>
-      </div>
-
       {error && (
         <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      <div
-        className={`grid gap-4 sm:grid-cols-2 ${
-          tripType === "roundtrip" ? "lg:grid-cols-7" : "lg:grid-cols-6"
-        }`}
-      >
-        <Input
-          label="From"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          placeholder="Lagos (LOS)"
-          required
-        />
+      {/* Row 1: Trip Type, Cabin, Passengers - Takes 50% width on desktop */}
+      <div className="mb-6 w-full lg:w-1/2">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <TripTypeDropdown value={tripType} onChange={handleTripTypeChange} />
+          <CabinDropdown value={cabin} onChange={setCabin} />
+          <PassengerDropdown value={passengers} onChange={setPassengers} />
+        </div>
+      </div>
 
-        <Input
-          label="To"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          placeholder="Dubai (DXB)"
-          required
-        />
-
-        <div className="hidden items-end lg:flex">
+      {/* Row 2: From, To, Departure Date, Return Date, Search Button - all on same row */}
+      <div className={cn(
+        "grid gap-4",
+        "sm:grid-cols-2",
+        tripType === "roundtrip" 
+          ? "lg:grid-cols-5" 
+          : "lg:grid-cols-4"
+      )}>
+        {/* From Field with swap button on its right edge - visible on all devices */}
+        <div className="relative">
+          <AirportCombobox
+            label="From"
+            value={fromDisplay}
+            selectedCode={fromCode}
+            onSelect={(code, displayName) => {
+              setFromCode(code);
+              setFromDisplay(displayName);
+            }}
+            placeholder="Lagos, Nigeria"
+            required
+          />
+          {/* Swap button - visible on all devices, positioned between From and To */}
           <button
             type="button"
             onClick={handleSwap}
             aria-label="Swap cities"
-            className="mb-0.5 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background transition-all hover:bg-primary/10 hover:text-primary"
+            className="hidden absolute -right-5 top-[calc(50%+0.75rem)] z-10 md:flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-all hover:bg-primary/10 hover:text-primary"
           >
-            <ArrowRightLeft className="h-4 w-4" />
+            <ArrowRightLeft className="h-3 w-3" />
           </button>
         </div>
 
+
+        <div className="relative md:hidden flex items-center justify-center">
+        <button
+            type="button"
+            onClick={handleSwap}
+            aria-label="Swap cities"
+            className="md:hidden block absolute right-1/2 top-[calc(50%+0.75rem)] z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-all hover:bg-primary/10 hover:text-primary"
+          >
+            <ArrowRightLeft className="h-3 w-3" />
+          </button>
+        </div>
+
+        {/* To Field */}
+        <AirportCombobox
+          label="To"
+          value={toDisplay}
+          selectedCode={toCode}
+          onSelect={(code, displayName) => {
+            setToCode(code);
+            setToDisplay(displayName);
+          }}
+          placeholder="Dubai, UAE"
+          required
+        />
+
+        {/* Departure Date */}
         <DatePicker
           label="Departure Date"
           value={departure}
           onChange={handleDepartureChange}
-          placeholder="Date"
+          placeholder="Select date"
           required
         />
 
+        {/* Return Date (only for round trip) */}
         {tripType === "roundtrip" && (
           <DatePicker
             label="Return Date"
             value={returnDate}
             onChange={setReturnDate}
-            placeholder="Date"
+            placeholder="Select date"
             required
             fromDate={returnMinDate}
           />
         )}
 
-        <Input
-          label="Passengers"
-          type="number"
-          min={1}
-          max={9}
-          value={passengers}
-          onChange={(e) => setPassengers(e.target.value)}
-          required
-        />
-
-        <div className="flex items-end sm:col-span-2 lg:col-span-1">
+        {/* Search Button */}
+        <div className="flex items-end">
           <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
             {isLoading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

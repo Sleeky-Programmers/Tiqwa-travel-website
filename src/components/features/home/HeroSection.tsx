@@ -8,16 +8,23 @@ import { Container } from "@/components/ui/Container";
 import { trustBadges } from "@/data/mockData";
 import { heroBackgroundImage } from "@/utils/images";
 
-export function HeroSection() {
+interface HeroSectionProps {
+  heroImage?: string;
+}
+
+export function HeroSection({ heroImage }: HeroSectionProps) {
+  const backgroundImage = heroImage || heroBackgroundImage;
+
   return (
     <section className="relative flex min-h-[100vh] items-center overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Image
-          src={heroBackgroundImage}
+          src={backgroundImage}
           alt="Travel background"
           fill
           className="object-cover"
           priority
+          unoptimized={backgroundImage.includes("cloudinary.com")}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/30" />
       </div>

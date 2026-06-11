@@ -1,13 +1,22 @@
 import { popularRoutes, type FlightRoute } from "@/data/mockData";
 import { mockFlights, parseDuration } from "@/services/mockFlights";
-import type { Flight } from "@/types/flight";
+import type { Flight, StopsFilter } from "@/types/flight";
+import { matchesStopsFilter } from "@/types/flight";
 
 export type SortOption = "price" | "duration" | "departure";
 
 export interface FlightFilters {
   maxPrice?: number;
   maxStops?: number | null;
+  stopsFilter?: StopsFilter;
   airlines?: string[];
+}
+
+function resolveStopsFilter(filters: FlightFilters): StopsFilter {
+  if (filters.stopsFilter) return filters.stopsFilter;
+  if (filters.maxStops === 0) return "nonstop";
+  if (filters.maxStops === 1) return "one-stop-max";
+  return "any";
 }
 
 const routeSchedules = [
@@ -33,7 +42,9 @@ function routeToFlights(route: FlightRoute): Flight[] {
     arrival: schedule.arrival,
     duration: schedule.duration,
     stops: schedule.stops,
+    outbound_stops: schedule.stops,
     price: route.price + i * 40,
+    currency: "USD",
   }));
 }
 
@@ -68,12 +79,22 @@ export function searchFlights(
     results = [...mockFlights];
   }
 
+  return applyFlightFilters(results, filters);
+}
+
+export function applyFlightFilters(
+  flights: Flight[],
+  filters: FlightFilters = {}
+): Flight[] {
+  let results = [...flights];
+
   if (filters.maxPrice !== undefined) {
     results = results.filter((f) => f.price <= filters.maxPrice!);
   }
 
-  if (filters.maxStops !== undefined && filters.maxStops !== null) {
-    results = results.filter((f) => f.stops <= filters.maxStops!);
+  const stopsFilter = resolveStopsFilter(filters);
+  if (stopsFilter !== "any") {
+    results = results.filter((f) => matchesStopsFilter(f, stopsFilter));
   }
 
   if (filters.airlines && filters.airlines.length > 0) {

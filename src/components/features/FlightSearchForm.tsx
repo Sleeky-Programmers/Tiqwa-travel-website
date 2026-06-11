@@ -6,6 +6,11 @@ import { Search, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Input } from "@/components/ui/Input";
+import {
+  cacheFlightSearch,
+  searchFlightsForForm,
+  type FlightSearchParams,
+} from "@/services/whitelabel-api";
 
 interface FlightSearchFormProps {
   defaultValues?: {
@@ -28,8 +33,9 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
   const [departure, setDeparture] = useState(defaultValues?.departure ?? "");
   const [returnDate, setReturnDate] = useState(defaultValues?.returnDate ?? "");
   const [passengers, setPassengers] = useState(defaultValues?.passengers ?? "1");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // FIXED: Proper swap function using temp variable
   const handleSwap = () => {
     const temp = from;
     setFrom(to);
@@ -46,28 +52,48 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
     if (returnDate && date && returnDate < date) setReturnDate("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const params: Record<string, string> = {
+    setError(null);
+    setIsLoading(true);
+
+    const searchParams: FlightSearchParams = {
       from,
       to,
       departure,
-      passengers,
+      passengers: parseInt(passengers, 10),
       tripType,
+      ...(tripType === "roundtrip" && returnDate ? { returnDate } : {}),
     };
-    if (tripType === "roundtrip" && returnDate) {
-      params.returnDate = returnDate;
+
+    const result = await searchFlightsForForm(searchParams);
+
+    if (result.success && result.flights) {
+      cacheFlightSearch(result.flights, searchParams);
+
+      const urlParams: Record<string, string> = {
+        from,
+        to,
+        departure,
+        passengers,
+        tripType,
+      };
+      if (tripType === "roundtrip" && returnDate) {
+        urlParams.returnDate = returnDate;
+      }
+
+      router.push(`/results?${new URLSearchParams(urlParams).toString()}`);
+    } else {
+      setError(result.error ?? "Flight search failed. Please try again.");
     }
-    router.push(`/results?${new URLSearchParams(params).toString()}`);
+
+    setIsLoading(false);
   };
 
   const returnMinDate = departure ? new Date(departure) : new Date();
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="glossy rounded-2xl p-6 shadow-xl"
-    >
+    <form onSubmit={handleSubmit} className="glossy rounded-2xl p-6 shadow-xl">
       <div className="mb-6 flex gap-2 border-b border-border pb-4">
         <button
           type="button"
@@ -93,26 +119,30 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
         </button>
       </div>
 
+      {error && (
+        <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+
       <div
         className={`grid gap-4 sm:grid-cols-2 ${
           tripType === "roundtrip" ? "lg:grid-cols-7" : "lg:grid-cols-6"
         }`}
       >
-        <div className="relative">
-          <Input
-            label="From"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            placeholder="New York (JFK)"
-            required
-          />
-        </div>
+        <Input
+          label="From"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          placeholder="Lagos (LOS)"
+          required
+        />
 
         <Input
           label="To"
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          placeholder="London (LHR)"
+          placeholder="Dubai (DXB)"
           required
         />
 
@@ -157,8 +187,15 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
         />
 
         <div className="flex items-end sm:col-span-2 lg:col-span-1">
-          <Button type="submit" className="w-full" size="lg">
-            Search Flights
+          <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+            {isLoading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <>
+                <Search className="h-4 w-4" />
+                Search Flights
+              </>
+            )}
           </Button>
         </div>
       </div>

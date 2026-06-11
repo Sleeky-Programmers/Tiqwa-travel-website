@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Plane } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { formatFlightPrice } from "@/services/whitelabel-api";
 import type { Flight } from "@/types/flight";
+import { getFlightStops } from "@/types/flight";
 
 interface FlightCardProps {
   flight: Flight;
@@ -13,6 +15,7 @@ interface FlightCardProps {
 }
 
 export function FlightCard({ flight, passengers = 1, departure = "" }: FlightCardProps) {
+  const stops = getFlightStops(flight);
   const bookingParams = new URLSearchParams({
     flightId: flight.id,
     passengers: String(passengers),
@@ -27,17 +30,27 @@ export function FlightCard({ flight, passengers = 1, departure = "" }: FlightCar
         </div>
         <div>
           <p className="font-semibold">{flight.airline}</p>
-          <p className="text-sm text-muted-foreground">{flight.from} → {flight.to}</p>
+          <p className="text-sm text-muted-foreground">
+            {flight.from} → {flight.to}
+          </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-            <span>{flight.departure} – {flight.arrival}</span>
+            <span>
+              {flight.departure} – {flight.arrival}
+            </span>
             <span>{flight.duration}</span>
-            <span>{flight.stops === 0 ? "Non-stop" : `${flight.stops} stop${flight.stops > 1 ? "s" : ""}`}</span>
+            <span>
+              {stops === 0
+                ? "Non-stop"
+                : `${stops} stop${stops > 1 ? "s" : ""}`}
+            </span>
           </div>
         </div>
       </div>
       <div className="flex items-center gap-4 sm:flex-col sm:items-end">
         <div className="text-right">
-          <p className="text-2xl font-bold text-primary">${flight.price}</p>
+          <p className="text-2xl font-bold text-primary">
+            {formatFlightPrice(flight.price, flight.currency)}
+          </p>
           <p className="text-xs text-muted-foreground">per person</p>
         </div>
         <Link href={`/booking?${bookingParams.toString()}`}>

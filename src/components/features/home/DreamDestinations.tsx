@@ -5,7 +5,22 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { MapPin } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { destinations } from "@/data/mockData";
+import { destinations as mockDestinations } from "@/data/mockData";
+import type { PopularAirport } from "@/types/whitelabel";
+import { getDestinationImage } from "@/utils/images";
+
+interface DestinationCard {
+  id: string;
+  name: string;
+  country: string;
+  image: string;
+  tag: string;
+  priceFrom?: number;
+}
+
+interface DreamDestinationsProps {
+  popularAirports?: PopularAirport[];
+}
 
 const tagColors: Record<string, string> = {
   Romantic: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
@@ -14,13 +29,46 @@ const tagColors: Record<string, string> = {
   Tropical: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   Urban: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
   Adventure: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  Popular: "bg-primary/10 text-primary",
 };
 
-export function DreamDestinations() {
+const tags = ["Popular", "Urban", "Tropical", "Culture", "Adventure", "Luxury"];
+
+function mapAirportsToDestinations(
+  airports: PopularAirport[]
+): DestinationCard[] {
+  return airports.map((airport, i) => ({
+    id: airport.iata_code ?? `airport-${i}`,
+    name: airport.city,
+    country: airport.country,
+    image:
+      typeof airport.image === "string"
+        ? airport.image
+        : getDestinationImage(airport.city),
+    tag: tags[i % tags.length],
+  }));
+}
+
+export function DreamDestinations({
+  popularAirports = [],
+}: DreamDestinationsProps) {
   const router = useRouter();
 
-  const handleClick = (name: string) => {
-    router.push(`/search?to=${encodeURIComponent(name)}`);
+  const destinations: DestinationCard[] =
+    popularAirports.length > 0
+      ? mapAirportsToDestinations(popularAirports)
+      : mockDestinations.map((d) => ({
+          id: d.id,
+          name: d.name,
+          country: d.country,
+          image: d.image,
+          tag: d.tag,
+          priceFrom: d.priceFrom,
+        }));
+
+  const handleClick = (name: string, code?: string) => {
+    const query = code ? `${name} (${code})` : name;
+    router.push(`/search?to=${encodeURIComponent(query)}`);
   };
 
   return (
@@ -49,7 +97,14 @@ export function DreamDestinations() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08 }}
-              onClick={() => handleClick(dest.name)}
+              onClick={() =>
+                handleClick(
+                  dest.name,
+                  popularAirports.length > 0
+                    ? popularAirports[i]?.iata_code
+                    : undefined
+                )
+              }
               className="glossy-card glossy-hover group overflow-hidden text-left"
             >
               <div className="relative h-48 w-full overflow-hidden">
@@ -58,9 +113,10 @@ export function DreamDestinations() {
                   alt={dest.name}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  unoptimized={dest.image.includes("cloudinary.com")}
                 />
                 <span
-                  className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${tagColors[dest.tag]}`}
+                  className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${tagColors[dest.tag] ?? tagColors.Popular}`}
                 >
                   {dest.tag}
                 </span>

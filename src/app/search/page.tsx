@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { FlightSearchForm } from "@/components/features/FlightSearchForm";
+import { FlightTable } from "@/components/features/FlightTable";
 import { Container } from "@/components/ui/Container";
 
 function SearchContent() {
@@ -24,8 +25,8 @@ function SearchContent() {
   };
 
   return (
-    <div className="page-fade-in py-16">
-      <Container size="md">
+    <div className="page-fade-in py-28">
+      <Container>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -41,9 +42,15 @@ function SearchContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
+          className="mx-auto max-w-5xl"
         >
           <FlightSearchForm defaultValues={defaultValues} />
         </motion.div>
+
+        <div className="mt-12">
+          <h2 className="mb-6 text-2xl font-bold">Browse All Flights</h2>
+          <FlightTable />
+        </div>
       </Container>
     </div>
   );

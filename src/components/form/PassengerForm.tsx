@@ -12,9 +12,10 @@ export interface PassengerData {
 interface PassengerFormProps {
   data: PassengerData;
   onChange: (data: PassengerData) => void;
+  onPhoneChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-export function PassengerForm({ data, onChange }: PassengerFormProps) {
+export function PassengerForm({ data, onChange, onPhoneChange }: PassengerFormProps) {
   const update = (field: keyof PassengerData, value: string) => {
     onChange({ ...data, [field]: value });
   };
@@ -27,7 +28,7 @@ export function PassengerForm({ data, onChange }: PassengerFormProps) {
         <Input label="Last Name" value={data.lastName} onChange={(e) => update("lastName", e.target.value)} placeholder="Doe" required />
       </div>
       <Input label="Email" type="email" value={data.email} onChange={(e) => update("email", e.target.value)} placeholder="john@example.com" required />
-      <Input label="Phone" type="tel" value={data.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+1 (555) 000-0000" required />
+      <Input label="Phone" type="tel" value={data.phone}  onChange={onPhoneChange || ((e) => update("phone", e.target.value))} placeholder="+1 (555) 000-0000" required />
     </div>
   );
 }

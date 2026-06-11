@@ -18,7 +18,7 @@ export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="page-fade-in py-16">
+    <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="text-3xl font-bold sm:text-4xl">Frequently Asked Questions</h1>

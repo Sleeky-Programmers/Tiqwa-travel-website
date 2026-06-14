@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, Moon, Plane, Sun, X } from "lucide-react";
+import { LayoutDashboard, Menu, Moon, Plane, Sun, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTheme } from "@/hooks/useTheme";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 
 const navLinks = [
@@ -18,6 +19,7 @@ const navLinks = [
 export function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme, mounted } = useTheme();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Close sidebar on route change
@@ -106,16 +108,40 @@ export function Navbar() {
                 )}
 
                 <div className="hidden sm:flex items-center gap-2">
-                  <Link href="/login">
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button size="sm" className="rounded-full">
-                      Sign Up
-                    </Button>
-                  </Link>
+                  {isLoading ? null : isAuthenticated ? (
+                    <>
+                      <Link href="/dashboard">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                        >
+                          <LayoutDashboard className="mr-1.5 h-3.5 w-3.5" />
+                          {user?.firstName || "Dashboard"}
+                        </Button>
+                      </Link>
+                      <Button 
+                      size="sm" 
+                      onClick={logout}
+                      className="rounded-full"
+                      >
+                        Sign Out
+                        </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/login">
+                        <Button variant="outline" size="sm" className="rounded-full">
+                          Login
+                        </Button>
+                      </Link>
+                      <Link href="/signup">
+                        <Button size="sm" className="rounded-full">
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                 </div>
 
                 {/* Sidebar Toggle Button (Mobile) */}
@@ -207,14 +233,37 @@ export function Navbar() {
 
               {/* Auth Buttons */}
               <div className="p-4 space-y-2">
-                <Link href="/login" onClick={() => setSidebarOpen(false)}>
-                  <Button variant="outline" className="w-full rounded-xl">
-                    Login
-                  </Button>
-                </Link>
-                <Link href="/signup" onClick={() => setSidebarOpen(false)}>
-                  <Button className="w-full rounded-xl">Sign Up</Button>
-                </Link>
+                {isLoading ? null : isAuthenticated ? (
+                  <>
+                    <Link href="/dashboard" onClick={() => setSidebarOpen(false)}>
+                      <Button variant="outline" className="w-full rounded-xl">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Button
+                      className="w-full rounded-xl"
+                      variant="outline"
+                      onClick={() => {
+                        setSidebarOpen(false);
+                        logout();
+                      }}
+                    >
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" onClick={() => setSidebarOpen(false)}>
+                      <Button variant="outline" className="w-full rounded-xl">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/signup" onClick={() => setSidebarOpen(false)}>
+                      <Button className="w-full rounded-xl">Sign Up</Button>
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Theme Toggle in Sidebar (mobile) */}

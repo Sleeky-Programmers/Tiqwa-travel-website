@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const faqs = [
   { question: "How do I search for flights?", answer: "Use the search form on the homepage or the Flights page. Enter your departure city, destination, travel date, and number of passengers, then click Search Flights." },
@@ -18,6 +19,7 @@ export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
+    <PublicLayout>
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -43,5 +45,6 @@ export default function FAQPage() {
         </motion.div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }

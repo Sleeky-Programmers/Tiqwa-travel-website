@@ -6,6 +6,8 @@ import { motion } from "motion/react";
 import { FlightSearchForm } from "@/components/features/FlightSearchForm";
 import { FlightTable } from "@/components/features/FlightTable";
 import { Container } from "@/components/ui/Container";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import { Loader2 } from "lucide-react";
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -29,6 +31,7 @@ function SearchContent() {
   };
 
   return (
+    <PublicLayout>
     <div className="page-fade-in py-28">
       <Container>
         <motion.div
@@ -57,6 +60,7 @@ function SearchContent() {
         </div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }
 
@@ -64,9 +68,11 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <Container className="py-16">
-          <p className="text-muted-foreground">Loading...</p>
+        <PublicLayout>
+                <Container className="flex min-h-[80vh] items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </Container>
+        </PublicLayout>
       }
     >
       <SearchContent />

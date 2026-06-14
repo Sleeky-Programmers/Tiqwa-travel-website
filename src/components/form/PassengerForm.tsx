@@ -1,12 +1,14 @@
 "use client";
 
 import { Input } from "@/components/ui/Input";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 export interface PassengerData {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
+  dateOfBirth: string;
 }
 
 interface PassengerFormProps {
@@ -24,11 +26,45 @@ export function PassengerForm({ data, onChange, onPhoneChange }: PassengerFormPr
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Passenger Details</h3>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="First Name" value={data.firstName} onChange={(e) => update("firstName", e.target.value)} placeholder="John" required />
-        <Input label="Last Name" value={data.lastName} onChange={(e) => update("lastName", e.target.value)} placeholder="Doe" required />
+        <Input
+          label="First Name"
+          value={data.firstName}
+          onChange={(e) => update("firstName", e.target.value)}
+          placeholder="John"
+          required
+        />
+        <Input
+          label="Last Name"
+          value={data.lastName}
+          onChange={(e) => update("lastName", e.target.value)}
+          placeholder="Doe"
+          required
+        />
       </div>
-      <Input label="Email" type="email" value={data.email} onChange={(e) => update("email", e.target.value)} placeholder="john@example.com" required />
-      <Input label="Phone" type="tel" value={data.phone}  onChange={onPhoneChange || ((e) => update("phone", e.target.value))} placeholder="+1 (555) 000-0000" required />
+      <Input
+        label="Email"
+        type="email"
+        value={data.email}
+        onChange={(e) => update("email", e.target.value)}
+        placeholder="john@example.com"
+        required
+      />
+      <Input
+        label="Phone"
+        type="tel"
+        value={data.phone}
+        onChange={onPhoneChange || ((e) => update("phone", e.target.value))}
+        placeholder="+234 801 234 5678"
+        required
+      />
+      <DatePicker
+        label="Date of Birth"
+        value={data.dateOfBirth}
+        onChange={(date) => update("dateOfBirth", date)}
+        placeholder="Select date of birth"
+        required
+        disablePast={true}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
   aboutTestimonials,
 } from "@/data/mockData";
 import { heroBackgroundImage } from "@/utils/images";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const trustIconMap: Record<string, LucideIcon> = {
   Lock,
@@ -32,9 +33,10 @@ const trustIconMap: Record<string, LucideIcon> = {
 
 export default function AboutPage() {
   return (
+    <PublicLayout>
     <main className="page-fade-in">
       {/* Hero */}
-      <section className="relative overflow-hidden py-20 lg:py-28">
+      <section className="relative overflow-hidden pt-20 md:pt-28">
         <div className="absolute inset-0 z-0">
           <Image
             src={heroBackgroundImage}
@@ -279,5 +281,6 @@ export default function AboutPage() {
         </Container>
       </section>
     </main>
+    </PublicLayout>
   );
 }

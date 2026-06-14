@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { FlightCard } from "@/components/features/FlightCard";
@@ -25,6 +25,7 @@ import {
   type FlightSearchParams,
 } from "@/services/whitelabel-api";
 import type { Flight, StopsFilter } from "@/types/flight";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const CABIN_LABELS: Record<CabinClass, string> = {
   economy: "Economy",
@@ -312,6 +313,7 @@ function ResultsContent() {
   );
 
   return (
+    <PublicLayout>
     <div className="page-fade-in py-28">
       <Container>
         <Link
@@ -498,6 +500,7 @@ function ResultsContent() {
         </motion.div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }
 
@@ -505,9 +508,12 @@ export default function ResultsPage() {
   return (
     <Suspense
       fallback={
+        <PublicLayout>
         <Container className="py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Loading results...</p>
         </Container>
+        </PublicLayout>
       }
     >
       <ResultsContent />

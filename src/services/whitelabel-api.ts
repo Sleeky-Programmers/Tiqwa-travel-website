@@ -1,9 +1,15 @@
 import type { Flight } from "@/types/flight";
 import { normalizeFlight } from "@/types/flight";
+import { getAccessToken } from "@/services/auth";
 import type {
+  BookingDetails,
+  BookingPassengerPayload,
+  ConfirmPriceData,
+  CreateBookingData,
   FlightSearchData,
   FlightDeal,
   HomepageData,
+  PaymentInitiateData,
   PopularAirport,
   Airport,
   WhitelabelFlightItem,
@@ -17,6 +23,9 @@ export const API_BASE =
 
 export const FLIGHT_RESULTS_KEY = "flightResults_v2";
 export const SEARCH_PARAMS_KEY = "searchParams_v2";
+export const ACTIVE_BOOKING_KEY = "activeBooking_v1";
+
+export const BOOKING_RESERVATION_TTL_MS = 15 * 60 * 1000;
 
 export type CabinClass = "economy" | "premium_economy" | "business" | "first";
 
@@ -41,20 +50,48 @@ export function getTotalPassengers(
 type FetchOptions = RequestInit & { next?: { revalidate?: number } };
 
 async function fetchAPI<T>(endpoint: string, options?: FetchOptions): Promise<T> {
-  const { next, ...fetchOptions } = options ?? {};
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: { Accept: "application/json", ...fetchOptions.headers },
-    ...fetchOptions,
-    ...(typeof window === "undefined" ? { next: next ?? { revalidate: 300 } } : {}),
-  });
-
-  const data = (await response.json()) as WhitelabelResponse<T>;
-
-  if (!data.success) {
-    throw new Error(data.message ?? "API request failed");
+  const result = await fetchAPIResult<T>(endpoint, options);
+  if (!result.success) {
+    throw new Error(result.error);
   }
+  return result.data;
+}
 
-  return data.data;
+async function fetchAPIResult<T>(
+  endpoint: string,
+  options?: FetchOptions
+): Promise<{ success: true; data: T } | { success: false; error: string }> {
+  const { next, ...fetchOptions } = options ?? {};
+
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: { Accept: "application/json", ...fetchOptions.headers },
+      ...fetchOptions,
+      ...(typeof window === "undefined" ? { next: next ?? { revalidate: 300 } } : {}),
+    });
+
+    const data = (await response.json()) as WhitelabelResponse<T>;
+
+    if (!data.success) {
+      return { success: false, error: data.message ?? "API request failed" };
+    }
+
+    return { success: true, data: data.data };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "API request failed",
+    };
+  }
+}
+
+function postJSON<T>(endpoint: string, body: unknown): Promise<{ success: true; data: T } | { success: false; error: string }> {
+  return fetchAPIResult<T>(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
 }
 
 export function extractAirportCode(input: string): string {
@@ -351,6 +388,135 @@ export async function getAllFlights(params?: {
   return flights;
 }
 
+export interface ActiveBooking {
+  bookingId: string;
+  reference: string;
+  flightId: string;
+  createdAt: number;
+}
+
+export function saveActiveBooking(booking: Omit<ActiveBooking, "createdAt">): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(
+    ACTIVE_BOOKING_KEY,
+    JSON.stringify({ ...booking, createdAt: Date.now() })
+  );
+}
+
+export function readActiveBooking(): ActiveBooking | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_BOOKING_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as ActiveBooking;
+  } catch {
+    return null;
+  }
+}
+
+export function clearActiveBooking(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(ACTIVE_BOOKING_KEY);
+}
+
+export function isBookingReservationExpired(
+  createdAt: number,
+  ttlMs = BOOKING_RESERVATION_TTL_MS
+): boolean {
+  return Date.now() - createdAt > ttlMs;
+}
+
+export async function confirmFlightPrice(flightId: string) {
+  return fetchAPIResult<ConfirmPriceData>(`/flight/confirm-price/${flightId}`, {
+    cache: "no-store",
+  });
+}
+
+export async function createBooking(
+  flightId: string,
+  passengers: BookingPassengerPayload[]
+) {
+  return postJSON<CreateBookingData>(`/flight/book/create/${flightId}`, {
+    passengers,
+  });
+}
+
+export async function reserveBooking(bookingId: string, flightId: string) {
+  return postJSON<unknown>("/flight/book/reserve", {
+    booking_id: bookingId,
+    flight_id: flightId,
+  });
+}
+
+export async function initiatePayment(
+  bookingId: string,
+  flightId: string,
+  options?: { currency?: string }
+) {
+  const callbackUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/payment/callback`
+      : undefined;
+
+  return postJSON<PaymentInitiateData>("/payment/flight/initiate", {
+    flight_id: flightId,
+    booking_id: bookingId,
+    payment_method: "ONLINE_TRANSFER",
+    payment_gateway: "paystack",
+    currency: options?.currency ?? "NGN",
+    ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+  });
+}
+
+export async function getBookingDetails(reference: string) {
+  return fetchAPIResult<BookingDetails>(`/flight/booking-details/${reference}`, {
+    cache: "no-store",
+  });
+}
+
+export async function completeBookingFlow(
+  flightId: string,
+  passenger: BookingPassengerPayload,
+  currency = "NGN"
+): Promise<
+  | {
+      success: true;
+      paymentUrl: string;
+      bookingId: string;
+      reference: string;
+    }
+  | { success: false; error: string }
+> {
+  const createResult = await createBooking(flightId, [passenger]);
+  if (!createResult.success) {
+    return createResult;
+  }
+
+  const { booking_id, reference } = createResult.data;
+  saveActiveBooking({ bookingId: booking_id, reference, flightId });
+
+  const reserveResult = await reserveBooking(booking_id, flightId);
+  if (!reserveResult.success) {
+    return reserveResult;
+  }
+
+  const paymentResult = await initiatePayment(booking_id, flightId, { currency });
+  if (!paymentResult.success) {
+    return paymentResult;
+  }
+
+  if (!paymentResult.data.payment_url) {
+    return { success: false, error: "Payment URL not returned by gateway" };
+  }
+
+  return {
+    success: true,
+    paymentUrl: paymentResult.data.payment_url,
+    bookingId: booking_id,
+    reference,
+  };
+}
+
 export function cacheSelectedFlight(flight: Flight): void {
   if (typeof window === "undefined") return;
 
@@ -369,5 +535,127 @@ export function cacheSelectedFlight(flight: Flight): void {
       FLIGHT_RESULTS_KEY,
       JSON.stringify([normalized])
     );
+  }
+}
+
+export interface FlightBooking {
+  id: string;
+  reference: string;
+  from: string;
+  to: string;
+  departureDate: string;
+  returnDate?: string;
+  amount: number;
+  currency: string;
+  status: "confirmed" | "pending" | "cancelled";
+  cabin: string;
+}
+
+export interface RewardsData {
+  total_referral_reward: number;
+  referral_code: string;
+  referral_history: Array<{ referred_user: string; date: string }>;
+  referral_payment_history: Array<{ amount: number; date: string }>;
+  allow_withdraw: boolean;
+}
+
+function mapFlightBooking(raw: Record<string, unknown>): FlightBooking {
+  const statusRaw = String(raw.status ?? "pending").toLowerCase();
+  const status: FlightBooking["status"] =
+    statusRaw === "confirmed" || statusRaw === "cancelled"
+      ? statusRaw
+      : "pending";
+
+  return {
+    id: String(raw.id ?? raw.booking_id ?? raw.reference ?? ""),
+    reference: String(raw.reference ?? raw.booking_reference ?? ""),
+    from: String(
+      raw.from ?? raw.origin ?? raw.departure_city ?? raw.airport_from ?? ""
+    ),
+    to: String(
+      raw.to ?? raw.destination ?? raw.arrival_city ?? raw.airport_to ?? ""
+    ),
+    departureDate: String(
+      raw.departureDate ?? raw.departure_date ?? raw.departure ?? ""
+    ),
+    returnDate: raw.return_date ? String(raw.return_date) : undefined,
+    amount: Number(raw.amount ?? raw.total ?? raw.payable ?? 0),
+    currency: String(raw.currency ?? "NGN"),
+    status,
+    cabin: String(raw.cabin ?? raw.cabin_class ?? "economy"),
+  };
+}
+
+function mapRewardsData(raw: Record<string, unknown>): RewardsData {
+  return {
+    total_referral_reward: Number(raw.total_referral_reward ?? 0),
+    referral_code: String(raw.referral_code ?? ""),
+    referral_history: Array.isArray(raw.referral_history)
+      ? (raw.referral_history as RewardsData["referral_history"])
+      : [],
+    referral_payment_history: Array.isArray(raw.referral_payment_history)
+      ? (raw.referral_payment_history as RewardsData["referral_payment_history"])
+      : [],
+    allow_withdraw: Boolean(raw.allow_withdraw),
+  };
+}
+
+export async function getFlightBookings(): Promise<{
+  success: boolean;
+  data: FlightBooking[];
+}> {
+  const token = getAccessToken();
+  if (!token) return { success: false, data: [] };
+
+  try {
+    const response = await fetch(`${API_BASE}/user/flight-bookings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = await response.json();
+    const bookings = Array.isArray(result.data?.bookings)
+      ? result.data.bookings
+      : Array.isArray(result.data)
+        ? result.data
+        : [];
+
+    return {
+      success: Boolean(result.success),
+      data: bookings.map((b: Record<string, unknown>) => mapFlightBooking(b)),
+    };
+  } catch {
+    return { success: false, data: [] };
+  }
+}
+
+export async function getRewardsData(): Promise<{
+  success: boolean;
+  data: RewardsData | null;
+}> {
+  const token = getAccessToken();
+  if (!token) return { success: false, data: null };
+
+  try {
+    const response = await fetch(`${API_BASE}/user/rewards`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const result = await response.json();
+
+    if (result.success && result.data?.rewards) {
+      return {
+        success: true,
+        data: mapRewardsData(result.data.rewards as Record<string, unknown>),
+      };
+    }
+
+    if (result.success && result.data) {
+      return {
+        success: true,
+        data: mapRewardsData(result.data as Record<string, unknown>),
+      };
+    }
+
+    return { success: false, data: null };
+  } catch {
+    return { success: false, data: null };
   }
 }

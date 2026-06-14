@@ -5,6 +5,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "@/components/form/ContactForm";
 import { Container } from "@/components/ui/Container";
 import { Card } from "@/components/ui/Card";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const contactInfo = [
   { icon: Mail, label: "Email", value: "support@tiqwatravel.com" },
@@ -14,6 +15,7 @@ const contactInfo = [
 
 export default function ContactPage() {
   return (
+    <PublicLayout>
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -38,5 +40,6 @@ export default function ContactPage() {
         </motion.div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }

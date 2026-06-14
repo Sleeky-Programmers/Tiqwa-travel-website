@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { Container } from "@/components/ui/Container";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const sections = [
   { title: "Information We Collect", content: "We collect information you provide when searching for flights or making bookings, including name, email, phone number, and payment details." },
@@ -14,6 +15,8 @@ const sections = [
 
 export default function PrivacyPage() {
   return (
+    <PublicLayout>
+
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -33,5 +36,6 @@ export default function PrivacyPage() {
         </motion.div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }

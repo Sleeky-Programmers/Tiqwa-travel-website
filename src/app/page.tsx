@@ -9,6 +9,7 @@ import {
   getHomepageData,
   getPopularAirports,
 } from "@/services/whitelabel-api";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 export default async function HomePage() {
   const [homepage, popularAirports] = await Promise.all([
@@ -22,6 +23,7 @@ export default async function HomePage() {
   const heroImage = homepage.hero_banners?.[0]?.image;
 
   return (
+    <PublicLayout>
     <div className="page-fade-in">
       <HeroSection heroImage={heroImage} />
       <TrustBanner />
@@ -31,5 +33,6 @@ export default async function HomePage() {
       <DreamDestinations popularAirports={popularAirports} />
       <TestimonialsSection />
     </div>
+    </PublicLayout>
   );
 }

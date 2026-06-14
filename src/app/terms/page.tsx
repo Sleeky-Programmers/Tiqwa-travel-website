@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { Container } from "@/components/ui/Container";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const sections = [
   { title: "1. Acceptance of Terms", content: "By accessing and using Tiqwa Travel's website and services, you agree to be bound by these Terms of Service." },
@@ -13,6 +14,7 @@ const sections = [
 
 export default function TermsPage() {
   return (
+    <PublicLayout>
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -29,5 +31,6 @@ export default function TermsPage() {
         </motion.div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }

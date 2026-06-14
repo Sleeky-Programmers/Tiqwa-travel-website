@@ -91,3 +91,38 @@ export interface FlightSearchData {
   itemList: WhitelabelFlightItem[] | { message?: Record<string, string[]> };
   listing_id?: string;
 }
+
+export type PassengerType = "adult" | "child" | "infant";
+
+export interface BookingPassengerPayload {
+  passenger_type: PassengerType;
+  first_name: string;
+  last_name: string;
+  dob: string;
+  email: string;
+  phone_number: string;
+}
+
+export interface CreateBookingData {
+  booking_id: string;
+  reference: string;
+}
+
+export interface ConfirmPriceData {
+  amount?: number;
+  currency?: string;
+  id?: string;
+}
+
+export interface PaymentInitiateData {
+  payment_url: string;
+}
+
+export interface BookingDetails {
+  reference: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  passengers?: unknown[];
+  [key: string]: unknown;
+}

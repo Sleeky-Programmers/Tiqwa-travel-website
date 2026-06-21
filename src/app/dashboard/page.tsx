@@ -164,7 +164,7 @@ export default function DashboardPage() {
 						<h3 className="font-semibold">Ready for your next adventure?</h3>
 						<p className="text-sm text-muted-foreground">Search and book flights instantly</p>
 					</div>
-					<Link href="/search">
+					<Link href="/dashboard/search">
 						<Button>Book Now</Button>
 					</Link>
 				</div>

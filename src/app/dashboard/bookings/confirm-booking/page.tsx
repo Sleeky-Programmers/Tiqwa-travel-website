@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Clock, CreditCard, Loader2, Plane } from 'lucide-react';
+import { ArrowLeft, Clock, CreditCard, Loader2, Plane, UserMinus, UserPlus } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,10 +8,8 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
-import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Container } from '@/components/ui/Container';
 import {
 	completeBookingFlow,
 	confirmFlightPrice,
@@ -78,7 +76,17 @@ function validatePassenger(data: PassengerData): string | null {
 		return 'Date of birth must be in the past.';
 	}
 	if (!data.documentNumber.trim()) return 'Document number is required.';
+	if (!data.documentIssueDate) return 'Document issue date is required.'; // ✅ NEW
 	if (!data.documentExpiryDate) return 'Document expiry date is required.';
+
+	// ✅ NEW: Check expiry date is in the future
+	const expiryDate = new Date(data.documentExpiryDate);
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	if (expiryDate <= today) {
+		return 'Document expiry date must be in the future.';
+	}
+
 	if (!data.issuingCountry.trim()) return 'Issuing country is required.';
 	if (!data.nationalityCountry.trim()) return 'Nationality country is required.';
 	if (!data.documentType) return 'Document type is required.';
@@ -101,13 +109,13 @@ function buildResultsHref(flight: NonNullable<ReturnType<typeof getFlightFromCac
 			tripType: params.tripType,
 		});
 		if (params.returnDate) urlParams.set('returnDate', params.returnDate);
-		return `/results?${urlParams.toString()}`;
+		return `/dashboard/search/results?${urlParams.toString()}`;
 	}
 
-	return `/results?from=${encodeURIComponent(flight.from)}&to=${encodeURIComponent(flight.to)}&departure=${departure}&passengers=${passengers}`;
+	return `/dashboard/search/results?from=${encodeURIComponent(flight.from)}&to=${encodeURIComponent(flight.to)}&departure=${departure}&passengers=${passengers}`;
 }
 
-function BookingContent() {
+function ConfirmBookingContent() {
 	const searchParams = useSearchParams();
 	const flightId = searchParams.get('flightId') ?? '';
 	const passengersCount = Number(searchParams.get('passengers') ?? '1');
@@ -120,15 +128,15 @@ function BookingContent() {
 		lastName: '',
 		title: '',
 		gender: '',
-		dateOfBirth: '',
 		email: '',
 		phone: '',
-		documentNumber: '',
-		documentExpiryDate: '',
-		issuingCountry: '',
-		nationalityCountry: '',
+		dateOfBirth: '',
 		documentType: '',
+		documentNumber: '',
+		issuingCountry: '',
 		documentIssueDate: '',
+		documentExpiryDate: '',
+		nationalityCountry: '',
 	});
 
 	const [passengers, setPassengers] = useState<PassengerData[]>(() => Array.from({ length: Math.max(1, passengersCount) }, () => getInitialPassenger()));
@@ -145,7 +153,7 @@ function BookingContent() {
 	const currency = flight?.currency ?? 'NGN';
 	const total = unitPrice * passengersCount;
 
-	const resultsHref = useMemo(() => (flight ? buildResultsHref(flight, departure, passengersCount) : '/search'), [flight, departure, passengersCount]);
+	const resultsHref = useMemo(() => (flight ? buildResultsHref(flight, departure, passengersCount) : '/dashboard/search'), [flight, departure, passengers]);
 
 	const confirmPrice = useCallback(async () => {
 		if (!flightId) {
@@ -206,6 +214,7 @@ function BookingContent() {
 		setError(null);
 		setIsProcessing(true);
 
+		// Build payload for all passengers
 		const passengerPayloads: BookingPassengerPayload[] = passengers.map((p) => ({
 			passenger_type: 'adult',
 			first_name: p.firstName.trim(),
@@ -218,6 +227,7 @@ function BookingContent() {
 			phone_number: normalizePhone(p.phone),
 			documents: {
 				number: p.documentNumber.trim(),
+				issuing_date: p.documentIssueDate,
 				expiry_date: p.documentExpiryDate,
 				issuing_country: p.issuingCountry.trim().toUpperCase(),
 				nationality_country: p.nationalityCountry.trim().toUpperCase(),
@@ -226,6 +236,7 @@ function BookingContent() {
 			},
 		}));
 
+		// If multiple passengers, send all
 		const result = await completeBookingFlow(flightId, passengerPayloads, currency);
 
 		if (!result.success) {
@@ -234,227 +245,205 @@ function BookingContent() {
 			return;
 		}
 
+		// Store booking reference for success page
 		setBookingReference(result.reference);
 		setBookingSuccess(true);
+
+		// Redirect to payment
 		window.location.href = result.paymentUrl;
 	};
 
 	// Show success state while redirecting
 	if (bookingSuccess) {
 		return (
-			<PublicLayout>
-				<Container>
-					<div className="glossy-card p-12 text-center">
-						<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-							<div className="h-8 w-8 animate-pulse rounded-full bg-green-500" />
-						</div>
-						<h2 className="text-2xl font-bold">Redirecting to Payment...</h2>
-						<p className="mt-2 text-muted-foreground">
-							Booking reference: <span className="font-mono font-medium">{bookingReference}</span>
-						</p>
-						<p className="mt-2 text-sm text-muted-foreground">You will be redirected to Paystack to complete your payment.</p>
-						<Loader2 className="mx-auto mt-4 h-6 w-6 animate-spin text-primary" />
+			<div className="space-y-6">
+				<div className="glossy-card p-12 text-center">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
+						<div className="h-8 w-8 animate-pulse rounded-full bg-green-500" />
 					</div>
-				</Container>
-			</PublicLayout>
+					<h2 className="text-2xl font-bold">Redirecting to Payment...</h2>
+					<p className="mt-2 text-muted-foreground">
+						Booking reference: <span className="font-mono font-medium">{bookingReference}</span>
+					</p>
+					<p className="mt-2 text-sm text-muted-foreground">You will be redirected to Paystack to complete your payment.</p>
+					<Loader2 className="mx-auto mt-4 h-6 w-6 animate-spin text-primary" />
+				</div>
+			</div>
 		);
 	}
 
 	if (!flight) {
 		return (
-			<PublicLayout>
-				<Container className="flex min-h-[70vh] items-center justify-center py-28">
-					<div className="text-center">
-						<p className="text-lg font-medium">Flight not found</p>
-						<p className="mt-2 text-sm text-muted-foreground">Please select a flight from the search results.</p>
-						<Link
-							href="/search"
-							className="mt-4 inline-block text-primary hover:underline">
-							Search for flights
-						</Link>
-					</div>
-				</Container>
-			</PublicLayout>
+			<div className="text-center">
+				<p className="text-lg font-medium">Flight not found</p>
+				<p className="mt-2 text-sm text-muted-foreground">Please select a flight from the search results.</p>
+				<Link
+					href="/dashboard/search"
+					className="mt-4 inline-block text-primary hover:underline">
+					Search for flights
+				</Link>
+			</div>
 		);
 	}
 
 	return (
-		<PublicLayout>
-			<div className="page-fade-in py-28">
-				<Container size="md">
-					<Link
-						href={resultsHref}
-						className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
-						<ArrowLeft className="h-4 w-4" />
-						Back to results
-					</Link>
+		<div className="space-y-6">
+			<div>
+				<h1 className="text-2xl font-bold">Complete Your Booking</h1>
+				<p className="mt-2 text-sm text-muted-foreground">Enter passenger details to proceed to secure payment via Paystack.</p>
+			</div>
 
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.4 }}>
-						<h1 className="text-2xl font-bold sm:text-3xl">Complete Your Booking</h1>
-						<p className="mt-2 text-sm text-muted-foreground">Enter passenger details to proceed to secure payment via Paystack.</p>
+			<Link
+				href={resultsHref}
+				className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+				<ArrowLeft className="h-4 w-4" />
+				Back to results
+			</Link>
 
-						{error && <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+			{error && <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 
-						{reservationWarning && (
-							<p className="mt-4 flex items-start gap-2 rounded-lg bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-400">
-								<Clock className="mt-0.5 h-4 w-4 shrink-0" />
-								{reservationWarning}
-							</p>
-						)}
+			{reservationWarning && (
+				<p className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-400">
+					<Clock className="mt-0.5 h-4 w-4 shrink-0" />
+					{reservationWarning}
+				</p>
+			)}
 
-						<div className="mt-8 grid gap-8 lg:grid-cols-3">
-							<div className="space-y-6 lg:col-span-2">
-								{passengers.map((passenger, index) => (
-									<Card
-										key={index}
-										hover={false}>
-										<PassengerForm
-											data={passenger}
-											onChange={(data) => handlePassengerChange(index, data)}
-											onPhoneChange={handlePhoneChange(index)}
-											passengerNumber={index + 1}
-											totalPassengers={passengers.length}
-											showRemove={passengers.length > 1}
-											onRemove={() => {
-												const updated = passengers.filter((_, i) => i !== index);
-												setPassengers(updated);
-											}}
-										/>
-									</Card>
-								))}
+			<div className="grid gap-8 lg:grid-cols-3">
+				<div className="space-y-6 lg:col-span-2">
+					<div className="space-y-6 lg:col-span-2">
+						{passengers.map((passenger, index) => (
+							<Card
+								key={index}
+								hover={false}>
+								<PassengerForm
+									data={passenger}
+									onChange={(data) => handlePassengerChange(index, data)}
+									onPhoneChange={handlePhoneChange(index)}
+									passengerNumber={index + 1}
+									totalPassengers={passengers.length}
+									showRemove={passengers.length > 1}
+									onRemove={() => {
+										const updated = passengers.filter((_, i) => i !== index);
+										setPassengers(updated);
+									}}
+								/>
+							</Card>
+						))}
+					</div>
+				</div>
 
-								<Card hover={false}>
-									<div className="flex items-start gap-3">
-										<CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-										<div>
-											<h3 className="text-lg font-semibold">Secure Payment</h3>
-											<p className="mt-1 text-sm text-muted-foreground">
-												After confirming your details, you&apos;ll be redirected to Paystack to complete payment. No card details are collected on this site.
-											</p>
-										</div>
+				<div>
+					<Card
+						hover={false}
+						className="sticky top-24">
+						<div className="flex items-center gap-3">
+							<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
+								{flight.airlineLogo && !imageError ? (
+									<Image
+										src={flight.airlineLogo}
+										alt={`${flight.airline} logo`}
+										fill
+										className="object-contain p-1.5"
+										onError={() => setImageError(true)}
+									/>
+								) : (
+									<div className="flex h-full w-full items-center justify-center rounded-xl bg-primary/10 text-primary">
+										<Plane className="h-5 w-5" />
 									</div>
-								</Card>
+								)}
 							</div>
-
 							<div>
-								<Card
-									hover={false}
-									className="sticky top-24">
-									<div className="flex items-center gap-3">
-										<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
-											{flight.airlineLogo && !imageError ? (
-												<Image
-													src={flight.airlineLogo}
-													alt={`${flight.airline} logo`}
-													fill
-													className="object-contain p-1.5"
-													onError={() => setImageError(true)}
-												/>
-											) : (
-												<div className="flex h-full w-full items-center justify-center rounded-xl bg-primary/10 text-primary">
-													<Plane className="h-5 w-5" />
-												</div>
-											)}
-										</div>
-										<div>
-											<p className="font-semibold">{flight.airline}</p>
-											<p className="text-sm text-muted-foreground">
-												{flight.from} → {flight.to}
-											</p>
-										</div>
-									</div>
-
-									<div className="mt-4 space-y-2 text-sm">
-										<div className="flex justify-between">
-											<span className="text-muted-foreground">Departure</span>
-											<span>{flight.departure}</span>
-										</div>
-										<div className="flex justify-between">
-											<span className="text-muted-foreground">Arrival</span>
-											<span>{flight.arrival}</span>
-										</div>
-										<div className="flex justify-between">
-											<span className="text-muted-foreground">Duration</span>
-											<span>{flight.duration}</span>
-										</div>
-										<div className="flex justify-between">
-											<span className="text-muted-foreground">Stops</span>
-											<span>{getFlightStops(flight) === 0 ? 'Non-stop' : getFlightStops(flight)}</span>
-										</div>
-										{departure && (
-											<div className="flex justify-between">
-												<span className="text-muted-foreground">Date</span>
-												<span>{departure}</span>
-											</div>
-										)}
-										<div className="flex justify-between">
-											<span className="text-muted-foreground">Passengers</span>
-											<span>{passengers.length}</span>
-										</div>
-									</div>
-
-									<div className="mt-4 border-t border-border pt-4">
-										{isConfirmingPrice ? (
-											<p className="flex items-center gap-2 text-sm text-muted-foreground">
-												<Loader2 className="h-4 w-4 animate-spin" />
-												Confirming latest price...
-											</p>
-										) : (
-											<>
-												<div className="flex justify-between text-sm">
-													<span className="text-muted-foreground">
-														{formatFlightPrice(unitPrice, currency)} × {passengers.length}
-													</span>
-													<span>{formatFlightPrice(total, currency)}</span>
-												</div>
-												<div className="mt-2 flex justify-between text-lg font-bold">
-													<span>Total</span>
-													<span className="text-primary">{formatFlightPrice(total, currency)}</span>
-												</div>
-											</>
-										)}
-									</div>
-
-									<Button
-										className="mt-6 w-full"
-										size="lg"
-										disabled={isProcessing || isConfirmingPrice}
-										onClick={handleSubmit}>
-										{isProcessing ? (
-											<>
-												<Loader2 className="h-4 w-4 animate-spin" />
-												Processing booking...
-											</>
-										) : (
-											'Proceed to Payment'
-										)}
-									</Button>
-
-									<p className="mt-3 text-center text-xs text-muted-foreground">Reservation held for 15 minutes after booking</p>
-								</Card>
+								<p className="font-semibold">{flight.airline}</p>
+								<p className="text-sm text-muted-foreground">
+									{flight.from} → {flight.to}
+								</p>
 							</div>
 						</div>
-					</motion.div>
-				</Container>
+
+						<div className="mt-4 space-y-2 text-sm">
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Departure</span>
+								<span>{flight.departure}</span>
+							</div>
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Arrival</span>
+								<span>{flight.arrival}</span>
+							</div>
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Duration</span>
+								<span>{flight.duration}</span>
+							</div>
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Stops</span>
+								<span>{getFlightStops(flight) === 0 ? 'Non-stop' : getFlightStops(flight)}</span>
+							</div>
+							{departure && (
+								<div className="flex justify-between">
+									<span className="text-muted-foreground">Date</span>
+									<span>{departure}</span>
+								</div>
+							)}
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Passengers</span>
+								<span>{passengers.length}</span>
+							</div>
+						</div>
+
+						<div className="mt-4 border-t border-border pt-4">
+							{isConfirmingPrice ? (
+								<p className="flex items-center gap-2 text-sm text-muted-foreground">
+									<Loader2 className="h-4 w-4 animate-spin" />
+									Confirming latest price...
+								</p>
+							) : (
+								<>
+									<div className="flex justify-between text-sm">
+										<span className="text-muted-foreground">
+											{formatFlightPrice(unitPrice, currency)} × {passengers.length}
+										</span>
+										<span>{formatFlightPrice(total, currency)}</span>
+									</div>
+									<div className="mt-2 flex justify-between text-lg font-bold">
+										<span>Total</span>
+										<span className="text-primary">{formatFlightPrice(total, currency)}</span>
+									</div>
+								</>
+							)}
+						</div>
+
+						<Button
+							className="mt-6 w-full"
+							size="lg"
+							disabled={isProcessing || isConfirmingPrice}
+							onClick={handleSubmit}>
+							{isProcessing ? (
+								<>
+									<Loader2 className="h-4 w-4 animate-spin" />
+									Processing booking...
+								</>
+							) : (
+								'Proceed to Payment'
+							)}
+						</Button>
+
+						<p className="mt-3 text-center text-xs text-muted-foreground">Reservation held for 15 minutes after booking</p>
+					</Card>
+				</div>
 			</div>
-		</PublicLayout>
+		</div>
 	);
 }
 
-export default function BookingPage() {
+export default function DashboardConfirmBookingPage() {
 	return (
 		<Suspense
 			fallback={
-				<PublicLayout>
-					<Container className="flex min-h-[80vh] items-center justify-center py-20">
-						<Loader2 className="h-8 w-8 animate-spin text-primary" />
-					</Container>
-				</PublicLayout>
+				<div className="flex min-h-[80vh] items-center justify-center py-20">
+					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				</div>
 			}>
-			<BookingContent />
+			<ConfirmBookingContent />
 		</Suspense>
 	);
 }

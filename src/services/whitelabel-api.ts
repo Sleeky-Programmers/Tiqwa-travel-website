@@ -17,7 +17,12 @@ import type {
 	WhitelabelResponse,
 } from '@/types/whitelabel';
 
-export const API_BASE = '/api/proxy';
+// Determine which API base to use
+const isServer = typeof window === 'undefined';
+
+// During build (server-side), use the real API URL directly
+// During client-side, use the proxy to avoid CORS
+export const API_BASE = isServer ? process.env.TIQWA_API_BASE_URL ?? 'https://sandbox.premiumwhitelabel.com/api/v2' : '/api/proxy';
 
 // This is used by the proxy route
 export const TIQWA_API_BASE_URL = process.env.TIQWA_API_BASE_URL ?? 'https://sandbox.premiumwhitelabel.com/api/v2';
@@ -58,6 +63,10 @@ async function fetchAPI<T>(endpoint: string, options?: FetchOptions): Promise<T>
 
 async function fetchAPIResult<T>(endpoint: string, options?: FetchOptions): Promise<{ success: true; data: T } | { success: false; error: string }> {
 	const { next, ...fetchOptions } = options ?? {};
+
+	if (!endpoint || endpoint === '') {
+		return { success: false, error: 'Empty endpoint provided' };
+	}
 
 	try {
 		const response = await fetch(`${API_BASE}${endpoint}`, {

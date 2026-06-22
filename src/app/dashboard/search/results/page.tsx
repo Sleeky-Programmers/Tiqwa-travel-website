@@ -7,8 +7,8 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { FlightCard } from '@/components/features/FlightCard';
-import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption } from '@/services/flightSearch';
 import {
@@ -77,7 +77,6 @@ function paramsMatchCache(
 	);
 }
 
-// Pagination constants - set to a large number to effectively show all in scroll
 const FLIGHTS_PER_PAGE = 100;
 
 function ResultsContent() {
@@ -101,7 +100,6 @@ function ResultsContent() {
 	const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
 	const [showFilters, setShowFilters] = useState(false);
 
-	// Pagination state
 	const [currentPage, setCurrentPage] = useState(1);
 
 	const loadFlights = useCallback(async () => {
@@ -165,7 +163,6 @@ function ResultsContent() {
 		return sortFlights(filtered, sortBy);
 	}, [baseFlights, maxPrice, stopsFilter, selectedAirlines, sortBy]);
 
-	// Pagination calculations
 	const totalPages = Math.ceil(filteredFlights.length / FLIGHTS_PER_PAGE);
 	const paginatedFlights = useMemo(() => {
 		const start = (currentPage - 1) * FLIGHTS_PER_PAGE;
@@ -276,198 +273,188 @@ function ResultsContent() {
 	);
 
 	return (
-		<PublicLayout>
-			<div className="page-fade-in py-28">
-				<Container>
-					<Link
-						href="/search"
-						className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
-						<ArrowLeft className="h-4 w-4" />
-						Modify search
-					</Link>
+		<div className="space-y-6">
+			<div>
+				<h1 className="text-2xl font-bold">Flight Results</h1>
+				<p className="text-muted-foreground">
+					{from && to ? `${from} → ${to}` : 'Search for flights'}
+					{departure && ` · ${departure}`}
+					{returnDate && ` · return ${returnDate}`}
+					{tripType && ` · ${tripType}`}
+					{` · ${totalPassengers} passenger${totalPassengers > 1 ? 's' : ''}`}
+					{` · ${CABIN_LABELS[cabin]}`}
+				</p>
+			</div>
 
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.4 }}>
-						<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-							<div>
-								<h1 className="text-2xl font-bold sm:text-3xl">Flight Results</h1>
-								<p className="mt-1 text-muted-foreground">
-									{from && to ? `${from} → ${to}` : 'Search for flights'}
-									{departure && ` · ${departure}`}
-									{returnDate && ` · return ${returnDate}`}
-									{tripType && ` · ${tripType}`}
-									{` · ${totalPassengers} passenger${totalPassengers > 1 ? 's' : ''}`}
-									{` · ${CABIN_LABELS[cabin]}`}
+			<Link
+				href="/dashboard/search"
+				className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+				<ArrowLeft className="h-4 w-4" />
+				Modify search
+			</Link>
+
+			{error && (
+				<div className="flex flex-col gap-3 rounded-xl bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+					<p className="text-sm text-destructive">{error}</p>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={loadFlights}>
+						Retry search
+					</Button>
+				</div>
+			)}
+
+			<div className="flex flex-wrap items-center justify-between gap-4">
+				<div className="flex items-center gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						className="lg:hidden"
+						onClick={() => setShowFilters(!showFilters)}>
+						<SlidersHorizontal className="h-4 w-4" />
+						Filters
+					</Button>
+					<SlidersHorizontal className="hidden h-4 w-4 text-muted-foreground lg:block" />
+				</div>
+				<select
+					value={sortBy}
+					onChange={(e) => handleSortChange(e.target.value as SortOption)}
+					className="rounded-xl border border-input bg-white/60 px-3 py-2 text-sm outline-none focus:border-primary dark:bg-white/5">
+					<option value="price">Price: Low to High</option>
+					<option value="duration">Duration</option>
+					<option value="departure">Departure Time</option>
+				</select>
+			</div>
+
+			<div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+				<aside className="hidden lg:block">{filterPanel}</aside>
+
+				<AnimatePresence>
+					{showFilters && (
+						<motion.div
+							initial={{ opacity: 0, height: 0 }}
+							animate={{ opacity: 1, height: 'auto' }}
+							exit={{ opacity: 0, height: 0 }}
+							className="overflow-hidden lg:hidden">
+							<div className="relative mb-4">
+								<button
+									onClick={() => setShowFilters(false)}
+									className="absolute right-3 top-3 rounded-lg p-1 hover:bg-muted">
+									<X className="h-4 w-4" />
+								</button>
+								{filterPanel}
+							</div>
+						</motion.div>
+					)}
+				</AnimatePresence>
+
+				<div id="results-section">
+					{isLoading ? (
+						<Card
+							hover={false}
+							className="p-12 text-center">
+							<div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+							<p className="text-muted-foreground">Searching for flights...</p>
+						</Card>
+					) : paginatedFlights.length === 0 ? (
+						<Card
+							hover={false}
+							className="p-12 text-center">
+							<p className="text-lg font-medium">No flights found</p>
+							<p className="mt-2 text-sm text-muted-foreground">Try adjusting your search or filters. Use airport codes like LOS or DXB.</p>
+							<Link
+								href="/dashboard/search"
+								className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+								Search again
+							</Link>
+						</Card>
+					) : (
+						<>
+							<div className="mb-3 flex items-center justify-between">
+								<p className="text-sm text-muted-foreground">
+									{filteredFlights.length} flight{filteredFlights.length > 1 ? 's' : ''} found
 								</p>
 							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									className="lg:hidden"
-									onClick={() => setShowFilters(!showFilters)}>
-									<SlidersHorizontal className="h-4 w-4" />
-									Filters
-								</Button>
-								<SlidersHorizontal className="hidden h-4 w-4 text-muted-foreground lg:block" />
-								<select
-									value={sortBy}
-									onChange={(e) => handleSortChange(e.target.value as SortOption)}
-									className="rounded-xl border border-input bg-white/60 px-3 py-2 text-sm outline-none focus:border-primary dark:bg-white/5">
-									<option value="price">Price: Low to High</option>
-									<option value="duration">Duration</option>
-									<option value="departure">Departure Time</option>
-								</select>
-							</div>
-						</div>
 
-						{error && (
-							<div className="mb-6 flex flex-col gap-3 rounded-xl bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-								<p className="text-sm text-destructive">{error}</p>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={loadFlights}>
-									Retry search
-								</Button>
-							</div>
-						)}
-
-						<div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-							<aside className="hidden lg:block">{filterPanel}</aside>
-
-							<AnimatePresence>
-								{showFilters && (
+							<div className="h-[500px] overflow-y-auto pr-2 space-y-4 custom-scroll">
+								{paginatedFlights.map((flight, i) => (
 									<motion.div
-										initial={{ opacity: 0, height: 0 }}
-										animate={{ opacity: 1, height: 'auto' }}
-										exit={{ opacity: 0, height: 0 }}
-										className="overflow-hidden lg:hidden">
-										<div className="relative mb-4">
-											<button
-												onClick={() => setShowFilters(false)}
-												className="absolute right-3 top-3 rounded-lg p-1 hover:bg-muted">
-												<X className="h-4 w-4" />
-											</button>
-											{filterPanel}
-										</div>
+										key={flight.id}
+										initial={{ opacity: 0, y: 15 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.3, delay: i * 0.05 }}>
+										<FlightCard
+											flight={flight}
+											passengers={totalPassengers}
+											departure={departure}
+										/>
 									</motion.div>
-								)}
-							</AnimatePresence>
-
-							<div id="results-section">
-								{isLoading ? (
-									<div className="glossy-card p-12 text-center">
-										<div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-										<p className="text-muted-foreground">Searching for flights...</p>
-									</div>
-								) : paginatedFlights.length === 0 ? (
-									<div className="glossy-card p-12 text-center">
-										<p className="text-lg font-medium">No flights found</p>
-										<p className="mt-2 text-sm text-muted-foreground">Try adjusting your search or filters. Use airport codes like LOS or DXB.</p>
-										<Link
-											href="/search"
-											className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
-											Search again
-										</Link>
-									</div>
-								) : (
-									<>
-										<div className="mb-3 flex items-center justify-between">
-											<p className="text-sm text-muted-foreground">
-												{filteredFlights.length} flight{filteredFlights.length > 1 ? 's' : ''} found
-											</p>
-										</div>
-
-										{/* Fixed height scrollable container - 500px */}
-										<div className="h-[500px] overflow-y-auto pr-2 space-y-4 custom-scroll">
-											{paginatedFlights.map((flight, i) => (
-												<motion.div
-													key={flight.id}
-													initial={{ opacity: 0, y: 15 }}
-													animate={{ opacity: 1, y: 0 }}
-													transition={{ duration: 0.3, delay: i * 0.05 }}>
-													<FlightCard
-														isPublic
-														flight={flight}
-														departure={departure}
-														passengers={totalPassengers}
-													/>
-												</motion.div>
-											))}
-										</div>
-
-										{/* Pagination Controls - only show if more than FLIGHTS_PER_PAGE */}
-										{totalPages > 1 && (
-											<div className="mt-6 flex items-center justify-center gap-2 pt-4 border-t border-border">
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => goToPage(currentPage - 1)}
-													disabled={currentPage === 1}
-													className="h-9 w-9 p-0">
-													<ChevronLeft className="h-4 w-4" />
-												</Button>
-
-												<div className="flex items-center gap-1">
-													{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-														let pageNum: number;
-														if (totalPages <= 5) {
-															pageNum = i + 1;
-														} else if (currentPage <= 3) {
-															pageNum = i + 1;
-														} else if (currentPage >= totalPages - 2) {
-															pageNum = totalPages - 4 + i;
-														} else {
-															pageNum = currentPage - 2 + i;
-														}
-
-														return (
-															<Button
-																key={pageNum}
-																variant={currentPage === pageNum ? 'default' : 'outline'}
-																size="sm"
-																onClick={() => goToPage(pageNum)}
-																className="h-9 w-9 p-0">
-																{pageNum}
-															</Button>
-														);
-													})}
-												</div>
-
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => goToPage(currentPage + 1)}
-													disabled={currentPage === totalPages}
-													className="h-9 w-9 p-0">
-													<ChevronRight className="h-4 w-4" />
-												</Button>
-											</div>
-										)}
-									</>
-								)}
+								))}
 							</div>
-						</div>
-					</motion.div>
-				</Container>
+
+							{totalPages > 1 && (
+								<div className="mt-6 flex items-center justify-center gap-2 pt-4 border-t border-border">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => goToPage(currentPage - 1)}
+										disabled={currentPage === 1}
+										className="h-9 w-9 p-0">
+										<ChevronLeft className="h-4 w-4" />
+									</Button>
+
+									<div className="flex items-center gap-1">
+										{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+											let pageNum: number;
+											if (totalPages <= 5) {
+												pageNum = i + 1;
+											} else if (currentPage <= 3) {
+												pageNum = i + 1;
+											} else if (currentPage >= totalPages - 2) {
+												pageNum = totalPages - 4 + i;
+											} else {
+												pageNum = currentPage - 2 + i;
+											}
+
+											return (
+												<Button
+													key={pageNum}
+													variant={currentPage === pageNum ? 'default' : 'outline'}
+													size="sm"
+													onClick={() => goToPage(pageNum)}
+													className="h-9 w-9 p-0">
+													{pageNum}
+												</Button>
+											);
+										})}
+									</div>
+
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => goToPage(currentPage + 1)}
+										disabled={currentPage === totalPages}
+										className="h-9 w-9 p-0">
+										<ChevronRight className="h-4 w-4" />
+									</Button>
+								</div>
+							)}
+						</>
+					)}
+				</div>
 			</div>
-		</PublicLayout>
+		</div>
 	);
 }
 
-export default function ResultsPage() {
+export default function DashboardResultsPage() {
 	return (
 		<Suspense
 			fallback={
-				<PublicLayout>
-					<Container className="py-12">
-						<Loader2 className="h-8 w-8 animate-spin text-primary" />
-						<p className="text-muted-foreground">Loading results...</p>
-					</Container>
-				</PublicLayout>
+				<div className="flex items-center justify-center py-20">
+					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				</div>
 			}>
 			<ResultsContent />
 		</Suspense>

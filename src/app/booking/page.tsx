@@ -13,10 +13,10 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import {
-	completeBookingFlow,
 	confirmFlightPrice,
 	formatFlightPrice,
 	getFlightFromCache,
+	initiateBookingFlow,
 	isBookingReservationExpired,
 	readActiveBooking,
 	readCachedFlightSearch,
@@ -219,6 +219,7 @@ function BookingContent() {
 			documents: {
 				number: p.documentNumber.trim(),
 				expiry_date: p.documentExpiryDate,
+				issuing_date: p.documentIssueDate,
 				issuing_country: p.issuingCountry.trim().toUpperCase(),
 				nationality_country: p.nationalityCountry.trim().toUpperCase(),
 				document_type: p.documentType,
@@ -226,7 +227,8 @@ function BookingContent() {
 			},
 		}));
 
-		const result = await completeBookingFlow(flightId, passengerPayloads, currency);
+		// Use the new initiateBookingFlow function
+		const result = await initiateBookingFlow(flightId, passengerPayloads, currency);
 
 		if (!result.success) {
 			setError(result.error);

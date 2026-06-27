@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Clock, CreditCard, Loader2, Plane, UserMinus, UserPlus } from 'lucide-react';
+import { ArrowLeft, Clock, CreditCard, Loader2, Plane } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -11,10 +11,10 @@ import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import {
-	completeBookingFlow,
 	confirmFlightPrice,
 	formatFlightPrice,
 	getFlightFromCache,
+	initiateBookingFlow,
 	isBookingReservationExpired,
 	readActiveBooking,
 	readCachedFlightSearch,
@@ -153,7 +153,7 @@ function ConfirmBookingContent() {
 	const currency = flight?.currency ?? 'NGN';
 	const total = unitPrice * passengersCount;
 
-	const resultsHref = useMemo(() => (flight ? buildResultsHref(flight, departure, passengersCount) : '/dashboard/search'), [flight, departure, passengers]);
+	const resultsHref = useMemo(() => (flight ? buildResultsHref(flight, departure, passengersCount) : '/dashboard/search'), [flight, departure, passengersCount]);
 
 	const confirmPrice = useCallback(async () => {
 		if (!flightId) {
@@ -236,8 +236,8 @@ function ConfirmBookingContent() {
 			},
 		}));
 
-		// If multiple passengers, send all
-		const result = await completeBookingFlow(flightId, passengerPayloads, currency);
+		// Use the new initiateBookingFlow function
+		const result = await initiateBookingFlow(flightId, passengerPayloads, currency);
 
 		if (!result.success) {
 			setError(result.error);
@@ -311,26 +311,24 @@ function ConfirmBookingContent() {
 
 			<div className="grid gap-8 lg:grid-cols-3">
 				<div className="space-y-6 lg:col-span-2">
-					<div className="space-y-6 lg:col-span-2">
-						{passengers.map((passenger, index) => (
-							<Card
-								key={index}
-								hover={false}>
-								<PassengerForm
-									data={passenger}
-									onChange={(data) => handlePassengerChange(index, data)}
-									onPhoneChange={handlePhoneChange(index)}
-									passengerNumber={index + 1}
-									totalPassengers={passengers.length}
-									showRemove={passengers.length > 1}
-									onRemove={() => {
-										const updated = passengers.filter((_, i) => i !== index);
-										setPassengers(updated);
-									}}
-								/>
-							</Card>
-						))}
-					</div>
+					{passengers.map((passenger, index) => (
+						<Card
+							key={index}
+							hover={false}>
+							<PassengerForm
+								data={passenger}
+								onChange={(data) => handlePassengerChange(index, data)}
+								onPhoneChange={handlePhoneChange(index)}
+								passengerNumber={index + 1}
+								totalPassengers={passengers.length}
+								showRemove={passengers.length > 1}
+								onRemove={() => {
+									const updated = passengers.filter((_, i) => i !== index);
+									setPassengers(updated);
+								}}
+							/>
+						</Card>
+					))}
 				</div>
 
 				<div>

@@ -126,14 +126,108 @@ export interface ConfirmPriceData {
 }
 
 export interface PaymentInitiateData {
-	payment_url: string;
+	access_code: string; // e.g., "9cwwmsgvek3rhed"
+	tranx_reference: string; // e.g., "529368819863"
+	authorization_url: string; // e.g., "https://checkout.paystack.com/..."
+}
+
+export interface VerifyPaymentData {
+	status: number; // 200 = success
+	service: string; // "flight"
+	booking_id: string;
+	flight_id: string;
+}
+
+export interface VerifyPaymentResponse {
+	success: boolean;
+	data: VerifyPaymentData;
+	message: string;
+}
+
+export interface FinalizeBookingData {
+	reference: string; // e.g., "TW-5IKU6JOE18"
+	booking_id: string; // e.g., "502442798976"
+	flight_id: string; // e.g., "mxa_383f7ae8-fd66-4f2b-98ba-6a85de6a7c0a"
+	status: string; // e.g., "BOOKED"
+}
+
+export interface FinalizeBookingResponse {
+	success: boolean;
+	data: FinalizeBookingData;
+	message: string;
 }
 
 export interface BookingDetails {
 	reference: string;
-	status?: string;
-	amount?: number;
-	currency?: string;
-	passengers?: unknown[];
-	[key: string]: unknown;
+	booking_id: string;
+	flight_id: string;
+	user_id: number;
+	amount: string;
+	payable_amount: string;
+	currency: string;
+	status: string;
+	created_at: string;
+	expires_at: string;
+	outbound: OutboundSegment[];
+	inbound: OutboundSegment[] | null;
+	passengers: Passenger[];
+	pricing: Pricing;
+	pnr: string;
+	total_duration: number;
+}
+
+export interface OutboundSegment {
+	flight_number: string;
+	airport_from: string;
+	airport_to: string;
+	departure_time: string;
+	arrival_time: string;
+	duration: number;
+	cabin_type: string;
+	baggage: string;
+	airline_details: {
+		name: string;
+		code: string;
+		logo: string;
+	};
+	airport_from_details: {
+		city: string;
+		name: string;
+		country: string;
+		iata_code: string;
+	};
+	airport_to_details: {
+		city: string;
+		name: string;
+		country: string;
+		iata_code: string;
+	};
+}
+
+export interface Passenger {
+	first_name: string;
+	last_name: string;
+	middle_name: string | null;
+	email: string;
+	phone_number: string;
+	dob: string;
+	gender: string;
+	title: string;
+	passenger_type: string;
+	documents: {
+		number: string;
+		document_type: string;
+		issuing_country: string;
+		nationality_country: string;
+		expiry_date: string;
+		issuing_date: string;
+		holder: boolean;
+	};
+}
+
+export interface Pricing {
+	base_fare: number;
+	tax: number;
+	markup: number | null;
+	payable: number;
 }

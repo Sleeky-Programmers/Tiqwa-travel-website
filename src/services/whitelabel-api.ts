@@ -15,6 +15,8 @@ import type {
 	Airport,
 	WhitelabelFlightItem,
 	WhitelabelResponse,
+	VerifyPaymentData,
+	FinalizeBookingData,
 } from '@/types/whitelabel';
 
 // Determine which API base to use
@@ -69,8 +71,22 @@ async function fetchAPIResult<T>(endpoint: string, options?: FetchOptions): Prom
 	}
 
 	try {
+		// Get the auth token
+		const token = getAccessToken();
+
+		// Build headers
+		const headers: Record<string, string> = {
+			Accept: 'application/json',
+			...(fetchOptions.headers as Record<string, string>),
+		};
+
+		// Add Authorization header if token exists
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+
 		const response = await fetch(`${API_BASE}${endpoint}`, {
-			headers: { Accept: 'application/json', ...fetchOptions.headers },
+			headers,
 			...fetchOptions,
 			...(typeof window === 'undefined' ? { next: next ?? { revalidate: 300 } } : {}),
 		});
@@ -91,9 +107,19 @@ async function fetchAPIResult<T>(endpoint: string, options?: FetchOptions): Prom
 }
 
 function postJSON<T>(endpoint: string, body: unknown): Promise<{ success: true; data: T } | { success: false; error: string }> {
+	const token = getAccessToken();
+
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json',
+	};
+
+	if (token) {
+		headers['Authorization'] = `Bearer ${token}`;
+	}
+
 	return fetchAPIResult<T>(endpoint, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers,
 		body: JSON.stringify(body),
 		cache: 'no-store',
 	});
@@ -429,15 +455,25 @@ export async function reserveBooking(bookingId: string, flightId: string) {
 }
 
 export async function initiatePayment(bookingId: string, flightId: string, options?: { currency?: string }) {
-	const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/payment/callback` : undefined;
-
 	return postJSON<PaymentInitiateData>('/payment/flight/initiate', {
 		flight_id: flightId,
 		booking_id: bookingId,
 		payment_method: 'ONLINE_TRANSFER',
 		payment_gateway: 'paystack',
 		currency: options?.currency ?? 'NGN',
-		...(callbackUrl ? { callback_url: callbackUrl } : {}),
+	});
+}
+
+export async function verifyPayment(reference: string, trxref: string) {
+	return fetchAPIResult<VerifyPaymentData>(`/payment/callback?reference=${reference}&trxref=${trxref}`, {
+		cache: 'no-store',
+	});
+}
+
+export async function finalizeBooking(bookingId: string, flightId: string) {
+	return postJSON<FinalizeBookingData>('/flight/book', {
+		booking_id: bookingId,
+		flight_id: flightId,
 	});
 }
 
@@ -447,7 +483,7 @@ export async function getBookingDetails(reference: string) {
 	});
 }
 
-export async function completeBookingFlow(
+export async function initiateBookingFlow(
 	flightId: string,
 	passengers: BookingPassengerPayload[],
 	currency = 'NGN'
@@ -457,9 +493,11 @@ export async function completeBookingFlow(
 			paymentUrl: string;
 			bookingId: string;
 			reference: string;
+			tranxReference: string;
 	  }
 	| { success: false; error: string }
 > {
+	// 1. Create booking
 	const createResult = await createBooking(flightId, passengers);
 	if (!createResult.success) {
 		return createResult;
@@ -467,26 +505,23 @@ export async function completeBookingFlow(
 
 	const { booking_id, reference } = createResult.data;
 	saveActiveBooking({ bookingId: booking_id, reference, flightId });
+	console.log({ bookingId: booking_id, reference, flightId });
 
-	const reserveResult = await reserveBooking(booking_id, flightId);
-	if (!reserveResult.success) {
-		return reserveResult;
-	}
-
+	// 2. Initiate payment
 	const paymentResult = await initiatePayment(booking_id, flightId, { currency });
+	console.log({ paymentResult });
 	if (!paymentResult.success) {
+		console.log({ paymentResult, success: false });
 		return paymentResult;
 	}
 
-	if (!paymentResult.data.payment_url) {
-		return { success: false, error: 'Payment URL not returned by gateway' };
-	}
-
+	console.log({ authorization_url: paymentResult.data.authorization_url });
 	return {
-		success: true,
-		paymentUrl: paymentResult.data.payment_url,
-		bookingId: booking_id,
 		reference,
+		success: true,
+		bookingId: booking_id,
+		tranxReference: paymentResult.data.tranx_reference,
+		paymentUrl: paymentResult.data.authorization_url,
 	};
 }
 
@@ -505,16 +540,74 @@ export function cacheSelectedFlight(flight: Flight): void {
 }
 
 export interface FlightBooking {
+	// Core identifiers
 	id: string;
 	reference: string;
+	booking_id: string;
+	flight_id: string;
+	user_id: number;
+
+	// Flight details
 	from: string;
+	fromCode: string;
 	to: string;
+	toCode: string;
 	departureDate: string;
+	arrivalDate: string;
 	returnDate?: string;
+
+	// Pricing
 	amount: number;
 	currency: string;
-	status: 'confirmed' | 'pending' | 'cancelled';
-	cabin: string;
+	payable_amount: number;
+
+	// Status
+	status: 'BOOKED' | 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'RESERVED';
+	ticket_issued: boolean;
+
+	// Passenger info
+	passengers: Array<{
+		first_name: string;
+		last_name: string;
+		email: string;
+		phone_number: string;
+		dob: string;
+		gender: string;
+		passenger_type: string;
+	}>;
+
+	// Flight segments
+	outbound: Array<{
+		flight_number: string;
+		airport_from: string;
+		airport_to: string;
+		departure_time: string;
+		arrival_time: string;
+		duration: number;
+		cabin_type: string;
+		airline: string;
+		airline_code: string;
+		airline_logo?: string;
+	}>;
+	inbound?: Array<{
+		flight_number: string;
+		airport_from: string;
+		airport_to: string;
+		departure_time: string;
+		arrival_time: string;
+		duration: number;
+		cabin_type: string;
+		airline: string;
+		airline_code: string;
+		airline_logo?: string;
+	}>;
+
+	// Metadata
+	created_at: string;
+	expires_at: string;
+	total_duration: number;
+	stops: number;
+	booking_date: string;
 }
 
 export interface RewardsData {
@@ -526,20 +619,128 @@ export interface RewardsData {
 }
 
 function mapFlightBooking(raw: Record<string, unknown>): FlightBooking {
-	const statusRaw = String(raw.status ?? 'pending').toLowerCase();
-	const status: FlightBooking['status'] = statusRaw === 'confirmed' || statusRaw === 'cancelled' ? statusRaw : 'pending';
+	const outboundSegments = Array.isArray(raw.outbound) ? raw.outbound : [];
+	const inboundSegments = Array.isArray(raw.inbound) ? raw.inbound : [];
+	const passengers = Array.isArray(raw.passengers) ? raw.passengers : [];
+
+	const firstSegment = outboundSegments[0] as Record<string, unknown> | undefined;
+	const lastSegment = outboundSegments[outboundSegments.length - 1] as Record<string, unknown> | undefined;
+
+	// Type-safe helpers
+	const getString = (obj: Record<string, unknown> | undefined, key: string): string => {
+		return obj && typeof obj[key] === 'string' ? (obj[key] as string) : '';
+	};
+
+	const getNumber = (obj: Record<string, unknown> | undefined, key: string): number => {
+		return obj && typeof obj[key] === 'number' ? (obj[key] as number) : 0;
+	};
+
+	const getAirportCity = (segment: Record<string, unknown> | undefined): string => {
+		if (!segment) return '';
+		const details = segment.airport_from_details as Record<string, unknown> | undefined;
+		return (details?.city as string) || '';
+	};
+
+	const getAirportToCity = (segment: Record<string, unknown> | undefined): string => {
+		if (!segment) return '';
+		const details = segment.airport_to_details as Record<string, unknown> | undefined;
+		return (details?.city as string) || '';
+	};
+
+	const getAirlineName = (segment: Record<string, unknown> | undefined): string => {
+		if (!segment) return '';
+		const details = segment.airline_details as Record<string, unknown> | undefined;
+		return (details?.name as string) || '';
+	};
+
+	const getAirlineCode = (segment: Record<string, unknown> | undefined): string => {
+		if (!segment) return '';
+		const details = segment.airline_details as Record<string, unknown> | undefined;
+		return (details?.code as string) || '';
+	};
+
+	const getAirlineLogo = (segment: Record<string, unknown> | undefined): string => {
+		if (!segment) return '';
+		const details = segment.airline_details as Record<string, unknown> | undefined;
+		return (details?.logo as string) || '';
+	};
+
+	const statusRaw = String(raw.status ?? 'pending').toUpperCase();
+	const statusMap: Record<string, FlightBooking['status']> = {
+		BOOKED: 'BOOKED',
+		CONFIRMED: 'CONFIRMED',
+		PENDING: 'PENDING',
+		CANCELLED: 'CANCELLED',
+		RESERVED: 'RESERVED',
+	};
+	const status = statusMap[statusRaw] || 'PENDING';
 
 	return {
 		id: String(raw.id ?? raw.booking_id ?? raw.reference ?? ''),
 		reference: String(raw.reference ?? raw.booking_reference ?? ''),
-		from: String(raw.from ?? raw.origin ?? raw.departure_city ?? raw.airport_from ?? ''),
-		to: String(raw.to ?? raw.destination ?? raw.arrival_city ?? raw.airport_to ?? ''),
-		departureDate: String(raw.departureDate ?? raw.departure_date ?? raw.departure ?? ''),
+		booking_id: String(raw.booking_id ?? ''),
+		flight_id: String(raw.flight_id ?? ''),
+		user_id: Number(raw.user_id ?? 0),
+
+		from: getAirportCity(firstSegment),
+		fromCode: getString(firstSegment, 'airport_from'),
+		to: getAirportToCity(lastSegment),
+		toCode: getString(lastSegment, 'airport_to'),
+		departureDate: getString(firstSegment, 'departure_time') || String(raw.departureDate ?? raw.departure_date ?? raw.departure ?? ''),
+		arrivalDate: getString(lastSegment, 'arrival_time') || String(raw.arrivalDate ?? raw.arrival_date ?? raw.arrival ?? ''),
 		returnDate: raw.return_date ? String(raw.return_date) : undefined,
-		amount: Number(raw.amount ?? raw.total ?? raw.payable ?? 0),
+
+		amount: Number(raw.amount ?? raw.total ?? 0),
 		currency: String(raw.currency ?? 'NGN'),
+		payable_amount: Number(raw.payable_amount ?? raw.amount ?? 0),
+
 		status,
-		cabin: String(raw.cabin ?? raw.cabin_class ?? 'economy'),
+		ticket_issued: Boolean(raw.ticket_issued),
+
+		passengers: passengers.map((p: Record<string, unknown>) => ({
+			first_name: String(p.first_name ?? ''),
+			last_name: String(p.last_name ?? ''),
+			email: String(p.email ?? ''),
+			phone_number: String(p.phone_number ?? ''),
+			dob: String(p.dob ?? ''),
+			gender: String(p.gender ?? ''),
+			passenger_type: String(p.passenger_type ?? 'adult'),
+		})),
+
+		outbound: outboundSegments.map((seg: Record<string, unknown>) => ({
+			flight_number: String(seg.flight_number ?? ''),
+			airport_from: String(seg.airport_from ?? ''),
+			airport_to: String(seg.airport_to ?? ''),
+			departure_time: String(seg.departure_time ?? ''),
+			arrival_time: String(seg.arrival_time ?? ''),
+			duration: Number(seg.duration ?? 0),
+			cabin_type: String(seg.cabin_type ?? 'economy'),
+			airline: getAirlineName(seg),
+			airline_code: getAirlineCode(seg),
+			airline_logo: getAirlineLogo(seg),
+		})),
+
+		inbound:
+			inboundSegments.length > 0
+				? inboundSegments.map((seg: Record<string, unknown>) => ({
+						flight_number: String(seg.flight_number ?? ''),
+						airport_from: String(seg.airport_from ?? ''),
+						airport_to: String(seg.airport_to ?? ''),
+						departure_time: String(seg.departure_time ?? ''),
+						arrival_time: String(seg.arrival_time ?? ''),
+						duration: Number(seg.duration ?? 0),
+						cabin_type: String(seg.cabin_type ?? 'economy'),
+						airline: getAirlineName(seg),
+						airline_code: getAirlineCode(seg),
+						airline_logo: getAirlineLogo(seg),
+				  }))
+				: undefined,
+
+		created_at: String(raw.created_at ?? ''),
+		expires_at: String(raw.expires_at ?? ''),
+		total_duration: Number(raw.total_duration ?? 0),
+		stops: Number(raw.outbound_stops ?? 0),
+		booking_date: String(raw.created_at ?? ''),
 	};
 }
 

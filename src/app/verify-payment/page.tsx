@@ -14,28 +14,56 @@ type VerificationStatus = 'loading' | 'success' | 'failed' | 'not-found' | 'pend
 
 function VerifyPaymentContent() {
 	const searchParams = useSearchParams();
+
+	// Paystack params
 	const reference = searchParams.get('reference');
 	const trxref = searchParams.get('trxref');
 
-	const [status, setStatus] = useState<VerificationStatus>('loading');
+	// Flutterwave params
+	const status = searchParams.get('status');
+	const tx_ref = searchParams.get('tx_ref');
+	const transaction_id = searchParams.get('transaction_id');
+
+	const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('loading');
 	const [bookingDetails, setBookingDetails] = useState<any>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [attempts, setAttempts] = useState(0);
-	const maxAttempts = 3;
+	const maxAttempts = 5;
 	const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+	// Determine which reference to use (Paystack or Flutterwave)
+	const getReference = useCallback((): { ref: string; type: string } | null => {
+		if (reference) return { ref: reference, type: 'paystack' };
+		if (trxref) return { ref: trxref, type: 'paystack' };
+		if (tx_ref) return { ref: tx_ref, type: 'flutterwave' };
+
+		return null;
+	}, [reference, trxref, tx_ref]);
 
 	const handleVerification = useCallback(
 		async (isPolling = false) => {
-			const ref = reference || trxref;
+			const refData = getReference();
 
-			if (!ref) {
-				setStatus('not-found');
-				return;
-			}
-
-			if (!trxref) {
-				setStatus('not-found');
+			if (!refData) {
+				// Check if Flutterwave returned a success status without a reference
+				if (status === 'completed' || status === 'successful') {
+					// Try to get booking from session storage
+					const activeBooking = readActiveBooking();
+					if (activeBooking?.reference) {
+						try {
+							const detailsResult = await getBookingDetails(activeBooking.reference);
+							if (detailsResult.success) {
+								setBookingDetails(detailsResult.data);
+								setVerificationStatus('success');
+								return;
+							}
+						} catch {
+							// Fall through to not-found
+						}
+					}
+				}
+				setVerificationStatus('not-found');
 				return;
 			}
 
@@ -44,12 +72,29 @@ function VerifyPaymentContent() {
 			}
 
 			try {
-				// Step 1: Verify payment
-				const verifyResult = await verifyPayment(ref, trxref);
+				// Step 1: Verify payment using the appropriate reference
+				const verifyResult = await verifyPayment(refData.ref, refData.ref);
 
 				if (!verifyResult.success) {
+					// Check if it's a Flutterwave callback with status=completed
+					if (status === 'completed' || status === 'successful') {
+						// Try to get booking from session storage
+						const activeBooking = readActiveBooking();
+						if (activeBooking?.reference) {
+							try {
+								const detailsResult = await getBookingDetails(activeBooking.reference);
+								if (detailsResult.success) {
+									setBookingDetails(detailsResult.data);
+									setVerificationStatus('success');
+									return;
+								}
+							} catch {
+								// Fall through
+							}
+						}
+					}
 					setError(verifyResult.error || 'Payment verification failed');
-					setStatus('failed');
+					setVerificationStatus('failed');
 					if (pollingIntervalRef.current) {
 						clearInterval(pollingIntervalRef.current);
 						pollingIntervalRef.current = null;
@@ -65,7 +110,7 @@ function VerifyPaymentContent() {
 
 					if (!finalizeResult.success) {
 						setError(finalizeResult.error || 'Failed to finalize booking');
-						setStatus('failed');
+						setVerificationStatus('failed');
 						if (pollingIntervalRef.current) {
 							clearInterval(pollingIntervalRef.current);
 							pollingIntervalRef.current = null;
@@ -79,14 +124,14 @@ function VerifyPaymentContent() {
 						setBookingDetails(detailsResult.data);
 					}
 
-					setStatus('success');
+					setVerificationStatus('success');
 					if (pollingIntervalRef.current) {
 						clearInterval(pollingIntervalRef.current);
 						pollingIntervalRef.current = null;
 					}
 				} else {
 					// Payment not successful
-					setStatus('failed');
+					setVerificationStatus('failed');
 					setError('Payment was not successful');
 					if (pollingIntervalRef.current) {
 						clearInterval(pollingIntervalRef.current);
@@ -96,7 +141,7 @@ function VerifyPaymentContent() {
 			} catch (err) {
 				console.error('Verification error:', err);
 				setError(err instanceof Error ? err.message : 'Failed to verify payment');
-				setStatus('failed');
+				setVerificationStatus('failed');
 				if (pollingIntervalRef.current) {
 					clearInterval(pollingIntervalRef.current);
 					pollingIntervalRef.current = null;
@@ -107,7 +152,7 @@ function VerifyPaymentContent() {
 				}
 			}
 		},
-		[reference, trxref]
+		[getReference, status]
 	);
 
 	// Initial verification
@@ -116,7 +161,7 @@ function VerifyPaymentContent() {
 
 		// Set up polling every 30 seconds for pending/loading states
 		pollingIntervalRef.current = setInterval(() => {
-			if (status === 'pending' || status === 'loading') {
+			if (verificationStatus === 'pending' || verificationStatus === 'loading') {
 				handleVerification(true);
 			}
 		}, 30000);
@@ -131,17 +176,17 @@ function VerifyPaymentContent() {
 
 	// Stop polling after max attempts
 	useEffect(() => {
-		if (status === 'pending' && attempts >= maxAttempts) {
+		if (verificationStatus === 'pending' && attempts >= maxAttempts) {
 			if (pollingIntervalRef.current) {
 				clearInterval(pollingIntervalRef.current);
 				pollingIntervalRef.current = null;
 			}
 		}
-	}, [attempts, status]);
+	}, [attempts, verificationStatus]);
 
 	const handleRetry = () => {
 		setError(null);
-		setStatus('loading');
+		setVerificationStatus('loading');
 		setAttempts(0);
 		handleVerification();
 	};
@@ -152,18 +197,18 @@ function VerifyPaymentContent() {
 			pollingIntervalRef.current = null;
 		}
 		setAttempts(0);
-		setStatus('loading');
+		setVerificationStatus('loading');
 		handleVerification();
 
 		pollingIntervalRef.current = setInterval(() => {
-			if (status === 'pending' || status === 'loading') {
+			if (verificationStatus === 'pending' || verificationStatus === 'loading') {
 				handleVerification(true);
 			}
 		}, 30000);
 	};
 
 	// Loading state
-	if (status === 'loading') {
+	if (verificationStatus === 'loading') {
 		return (
 			<Container className="flex min-h-[60vh] items-center justify-center">
 				<div className="glossy-card p-12 text-center max-w-md">
@@ -176,7 +221,7 @@ function VerifyPaymentContent() {
 	}
 
 	// Pending state
-	if (status === 'pending') {
+	if (verificationStatus === 'pending') {
 		return (
 			<Container className="flex min-h-[60vh] items-center justify-center">
 				<div className="glossy-card p-12 text-center max-w-md">
@@ -206,7 +251,7 @@ function VerifyPaymentContent() {
 	}
 
 	// Not found
-	if (status === 'not-found') {
+	if (verificationStatus === 'not-found') {
 		return (
 			<Container className="flex min-h-[60vh] items-center justify-center">
 				<div className="glossy-card p-12 text-center max-w-md">
@@ -222,7 +267,7 @@ function VerifyPaymentContent() {
 	}
 
 	// Success
-	if (status === 'success') {
+	if (verificationStatus === 'success') {
 		return (
 			<Container className="flex min-h-[60vh] items-center justify-center">
 				<div className="glossy-card p-12 pt-24 text-center max-w-md">
@@ -259,10 +304,10 @@ function VerifyPaymentContent() {
 				<XCircle className="mx-auto h-16 w-16 text-destructive" />
 				<h2 className="mt-4 text-2xl font-bold">Payment Failed</h2>
 				<p className="mt-2 text-muted-foreground">{error || "We couldn't confirm your payment. Please try again or contact support."}</p>
-				{reference && (
+				{(reference || trxref || tx_ref) && (
 					<div className="mt-4 rounded-lg bg-muted text-white p-3">
 						<p className="text-sm font-medium">Reference</p>
-						<p className="font-mono text-sm">{reference}</p>
+						<p className="font-mono text-sm">{reference || trxref || tx_ref}</p>
 					</div>
 				)}
 				<div className="mt-6 flex flex-col gap-3 sm:flex-row">

@@ -1,28 +1,31 @@
 'use client';
 
-import { ArrowLeft, Clock, CreditCard, Loader2, Plane } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Plane } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { PaymentOptions } from '@/components/features/booking/PaymentOptions';
 import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import {
 	confirmFlightPrice,
+	createBooking,
 	formatFlightPrice,
+	getBankAccounts,
 	getFlightFromCache,
-	initiateBookingFlow,
+	initiatePayment,
 	isBookingReservationExpired,
 	readActiveBooking,
 	readCachedFlightSearch,
+	saveActiveBooking,
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
-import type { BookingPassengerPayload } from '@/types/whitelabel';
-
+import type { BankAccount, BookingPassengerPayload } from '@/types/whitelabel';
 function formatPhoneNumber(value: string): string {
 	let cleaned = value.replace(/[^\d+]/g, '');
 	if (!cleaned) return '';
@@ -79,7 +82,6 @@ function validatePassenger(data: PassengerData): string | null {
 	if (!data.documentIssueDate) return 'Document issue date is required.'; // ✅ NEW
 	if (!data.documentExpiryDate) return 'Document expiry date is required.';
 
-	// ✅ NEW: Check expiry date is in the future
 	const expiryDate = new Date(data.documentExpiryDate);
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -148,6 +150,13 @@ function ConfirmBookingContent() {
 	const [imageError, setImageError] = useState(false);
 	const [bookingSuccess, setBookingSuccess] = useState(false);
 	const [bookingReference, setBookingReference] = useState<string | null>(null);
+	const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+	const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+	const [selectedPaymentGateway, setSelectedPaymentGateway] = useState<string | null>(null);
+	const [showInstalments, setShowInstalments] = useState(false);
+	const [selectedInstalment, setSelectedInstalment] = useState<number | null>(null);
+	const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+	const [copied, setCopied] = useState(false);
 
 	const unitPrice = confirmedPrice ?? flight?.price ?? 0;
 	const currency = flight?.currency ?? 'NGN';
@@ -172,6 +181,16 @@ function ConfirmBookingContent() {
 	useEffect(() => {
 		confirmPrice();
 	}, [confirmPrice]);
+
+	useEffect(() => {
+		async function fetchBankAccounts() {
+			const result = await getBankAccounts();
+			if (result.success) {
+				setBankAccounts(result.data);
+			}
+		}
+		fetchBankAccounts();
+	}, []);
 
 	useEffect(() => {
 		const active = readActiveBooking();
@@ -202,7 +221,12 @@ function ConfirmBookingContent() {
 		return null;
 	};
 
-	const handleSubmit = async () => {
+	const isDomestic = useMemo(() => {
+		if (!flight) return false;
+		return flight.fromCountryCode === flight.toCountryCode;
+	}, [flight]);
+
+	const handleProceedToPayment = () => {
 		if (!flight) return;
 
 		const validationError = validateAllPassengers();
@@ -212,9 +236,21 @@ function ConfirmBookingContent() {
 		}
 
 		setError(null);
+		setShowPaymentOptions(true);
+	};
+
+	const handlePaymentSelect = async (method: string, gateway: string, instalment?: number) => {
+		if (!flight) return;
+
+		setSelectedPaymentMethod(method);
+		setSelectedPaymentGateway(gateway);
+		setShowPaymentOptions(false);
 		setIsProcessing(true);
 
-		// Build payload for all passengers
+		if (instalment) {
+			setSelectedInstalment(instalment);
+		}
+
 		const passengerPayloads: BookingPassengerPayload[] = passengers.map((p) => ({
 			passenger_type: 'adult',
 			first_name: p.firstName.trim(),
@@ -236,36 +272,141 @@ function ConfirmBookingContent() {
 			},
 		}));
 
-		// Use the new initiateBookingFlow function
-		const result = await initiateBookingFlow(flightId, passengerPayloads, currency);
+		try {
+			// Step 1: Create booking
+			const createResult = await createBooking(flightId, passengerPayloads);
+			if (!createResult.success) {
+				setError(createResult.error);
+				setIsProcessing(false);
+				return;
+			}
 
-		if (!result.success) {
-			setError(result.error);
+			const { booking_id, reference } = createResult.data;
+			saveActiveBooking({ bookingId: booking_id, reference, flightId });
+
+			// Step 2: Initiate payment
+			const paymentResult = await initiatePayment(booking_id, flightId, {
+				currency,
+				paymentMethod: method,
+				...(gateway && { paymentGateway: gateway }),
+				...(instalment && { instalment }),
+			});
+
+			if (!paymentResult.success) {
+				setError(paymentResult.error);
+				setIsProcessing(false);
+				return;
+			}
+
+			setBookingReference(reference);
+
+			if (method === 'WALK_IN_TRANSFER') {
+				setBookingSuccess(true);
+				setIsProcessing(false);
+				return;
+			}
+
+			if (!paymentResult.data.authorization_url) {
+				setError('Payment URL not returned by gateway');
+				setIsProcessing(false);
+				return;
+			}
+
+			window.location.href = paymentResult.data.authorization_url;
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'An error occurred');
 			setIsProcessing(false);
-			return;
 		}
-
-		// Store booking reference for success page
-		setBookingReference(result.reference);
-		setBookingSuccess(true);
-
-		// Redirect to payment
-		window.location.href = result.paymentUrl;
 	};
 
-	// Show success state while redirecting
 	if (bookingSuccess) {
+		// Walk-In Transfer: Show pending UI with bank details
+		if (selectedPaymentMethod === 'WALK_IN_TRANSFER') {
+			return (
+				<div className="space-y-6">
+					<div className="glossy-card p-8">
+						<div className="text-center">
+							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
+								<Clock className="h-10 w-10 text-amber-500" />
+							</div>
+							<h2 className="text-2xl font-bold">Booking is Pending Payment</h2>
+							<p className="mt-2 text-muted-foreground">Your booking has been created. Please complete the bank transfer to confirm your booking.</p>
+
+							{/* Booking Reference */}
+							<div className="mt-4 rounded-lg bg-primary/80 text-white p-3 py-6">
+								<p className="text-sm font-medium">Booking Reference</p>
+								<p className="font-mono text-sm tracking-widest">{bookingReference}</p>
+							</div>
+						</div>
+
+						{/* Bank Details */}
+						<div className="mt-6">
+							<h3 className="flex items-center gap-2 text-sm font-semibold">
+								<Landmark className="h-4 w-4" />
+								Bank Transfer Details
+							</h3>
+							<p className="text-xs text-muted-foreground">Use your booking reference as payment description.</p>
+							<div className="mt-3 space-y-3">
+								{bankAccounts.length === 0 ? (
+									<p className="text-sm text-amber-600">No bank accounts available. Please contact support.</p>
+								) : (
+									bankAccounts.map((account, index) => (
+										<div
+											key={index}
+											className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+											<p className="font-semibold">{account.bank_name || account.bank?.name}</p>
+											<p className="text-sm">
+												Account Name: <span className="font-medium">{account.account_name}</span>
+											</p>
+											<p className="text-sm">
+												Account Number: <span className="font-mono font-medium text-primary">{account.account_number}</span>
+											</p>
+										</div>
+									))
+								)}
+							</div>
+						</div>
+
+						{/* Important Note */}
+						<div className="mt-6 rounded-lg bg-amber-500/10 p-4 text-sm text-amber-700">
+							<p className="font-medium">⚠️ Important</p>
+							<p>Your booking will remain on hold until payment is confirmed. You'll receive a confirmation email once verified.</p>
+						</div>
+
+						{/* Actions */}
+						<div className="mt-6 flex flex-col gap-3 sm:flex-row">
+							<Link href="/dashboard/bookings">
+								<Button className="w-full sm:w-auto">View My Bookings</Button>
+							</Link>
+							<Button
+								variant="outline"
+								className="w-full sm:w-auto"
+								onClick={() => {
+									const details = bankAccounts.map((a) => `${a.bank_name}: ${a.account_number} (${a.account_name})`).join('\n');
+									navigator.clipboard.writeText(details);
+									setCopied(true);
+									setTimeout(() => setCopied(false), 3000);
+								}}>
+								<Copy className="mr-2 h-4 w-4" />
+								{copied ? 'Copied!' : 'Copy Bank Details'}
+							</Button>
+						</div>
+					</div>
+				</div>
+			);
+		}
+
+		// Other payment methods: Redirecting to payment
 		return (
 			<div className="space-y-6">
 				<div className="glossy-card p-12 text-center">
 					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-						<div className="h-8 w-8 animate-pulse rounded-full bg-green-500" />
+						<CheckCircle className="h-10 w-10 text-green-500" />
 					</div>
 					<h2 className="text-2xl font-bold">Redirecting to Payment...</h2>
 					<p className="mt-2 text-muted-foreground">
 						Booking reference: <span className="font-mono font-medium">{bookingReference}</span>
 					</p>
-					<p className="mt-2 text-sm text-muted-foreground">You will be redirected to Paystack to complete your payment.</p>
 					<Loader2 className="mx-auto mt-4 h-6 w-6 animate-spin text-primary" />
 				</div>
 			</div>
@@ -286,11 +427,41 @@ function ConfirmBookingContent() {
 		);
 	}
 
+	// Show payment options
+	if (showPaymentOptions) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h1 className="text-2xl font-bold">Choose Payment Method</h1>
+					<p className="mt-2 text-sm text-muted-foreground">Select how you want to pay for your flight booking.</p>
+				</div>
+
+				<button
+					onClick={() => setShowPaymentOptions(false)}
+					className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+					<ArrowLeft className="h-4 w-4" />
+					Back to passenger details
+				</button>
+
+				<Card
+					hover={false}
+					className="p-6">
+					<PaymentOptions
+						onSelect={handlePaymentSelect}
+						isLoading={isProcessing}
+					/>
+				</Card>
+
+				{error && <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+			</div>
+		);
+	}
+
 	return (
 		<div className="space-y-6">
 			<div>
 				<h1 className="text-2xl font-bold">Complete Your Booking</h1>
-				<p className="mt-2 text-sm text-muted-foreground">Enter passenger details to proceed to secure payment via Paystack.</p>
+				<p className="mt-2 text-sm text-muted-foreground">Enter passenger details to proceed to secure payment.</p>
 			</div>
 
 			<Link
@@ -326,6 +497,7 @@ function ConfirmBookingContent() {
 									const updated = passengers.filter((_, i) => i !== index);
 									setPassengers(updated);
 								}}
+								isDomestic={isDomestic}
 							/>
 						</Card>
 					))}
@@ -414,18 +586,18 @@ function ConfirmBookingContent() {
 							className="mt-6 w-full"
 							size="lg"
 							disabled={isProcessing || isConfirmingPrice}
-							onClick={handleSubmit}>
+							onClick={handleProceedToPayment}>
 							{isProcessing ? (
 								<>
 									<Loader2 className="h-4 w-4 animate-spin" />
-									Processing booking...
+									Processing...
 								</>
 							) : (
 								'Proceed to Payment'
 							)}
 						</Button>
 
-						<p className="mt-3 text-center text-xs text-muted-foreground">Reservation held for 15 minutes after booking</p>
+						<p className="mt-3 text-center text-xs text-muted-foreground">Select your preferred payment method after confirming details.</p>
 					</Card>
 				</div>
 			</div>

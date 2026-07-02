@@ -67,8 +67,8 @@ export interface AirportSegment {
 	airline_details?: { code: string; name: string; logo?: string };
 	airport_from?: string;
 	airport_to?: string;
-	airport_from_details?: { city: string; iata_code: string; name: string };
-	airport_to_details?: { city: string; iata_code: string; name: string };
+	airport_from_details?: { city: string; iata_code: string; name: string; country_code: string; country: string };
+	airport_to_details?: { city: string; iata_code: string; name: string; country_code: string; country: string };
 	departure_time: string;
 	arrival_time: string;
 	duration: number;
@@ -230,4 +230,37 @@ export interface Pricing {
 	tax: number;
 	markup: number | null;
 	payable: number;
+}
+
+export interface PaymentGateway {
+	service: string;
+	logo: string;
+}
+
+export interface PaymentMethod {
+	id: number;
+	title: string;
+	identifier: string;
+	description: string;
+	priority: number;
+	status: 0 | 1;
+	created_at: string;
+	updated_at: string;
+	interest_rate: number;
+	instalments: string | null; // e.g., "null", "\"[4]\"", "\"[2,4,6]\""
+}
+
+export interface BankAccount {
+	bank_name: string;
+	account_name: string;
+	account_number: string;
+	sort_code: string | null;
+	status: number;
+	bank: {
+		id: number;
+		name: string;
+		code: string;
+		ussdTemplate: string | null;
+		baseUssdCode: string;
+	};
 }

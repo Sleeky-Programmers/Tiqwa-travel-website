@@ -34,10 +34,19 @@ function getStatusColor(status: string): string {
 		BOOKED: 'bg-green-500/10 text-green-600 dark:text-green-400',
 		CONFIRMED: 'bg-green-500/10 text-green-600 dark:text-green-400',
 		PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+		PENDING_PAYMENT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
 		CANCELLED: 'bg-red-500/10 text-red-600 dark:text-red-400',
 		RESERVED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
 	};
 	return statusMap[status] || 'bg-muted text-muted-foreground';
+}
+
+function getDisplayStatus(status: string): string {
+	if (status === 'PENDING' || status === 'PENDING_PAYMENT') {
+		return 'Pending';
+	}
+	// Capitalize first letter and replace underscore with space for other statuses
+	return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, ' ');
 }
 
 function BookingDetailsContent() {
@@ -115,7 +124,7 @@ function BookingDetailsContent() {
 					</p>
 				</div>
 				<div className="flex items-center gap-3">
-					<span className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(booking.status)}`}>{booking.status}</span>
+					<span className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(booking.status)}`}>{getDisplayStatus(booking.status)}</span>
 					<span className="text-sm text-muted-foreground">
 						PNR: <span className="font-mono">{booking.pnr}</span>
 					</span>

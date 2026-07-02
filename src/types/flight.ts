@@ -19,6 +19,10 @@ export interface Flight {
 	inbound_stops?: number;
 	segmentCount?: number;
 	flightNumber?: string;
+	fromCountryCode?: string;
+	toCountryCode?: string;
+	fromCountry?: string;
+	toCountry?: string;
 }
 
 export type StopsFilter = 'any' | 'nonstop' | 'one-stop-max';

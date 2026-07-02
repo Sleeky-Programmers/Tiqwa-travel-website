@@ -35,6 +35,7 @@ interface PassengerFormProps {
 	onRemove?: () => void;
 	passengerNumber?: number;
 	totalPassengers?: number;
+	isDomestic?: boolean;
 }
 
 const TITLE_OPTIONS = [
@@ -50,18 +51,22 @@ const GENDER_OPTIONS = [
 	{ value: 'other', label: 'Other' },
 ];
 
-const DOCUMENT_TYPES = [
+const INTERNATIONAL_DOCUMENT_TYPES = [
 	{ value: 'passport', label: 'Passport' },
 	{ value: 'id_card', label: 'National ID Card' },
 ];
 
-export function PassengerForm({ data, onChange, onPhoneChange, showRemove = false, onRemove, passengerNumber, totalPassengers }: PassengerFormProps) {
+const DOMESTIC_DOCUMENT_TYPES = [{ value: 'id_card', label: 'National ID Card' }];
+
+export function PassengerForm({ data, onChange, onPhoneChange, showRemove = false, onRemove, passengerNumber, totalPassengers, isDomestic = false }: PassengerFormProps) {
 	const [isTitleOpen, setIsTitleOpen] = useState(false);
 	const [isDocumentTypeOpen, setIsDocumentTypeOpen] = useState(false);
 
 	const update = (field: keyof PassengerData, value: string) => {
 		onChange({ ...data, [field]: value });
 	};
+
+	const documentOptions = isDomestic ? DOMESTIC_DOCUMENT_TYPES : INTERNATIONAL_DOCUMENT_TYPES;
 
 	return (
 		<div className="space-y-4">
@@ -200,7 +205,9 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 			{/* Document Section */}
 			<div className="border-t border-border pt-4">
 				<h4 className="text-sm font-semibold">Document Details</h4>
-				<p className="text-xs text-muted-foreground">Travel document information for this passenger</p>
+				<p className="text-xs text-muted-foreground">
+					{isDomestic ? 'National ID Card required for domestic flights' : 'Passport or National ID Card required for international flights'}
+				</p>
 
 				<div className="mt-3 grid gap-4 sm:grid-cols-2">
 					{/* Document Type */}
@@ -214,13 +221,13 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 								onClick={() => setIsDocumentTypeOpen(!isDocumentTypeOpen)}
 								className="flex h-9 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
 								<span className={cn(!data.documentType && 'text-muted-foreground')}>
-									{data.documentType ? DOCUMENT_TYPES.find((opt) => opt.value === data.documentType)?.label : 'Select document type'}
+									{data.documentType ? documentOptions.find((opt) => opt.value === data.documentType)?.label : `Select document type${isDomestic ? '' : ''}`}
 								</span>
 								<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isDocumentTypeOpen && 'rotate-180')} />
 							</button>
 							{isDocumentTypeOpen && (
 								<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
-									{DOCUMENT_TYPES.map((opt) => (
+									{documentOptions.map((opt) => (
 										<button
 											key={opt.value}
 											type="button"
@@ -249,6 +256,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 						onChange={(e) => update('documentNumber', e.target.value)}
 					/>
 
+					{/* Document Issue Date */}
 					<DateOfBirthPicker
 						required
 						label="Document Issue Date"
@@ -261,7 +269,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 					{/* Document Expiry Date */}
 					<DateOfBirthPicker
 						required
-						disabled={undefined}
+						// disabled={{ after: new Date() }}
 						label="Document Expiry Date"
 						value={data.documentExpiryDate}
 						placeholder="Select expiry date"

@@ -17,6 +17,9 @@ import type {
 	WhitelabelResponse,
 	VerifyPaymentData,
 	FinalizeBookingData,
+	PaymentGateway,
+	PaymentMethod,
+	BankAccount,
 } from '@/types/whitelabel';
 
 // Determine which API base to use
@@ -224,6 +227,10 @@ export function transformFlightItem(item: WhitelabelFlightItem): Flight | null {
 		inbound_stops: inboundStops,
 		segmentCount: item.outbound?.length ?? 1,
 		flightNumber: first.flight_number,
+		fromCountryCode: first.airport_from_details?.country_code,
+		toCountryCode: last.airport_to_details?.country_code,
+		fromCountry: first.airport_from_details?.country,
+		toCountry: last.airport_to_details?.country,
 	};
 }
 
@@ -454,14 +461,57 @@ export async function reserveBooking(bookingId: string, flightId: string) {
 	});
 }
 
-export async function initiatePayment(bookingId: string, flightId: string, options?: { currency?: string }) {
-	return postJSON<PaymentInitiateData>('/payment/flight/initiate', {
+// export async function initiatePayment(
+// 	bookingId: string,
+// 	flightId: string,
+// 	options?: {
+// 		currency?: string;
+// 		paymentMethod?: string;
+// 		paymentGateway?: string;
+// 	}
+// ) {
+// 	return postJSON<PaymentInitiateData>('/payment/flight/initiate', {
+// 		flight_id: flightId,
+// 		booking_id: bookingId,
+// 		payment_method: options?.paymentMethod ?? 'ONLINE_TRANSFER',
+// 		payment_gateway: options?.paymentGateway ?? 'paystack',
+// 		currency: options?.currency ?? 'NGN',
+// 	});
+// }
+
+export async function initiatePayment(
+	bookingId: string,
+	flightId: string,
+	options?: {
+		currency?: string;
+		paymentMethod?: string;
+		paymentGateway?: string;
+		instalment?: number;
+	}
+) {
+	const payload: {
+		flight_id: string;
+		booking_id: string;
+		payment_method: string;
+		currency: string;
+		payment_gateway?: string;
+		instalment?: number;
+	} = {
 		flight_id: flightId,
 		booking_id: bookingId,
-		payment_method: 'ONLINE_TRANSFER',
-		payment_gateway: 'paystack',
+		payment_method: options?.paymentMethod ?? 'ONLINE_TRANSFER',
 		currency: options?.currency ?? 'NGN',
-	});
+	};
+
+	if (options?.paymentGateway && options.paymentMethod !== 'WALK_IN_TRANSFER') {
+		payload.payment_gateway = options.paymentGateway;
+	}
+
+	if (options?.instalment) {
+		payload.instalment = options.instalment;
+	}
+
+	return postJSON<PaymentInitiateData>('/payment/flight/initiate', payload);
 }
 
 export async function verifyPayment(reference: string, trxref: string) {
@@ -505,11 +555,10 @@ export async function initiateBookingFlow(
 
 	const { booking_id, reference } = createResult.data;
 	saveActiveBooking({ bookingId: booking_id, reference, flightId });
-	console.log({ bookingId: booking_id, reference, flightId });
 
 	// 2. Initiate payment
 	const paymentResult = await initiatePayment(booking_id, flightId, { currency });
-	console.log({ paymentResult });
+
 	if (!paymentResult.success) {
 		console.log({ paymentResult, success: false });
 		return paymentResult;
@@ -808,4 +857,16 @@ export async function getRewardsData(): Promise<{
 	} catch {
 		return { success: false, data: null };
 	}
+}
+
+export async function getPaymentMethods() {
+	return fetchAPIResult<PaymentMethod[]>('/get/payment-methods');
+}
+
+export async function getPaymentGateways() {
+	return fetchAPIResult<PaymentGateway[]>('/get/payment-gateways');
+}
+
+export async function getBankAccounts() {
+	return fetchAPIResult<BankAccount[]>('/get/bank-accounts');
 }

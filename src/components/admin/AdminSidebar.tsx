@@ -1,0 +1,95 @@
+'use client';
+
+import { Calendar, CreditCard, LayoutDashboard, LogOut, Plane, Settings, Users } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+
+import { cn } from '@/lib/utils';
+
+const navItems = [
+	{ href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+	{ href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+	{ href: '/admin/customers', label: 'Customers', icon: Users },
+	{ href: '/admin/payments', label: 'Payments', icon: CreditCard, disabled: false },
+	{ href: '/admin/settings', label: 'Settings', icon: Settings, disabled: false },
+];
+
+function isNavActive(pathname: string, href: string, exact?: boolean): boolean {
+	if (exact) return pathname === href;
+	return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+interface AdminSidebarProps {
+	onNavigate?: () => void;
+}
+
+export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
+	const pathname = usePathname();
+	const router = useRouter();
+
+	const handleLogout = () => {
+		onNavigate?.();
+		router.push('/admin/login');
+	};
+
+	return (
+		<aside className="flex h-full flex-col border-r border-border bg-background/80 backdrop-blur-xl">
+			{/* Logo - Fixed at top - Matches public navbar */}
+			<div className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-6">
+				<Link
+					href="/admin"
+					className="flex items-center gap-2 group"
+					onClick={onNavigate}>
+					<div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-primary/30">
+						<Plane className="h-4 w-4" />
+					</div>
+					<span className="text-base font-bold text-foreground">Tiqwa Admin</span>
+				</Link>
+			</div>
+
+			{/* Navigation - Takes remaining space and scrolls */}
+			<nav className="flex-1 space-y-1 overflow-y-auto p-4">
+				{navItems.map((item) => {
+					const active = !item.disabled && isNavActive(pathname, item.href, item.exact);
+
+					if (item.disabled) {
+						return (
+							<span
+								key={item.href}
+								className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/50"
+								title="Coming soon">
+								<item.icon className="h-4 w-4" />
+								{item.label}
+							</span>
+						);
+					}
+
+					return (
+						<Link
+							key={item.href}
+							href={item.href}
+							onClick={onNavigate}
+							className={cn(
+								'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
+								active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-primary/5 hover:text-foreground'
+							)}>
+							<item.icon className="h-4 w-4" />
+							{item.label}
+						</Link>
+					);
+				})}
+			</nav>
+
+			{/* Logout Button - Fixed at bottom */}
+			<div className="shrink-0 border-t border-border p-4">
+				<button
+					type="button"
+					onClick={handleLogout}
+					className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive transition-all hover:bg-destructive/10">
+					<LogOut className="h-4 w-4" />
+					Logout
+				</button>
+			</div>
+		</aside>
+	);
+}

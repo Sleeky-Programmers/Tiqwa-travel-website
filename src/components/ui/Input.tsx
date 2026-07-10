@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 interface InputProps extends React.ComponentProps<"input"> {
   label?: string;
   error?: string;
+  helperText?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, label, error, id, ...props }, ref) => {
+  ({ className, type, label, error, id, helperText, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     const field = (
       <InputPrimitive
@@ -26,7 +27,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {...props}
       />
     );
-    if (!label && !error) return field;
+    if (!label && !error && !helperText) return field;
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -35,6 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         {field}
+        {helperText && <p className="text-xs text-muted-foreground">{helperText}</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
     );

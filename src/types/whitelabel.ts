@@ -235,6 +235,9 @@ export interface Pricing {
 export interface PaymentGateway {
 	service: string;
 	logo: string;
+	public_key?: string;
+	secret_key?: string;
+	is_active?: boolean;
 }
 
 export interface PaymentMethod {
@@ -247,7 +250,7 @@ export interface PaymentMethod {
 	created_at: string;
 	updated_at: string;
 	interest_rate: number;
-	instalments: string | null; // e.g., "null", "\"[4]\"", "\"[2,4,6]\""
+	instalments: string | null;
 }
 
 export interface BankAccount {

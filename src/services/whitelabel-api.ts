@@ -256,6 +256,8 @@ export function getFlightSearchError(data: FlightSearchData): string | null {
 	return parts[0] ?? 'Flight search failed';
 }
 
+// ==================== PUBLIC ENDPOINTS ====================
+
 export async function getHomepageData(): Promise<HomepageData> {
 	return fetchAPI<HomepageData>('/');
 }
@@ -409,6 +411,8 @@ export async function getAllFlights(params?: { origin?: string; destination?: st
 	return flights;
 }
 
+// ==================== BOOKING & PAYMENT ENDPOINTS ====================
+
 export interface ActiveBooking {
 	bookingId: string;
 	reference: string;
@@ -460,24 +464,6 @@ export async function reserveBooking(bookingId: string, flightId: string) {
 		flight_id: flightId,
 	});
 }
-
-// export async function initiatePayment(
-// 	bookingId: string,
-// 	flightId: string,
-// 	options?: {
-// 		currency?: string;
-// 		paymentMethod?: string;
-// 		paymentGateway?: string;
-// 	}
-// ) {
-// 	return postJSON<PaymentInitiateData>('/payment/flight/initiate', {
-// 		flight_id: flightId,
-// 		booking_id: bookingId,
-// 		payment_method: options?.paymentMethod ?? 'ONLINE_TRANSFER',
-// 		payment_gateway: options?.paymentGateway ?? 'paystack',
-// 		currency: options?.currency ?? 'NGN',
-// 	});
-// }
 
 export async function initiatePayment(
 	bookingId: string,
@@ -588,6 +574,8 @@ export function cacheSelectedFlight(flight: Flight): void {
 	}
 }
 
+// ==================== USER ENDPOINTS ====================
+
 export interface FlightBooking {
 	// Core identifiers
 	id: string;
@@ -665,6 +653,82 @@ export interface RewardsData {
 	referral_history: Array<{ referred_user: string; date: string }>;
 	referral_payment_history: Array<{ amount: number; date: string }>;
 	allow_withdraw: boolean;
+}
+
+export interface Payment {
+	id: number;
+	reference: string;
+	order_reference: string;
+	payment_for: 'flight' | 'hotel' | 'package';
+	amount: number;
+	amount_settled: number;
+	payment_method: string;
+	payment_gateway: string;
+	status: string;
+	paid_at: string | null;
+	created_at: string;
+	booking_id?: string;
+	flexi_pay_details?: {
+		payable_amount: number;
+		total_paid: number;
+		next_pay_date: string | null;
+		flexi_pay_dates: Array<{
+			id: number;
+			date: string;
+			amount: number;
+		}>;
+	};
+}
+
+export interface AdminCustomer {
+	id: number;
+	name: string;
+	email: string;
+	phone_number: string;
+	loyalty_reward: number;
+	date_of_birth: string;
+	gender: string;
+	bookings_count?: number;
+	created_at?: string;
+}
+
+export interface AdminUser {
+	id: number;
+	uniqueid: string;
+	name: string;
+	email: string;
+	phone: string | null;
+	status: string;
+	last_login_at: string | null;
+	last_login_ip: string | null;
+	is_dark_mode: boolean;
+	referral_code: string | null;
+	referrer_code: string | null;
+	created_at: string;
+	updated_at: string;
+	deleted_at: string | null;
+}
+
+export interface ActivityLog {
+	id: number;
+	log_name: string;
+	description: string;
+	event: string | null;
+	performed_by: string;
+	properties: Record<string, unknown>;
+	created_at: string;
+	human_time: string;
+}
+
+export interface DashboardStats {
+	stats: {
+		flights: { total_month: number; total_today: number };
+		hotels: { total_month: number; total_today: number };
+		payments: { total_sum: number };
+	};
+	customers_count: number;
+	total_loyalty_rewards: number;
+	recent_activities: ActivityLog[];
 }
 
 function mapFlightBooking(raw: Record<string, unknown>): FlightBooking {
@@ -803,6 +867,8 @@ function mapRewardsData(raw: Record<string, unknown>): RewardsData {
 	};
 }
 
+// ==================== USER AUTHENTICATED ENDPOINTS ====================
+
 export async function getFlightBookings(): Promise<{
 	success: boolean;
 	data: FlightBooking[];
@@ -863,10 +929,796 @@ export async function getPaymentMethods() {
 	return fetchAPIResult<PaymentMethod[]>('/get/payment-methods');
 }
 
-export async function getPaymentGateways() {
-	return fetchAPIResult<PaymentGateway[]>('/get/payment-gateways');
+// export async function getPaymentGateways() {
+// 	return fetchAPIResult<PaymentGateway[]>('/get/payment-gateways');
+// }
+
+export async function getPaymentGateways(): Promise<{
+	success: boolean;
+	data: PaymentGateway[];
+}> {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<PaymentGateway[]>('/get/payment-gateways', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+
+		// If the API call failed
+		if (!result.success) {
+			return { success: false, data: [] };
+		}
+
+		// If successful, map the data
+		const gateways = (result.data || []).map((g) => ({
+			...g,
+			public_key: (g as any).public_key || '',
+			secret_key: (g as any).secret_key || '',
+			is_active: (g as any).is_active || false,
+		}));
+
+		return { success: true, data: gateways };
+	} catch {
+		return { success: false, data: [] };
+	}
 }
 
 export async function getBankAccounts() {
 	return fetchAPIResult<BankAccount[]>('/get/bank-accounts');
+}
+
+// ==================== ADMIN MANAGEMENT ENDPOINTS ====================
+
+// ---------- Dashboard ----------
+export async function getAdminDashboard() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: {} as DashboardStats };
+
+	try {
+		const result = await fetchAPIResult<DashboardStats>('/management/dashboard', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: {} as DashboardStats };
+	}
+}
+
+// ---------- Activity Logs ----------
+export async function getActivityLogs() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<ActivityLog[]>('/management/activity-logs', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+// ---------- Customers ----------
+export async function getAdminCustomers(): Promise<{
+	success: boolean;
+	data: AdminCustomer[];
+}> {
+	const token = getAccessToken();
+	if (!token) {
+		return { success: false, data: [] };
+	}
+
+	try {
+		const result = await fetchAPIResult<AdminCustomer[]>('/management/customers', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+
+		// Ensure we always return the correct shape
+		if (result.success) {
+			return { success: true, data: result.data };
+		} else {
+			return { success: false, data: [] };
+		}
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+// ---------- Users ----------
+export async function getAdminUsers() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<AdminUser[]>('/management/users', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function updateAdminUser(
+	uniqueid: string,
+	data: {
+		first_name: string;
+		last_name: string;
+		email: string;
+		phone: string;
+		status: string;
+	}
+): Promise<{ success: boolean; data?: AdminUser; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<AdminUser>(`/management/users/${uniqueid}`, data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update user' };
+	}
+}
+
+export async function toggleUserSuspension(uniqueid: string): Promise<{ success: boolean; data?: { status: string }; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<{ status: string }>(`/management/users/${uniqueid}/toggle-suspension`, {
+			method: 'PATCH',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to toggle suspension' };
+	}
+}
+
+export async function deleteAdminUser(uniqueid: string): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<unknown>(`/management/users/${uniqueid}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to delete user' };
+	}
+}
+
+// ---------- Payments ----------
+export async function getAdminPayments(): Promise<{
+	success: boolean;
+	data: Payment[];
+}> {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<Payment[]>('/management/payments', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		// Ensure we always return the correct shape
+		if (result.success) {
+			return { success: true, data: result.data };
+		} else {
+			return { success: false, data: [] };
+		}
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function getFlexiPayments() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<Payment[]>('/management/payments/flexi-payments', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (result.success) {
+			return { success: true, data: result.data };
+		} else {
+			return { success: false, data: [] };
+		}
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function getPaymentInvoice(reference: string) {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: {} as Payment };
+
+	try {
+		const result = await fetchAPIResult<Payment>(`/management/payments/${reference}/invoice`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (result.success) {
+			return { success: true, data: result.data };
+		} else {
+			return { success: false, data: [] };
+		}
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+// ---------- Bookings ----------
+export async function getManagementBookings(type?: 'requests' | 'booked' | 'ticketed') {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	const query = type ? `?type=${type}` : '';
+	try {
+		const result = await fetchAPIResult<any[]>(`/management/flights${query}`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (result.success) {
+			return { success: true, data: result.data };
+		} else {
+			return { success: false, data: [] };
+		}
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function getManagementBookingDetails(bookingId: string) {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: null };
+
+	try {
+		const result = await fetchAPIResult<any>(`/management/flights/${bookingId}/details`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		if (result.success) {
+			return { success: true, data: result.data };
+		} else {
+			return { success: false, data: null };
+		}
+	} catch {
+		return { success: false, data: null };
+	}
+}
+
+export async function cancelManagementBooking(flightId: string): Promise<{
+	success: boolean;
+	message?: string;
+	error?: string;
+}> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<null>(`/management/flights/${flightId}/cancel`, {
+			method: 'PATCH',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to cancel booking' };
+	}
+}
+
+export async function changeBookingStatus(
+	bookingId: string,
+	status: string,
+	pnr?: string,
+	ticketNumber?: string,
+	remark?: string
+): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<unknown>('/management/flights/set-flight-status', {
+			booking_id: bookingId,
+			pnr: pnr ?? null,
+			ticket_number: ticketNumber ?? null,
+			status,
+			remark: remark ?? null,
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to change booking status' };
+	}
+}
+
+// ---------- Flight Deals ----------
+export async function getFlightDealsAdmin() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<any[]>('/management/flight/deals', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function createFlightDeal(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const response = await fetch(`${API_BASE}/management/flight/deals`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: formData,
+		});
+		const result = await response.json();
+		return result.success ? { success: true, data: result.data } : { success: false, error: result.message };
+	} catch {
+		return { success: false, error: 'Failed to create flight deal' };
+	}
+}
+
+export async function deleteFlightDeal(dealId: number): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<null>(`/management/flight/deals/${dealId}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to delete flight deal' };
+	}
+}
+
+// ---------- Settings ----------
+export async function getGeneralSettings() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: {} as any };
+
+	try {
+		const result = await fetchAPIResult<any>('/management/settings/general', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: {} as any };
+	}
+}
+
+export async function updateGeneralSettings(data: FormData): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const response = await fetch(`${API_BASE}/management/settings/general`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: data,
+		});
+		const result = await response.json();
+		return result.success ? { success: true } : { success: false, error: result.message };
+	} catch {
+		return { success: false, error: 'Failed to update general settings' };
+	}
+}
+
+export async function getLoyaltySettings() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: {} as any };
+
+	try {
+		const result = await fetchAPIResult<any>('/management/settings/loyalty', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: {} as any };
+	}
+}
+
+export async function updateLoyaltySettings(data: {
+	loyalty_mode: number;
+	loyalty_threshold: number;
+	loyalty_value: number;
+	loyalty_policy: string;
+}): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<unknown>('/management/settings/loyalty', data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update loyalty settings' };
+	}
+}
+
+export async function getSiteMenus() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<Array<{ id: number; active: number; title: string }>>('/management/settings/site-menus', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function updateSiteMenus(data: { menus: Array<{ id: number; active: number; title: string }> }): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<unknown>('/management/settings/site-menus', data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update site menus' };
+	}
+}
+
+export async function getFooterMenus() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<Array<{ id: number; title: string; route: string; active: number }>>('/management/settings/footer-menus', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function updateFooterMenu(id: number, data: { title: string; route: string; active: number }): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<unknown>(`/management/settings/footer-menus/${id}`, data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update footer menu' };
+	}
+}
+
+// ---------- Payment Gateway Settings ----------
+export async function getPaymentGatewaySettings() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: {} as any };
+
+	try {
+		const result = await fetchAPIResult<any>('/management/settings/payment-gateway', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: {} as any };
+	}
+}
+
+export async function updatePaymentGatewaySettings(data: {
+	gateway: string;
+	public_key: string;
+	secret_key: string;
+	is_active: boolean;
+}): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<unknown>('/management/settings/payment-gateway', data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update payment gateway settings' };
+	}
+}
+
+// ---------- Team / Admins ----------
+export async function getTeamMembers() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<any[]>('/management/team', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function createTeamMember(data: {
+	first_name: string;
+	last_name: string;
+	email: string;
+	phone: string;
+	password: string;
+	role_id: number;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<any>('/management/team', data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to create team member' };
+	}
+}
+
+export async function updateTeamMember(
+	id: string,
+	data: {
+		first_name: string;
+		last_name: string;
+		email: string;
+		phone: string;
+		password?: string;
+		role_id: number;
+	}
+): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await postJSON<unknown>(`/management/team/${id}`, data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update team member' };
+	}
+}
+
+export async function deleteTeamMember(id: string): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<null>(`/management/team/${id}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to delete team member' };
+	}
+}
+
+// ---------- Airport & Airline Management ----------
+export async function getAirportsAdmin() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<any[]>('/management/airports', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function toggleAirportPopular(id: number): Promise<{ success: boolean; data?: { popular: boolean }; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<{ popular: boolean }>(`/management/airports/${id}/toggle-popular`, {
+			method: 'PATCH',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to toggle airport popularity' };
+	}
+}
+
+export async function getAirlinesAdmin() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<any[]>('/management/airlines', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function toggleAirlinePopular(id: number): Promise<{ success: boolean; data?: { popular: boolean }; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<{ popular: boolean }>(`/management/airlines/${id}/toggle-popular`, {
+			method: 'PATCH',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to toggle airline popularity' };
+	}
+}
+
+// ---------- Banners ----------
+export async function getBanners() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<any[]>('/management/banners', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function createBanner(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const response = await fetch(`${API_BASE}/management/banners`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: formData,
+		});
+		const result = await response.json();
+		return result.success ? { success: true, data: result.data } : { success: false, error: result.message };
+	} catch {
+		return { success: false, error: 'Failed to create banner' };
+	}
+}
+
+export async function deleteBanner(id: number): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<null>(`/management/banners/${id}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to delete banner' };
+	}
+}
+
+// ---------- Holiday Packages ----------
+export async function getHolidayPackagesAdmin() {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: [] };
+
+	try {
+		const result = await fetchAPIResult<any[]>('/management/holiday-packages', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: [] };
+	}
+}
+
+export async function getHolidayPackage(id: string) {
+	const token = getAccessToken();
+	if (!token) return { success: false, data: {} as any };
+
+	try {
+		const result = await fetchAPIResult<any>(`/management/holiday-packages/${id}`, {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, data: {} as any };
+	}
+}
+
+export async function createHolidayPackage(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const response = await fetch(`${API_BASE}/management/holiday-packages`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: formData,
+		});
+		const result = await response.json();
+		return result.success ? { success: true, data: result.data } : { success: false, error: result.message };
+	} catch {
+		return { success: false, error: 'Failed to create holiday package' };
+	}
+}
+
+export async function updateHolidayPackage(id: string, formData: FormData): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const response = await fetch(`${API_BASE}/management/holiday-packages/${id}/update`, {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: formData,
+		});
+		const result = await response.json();
+		return result.success ? { success: true } : { success: false, error: result.message };
+	} catch {
+		return { success: false, error: 'Failed to update holiday package' };
+	}
+}
+
+export async function deleteHolidayPackage(id: string): Promise<{ success: boolean; error?: string }> {
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
+
+	try {
+		const result = await fetchAPIResult<null>(`/management/holiday-packages/${id}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to delete holiday package' };
+	}
+}
+
+// ---------- Wallet ----------
+export async function getAdminWallet() {
+	const token = getAccessToken();
+	if (!token) {
+		return {
+			success: false,
+			data: {
+				walletBalance: { api_balance: 0, api_units: 0, ticket_balance: 0 },
+				walletHistory: { data: [], page: 1, pages: 0, per_page: 10, total: 0 },
+			},
+		};
+	}
+
+	try {
+		const result = await fetchAPIResult<{
+			walletBalance: {
+				api_balance: number;
+				api_units: number;
+				ticket_balance: number;
+			};
+			walletHistory: {
+				data: Array<unknown>;
+				page: number;
+				pages: number;
+				per_page: number;
+				total: number;
+			};
+		}>('/management/wallet', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		return result;
+	} catch {
+		return {
+			success: false,
+			data: {
+				walletBalance: { api_balance: 0, api_units: 0, ticket_balance: 0 },
+				walletHistory: { data: [], page: 1, pages: 0, per_page: 10, total: 0 },
+			},
+		};
+	}
 }

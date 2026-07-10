@@ -1294,21 +1294,16 @@ export async function getGeneralSettings() {
 	}
 }
 
-export async function updateGeneralSettings(data: FormData): Promise<{ success: boolean; error?: string }> {
-	const token = getAccessToken();
-	if (!token) return { success: false, error: 'Not authenticated' };
+export async function updateGeneralSettings(data: Record<string, any>): Promise<{ success: boolean; error?: string }> {
+  const token = getAccessToken();
+  if (!token) return { success: false, error: 'Not authenticated' };
 
-	try {
-		const response = await fetch(`${API_BASE}/management/settings/general`, {
-			method: 'POST',
-			headers: { Authorization: `Bearer ${token}` },
-			body: data,
-		});
-		const result = await response.json();
-		return result.success ? { success: true } : { success: false, error: result.message };
-	} catch {
-		return { success: false, error: 'Failed to update general settings' };
-	}
+  try {
+    const result = await postJSON<unknown>('/management/settings/general', data);
+    return result;
+  } catch {
+    return { success: false, error: 'Failed to update general settings' };
+  }
 }
 
 export async function getLoyaltySettings() {

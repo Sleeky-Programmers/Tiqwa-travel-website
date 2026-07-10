@@ -20,15 +20,7 @@ interface AdminTableProps<T> {
 	skeletonRows?: number;
 }
 
-export function AdminTable<T>({
-	data,
-	columns,
-	onRowClick,
-	isLoading = false,
-	emptyMessage = 'No results found',
-	getRowKey,
-	skeletonRows = 5,
-}: AdminTableProps<T>) {
+export function AdminTable<T>({ data, columns, onRowClick, isLoading = false, emptyMessage = 'No results found', getRowKey, skeletonRows = 5 }: AdminTableProps<T>) {
 	if (isLoading) {
 		return (
 			<div className="glossy-card overflow-hidden">
@@ -46,19 +38,25 @@ export function AdminTable<T>({
 							</tr>
 						</thead>
 						<tbody>
-							{Array.from({ length: skeletonRows }).map((_, rowIndex) => (
-								<tr
-									key={rowIndex}
-									className="border-b border-border/60 last:border-0">
-									{columns.map((column) => (
-										<td
-											key={String(column.key)}
-											className="px-4 py-3">
-											<Skeleton className="h-4 w-full max-w-[120px]" />
-										</td>
-									))}
-								</tr>
-							))}
+							{Array.from({ length: skeletonRows }).map((_, rowIndex) => {
+								const rowKey = `skeleton-${rowIndex}`;
+								return (
+									<tr
+										key={rowKey}
+										className="border-b border-border/60 last:border-0">
+										{columns.map((column, colIndex) => {
+											const cellKey = `skeleton-${rowIndex}-${colIndex}`;
+											return (
+												<td
+													key={cellKey}
+													className="px-4 py-3">
+													<Skeleton className="h-4 w-full max-w-[120px]" />
+												</td>
+											);
+										})}
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 				</div>
@@ -94,19 +92,17 @@ export function AdminTable<T>({
 							<tr
 								key={getRowKey(item)}
 								onClick={onRowClick ? () => onRowClick(item) : undefined}
-								className={cn(
-									'border-b border-border/60 transition-colors last:border-0 hover:bg-primary/5',
-									onRowClick && 'cursor-pointer'
-								)}>
-								{columns.map((column) => (
-									<td
-										key={String(column.key)}
-										className={cn('px-4 py-3', column.className)}>
-										{column.render
-											? column.render(item)
-											: String((item as Record<string, unknown>)[column.key as string] ?? '—')}
-									</td>
-								))}
+								className={cn('border-b border-border/60 transition-colors last:border-0 hover:bg-primary/5', onRowClick && 'cursor-pointer')}>
+								{columns.map((column, colIndex) => {
+									const cellKey = `${getRowKey(item)}-${colIndex}`;
+									return (
+										<td
+											key={cellKey}
+											className={cn('px-4 py-3', column.className)}>
+											{column.render ? column.render(item) : String((item as Record<string, unknown>)[column.key as string] ?? '—')}
+										</td>
+									);
+								})}
 							</tr>
 						))}
 					</tbody>

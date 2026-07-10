@@ -59,6 +59,11 @@ interface GeneralSettingsData {
 	twitter_link: string;
 	instagram_link: string;
 	linkedin_link: string;
+	tagline?: string;
+	primary_color?: string;
+	secondary_color?: string;
+	payment_gateway?: string;
+	maintenance_mode?: number;
 }
 
 interface LoyaltySettingsData {
@@ -161,12 +166,15 @@ export default function AdminSettingsPage() {
 			switch (activeTab) {
 				case 'general':
 					if (generalSettings) {
-						// Build FormData for general settings
-						const formData = new FormData();
+						const cleanData: Record<string, any> = {};
 						Object.entries(generalSettings).forEach(([key, value]) => {
-							formData.append(key, String(value));
+							if (value !== null && value !== undefined && value !== 'null') {
+								cleanData[key] = value;
+							}
 						});
-						await updateGeneralSettings(formData);
+
+						// Send as JSON instead of FormData
+						await updateGeneralSettings(cleanData);
 					}
 					break;
 				case 'loyalty':

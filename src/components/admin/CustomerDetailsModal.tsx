@@ -160,18 +160,6 @@ export function CustomerDetailsModal({ customer, open, onOpenChange }: CustomerD
 				</div>
 
 				<DialogFooter className="flex-col gap-2 sm:flex-row">
-					<Button
-						variant="outline"
-						disabled
-						title="Coming soon">
-						Edit Details
-					</Button>
-					<Button
-						variant="destructive"
-						disabled
-						title="Coming soon">
-						Suspend Account
-					</Button>
 					<Link href={`/admin/bookings?search=${encodeURIComponent(customer.email)}`}>
 						<Button variant="ghost">
 							<Calendar className="h-4 w-4" />

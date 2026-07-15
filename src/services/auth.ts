@@ -36,8 +36,19 @@ interface AuthApiResponse<T> {
 }
 
 interface LoginResponseData {
+	uniqueid?: string;
+	name?: string;
+	first_name?: string;
+	last_name?: string;
+	email?: string;
+	phone?: string | null;
+	avatar?: string | null;
 	token: string;
-	role?: string | null; // ✅ Added role field
+	role?: string | null;
+	last_login_at?: string;
+	last_login_ip?: string;
+	created_at?: string;
+	updated_at?: string;
 }
 
 interface ProfileResponseData {
@@ -48,7 +59,7 @@ interface ProfileResponseData {
 	email: string;
 	phone?: string;
 	avatar?: string;
-	role?: string | null; // ✅ Added role field
+	role?: string | null;
 }
 
 /**
@@ -152,25 +163,27 @@ export async function login(credentials: LoginCredentials): Promise<{
 		if (data.success && data.data?.token) {
 			setAccessToken(data.data.token);
 
-			// Fetch user profile to get role
-			const user = await fetchUserProfile(data.data.token);
+			const userData = data.data;
+			const user: AuthUser = {
+				id: userData.uniqueid ? parseInt(userData.uniqueid) : 0,
+				name: userData.name || '',
+				firstName: userData.first_name || '',
+				lastName: userData.last_name || '',
+				email: userData.email || '',
+				phone: userData.phone || undefined,
+				avatar: userData.avatar || undefined,
+				role: userData.role || null,
+			};
 
-			if (user) {
-				setAuthUser(user);
-				const redirectPath = getRedirectPath(user.role);
-				return {
-					success: true,
-					token: data.data.token,
-					user,
-					redirectPath,
-				};
-			}
+			setAuthUser(user);
 
-			// Fallback: if user fetch fails but login succeeded
+			const redirectPath = getRedirectPath(user.role);
+
 			return {
 				success: true,
 				token: data.data.token,
-				redirectPath: '/dashboard',
+				user,
+				redirectPath,
 			};
 		}
 
@@ -303,7 +316,3 @@ export function logout(): void {
 		window.location.href = '/login';
 	}
 }
-
-// Refresh-ready placeholder for future token refresh support
-// export function getRefreshToken(): string | null { ... }
-// export async function refreshAccessToken(): Promise<boolean> { ... }

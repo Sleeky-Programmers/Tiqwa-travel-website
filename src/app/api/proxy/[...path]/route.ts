@@ -13,9 +13,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 		const authHeader = request.headers.get('Authorization');
 		const originHeader = request.headers.get('Origin') || process.env.NEXT_PUBLIC_APP_URL!;
 
-		console.log('🔄 Proxy GET to:', url);
-		console.log('🔑 Auth header present:', !!authHeader);
-
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			'Accept': 'application/json',
@@ -37,8 +34,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 			}),
 		});
 
-		console.log('✅ Proxy response status:', response.status);
-
 		const data = await response.json();
 
 		return NextResponse.json(data, {
@@ -50,7 +45,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 			},
 		});
 	} catch (error) {
-		console.error('❌ Proxy error:', error);
 		return NextResponse.json(
 			{
 				success: false,
@@ -75,10 +69,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 		const baseURL = process.env.NEXT_PUBLIC_APP_URL!;
 		const originHeader = request.headers.get('Origin') || baseURL;
 
-		console.log('🔄 Proxy POST to:', url);
-		console.log('🔑 Auth header present:', !!authHeader);
-		console.log('📦 Request body:', JSON.stringify(body, null, 2));
-
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			'Accept': 'application/json',
@@ -97,8 +87,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			body: JSON.stringify(body),
 		});
 
-		console.log('✅ Proxy response status:', response.status);
-
 		const data = await response.json();
 
 		return NextResponse.json(data, {
@@ -110,7 +98,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			},
 		});
 	} catch (error) {
-		console.error('❌ Proxy error:', error);
 		return NextResponse.json(
 			{
 				success: false,

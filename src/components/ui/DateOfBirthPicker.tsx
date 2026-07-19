@@ -1,12 +1,14 @@
 'use client';
-
 import { format, isValid, parse } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
-import { useId, useState } from 'react';
+import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
+import { DayPicker, useDayPicker } from 'react-day-picker';
 
-import { Calendar } from '@/components/ui/calendar';
+import { buttonVariants } from '@/components/ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface DateOfBirthPickerProps {
 	label?: string;
@@ -17,6 +19,8 @@ interface DateOfBirthPickerProps {
 	disabled?: { after: Date };
 	className?: string;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function parseDate(value: string | undefined): Date | undefined {
 	if (!value) return undefined;
@@ -29,12 +33,192 @@ function formatCompactDate(date: Date): string {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
+const START_YEAR = 1920;
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// ─── Custom Dropdown ──────────────────────────────────────────────────────────
+
+interface CustomSelectProps {
+	value: number;
+	options: { value: number; label: string }[];
+	onChange: (value: number) => void;
+	className?: string;
+}
+
+function CustomSelect({ value, options, onChange, className }: CustomSelectProps) {
+	const [open, setOpen] = useState(false);
+	const ref = useRef<HTMLDivElement>(null);
+	const selectedLabel = options.find((o) => o.value === value)?.label ?? String(value);
+
+	// Close on outside click
+	const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+		if (!ref.current?.contains(e.relatedTarget as Node)) setOpen(false);
+	};
+
+	return (
+		<div
+			ref={ref}
+			className={cn('relative', className)}
+			onBlur={handleBlur}>
+			{/* Trigger */}
+			<button
+				type="button"
+				onClick={() => setOpen((o) => !o)}
+				className={cn(
+					'flex h-7 items-center gap-1 rounded-lg border border-border/60 bg-background/80 px-2.5',
+					'text-xs font-medium text-foreground shadow-sm backdrop-blur-sm',
+					'transition-all hover:border-primary/40 hover:bg-background',
+					'focus:outline-none focus:ring-2 focus:ring-primary/20',
+					open && 'border-primary/40 bg-background ring-2 ring-primary/20'
+				)}
+				aria-haspopup="listbox"
+				aria-expanded={open}>
+				<span>{selectedLabel}</span>
+				<ChevronDown className={cn('h-3 w-3 text-muted-foreground transition-transform', open && 'rotate-180')} />
+			</button>
+
+			{/* Dropdown list */}
+			{open && (
+				<div
+					role="listbox"
+					className={cn(
+						'absolute left-0 top-full z-50 mt-1 max-h-48 w-max min-w-full overflow-y-auto rounded-xl',
+						'border border-border/60 bg-popover shadow-lg backdrop-blur-sm',
+						'scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent'
+					)}>
+					{options.map((opt) => (
+						<button
+							key={opt.value}
+							type="button"
+							role="option"
+							aria-selected={opt.value === value}
+							onMouseDown={(e) => {
+								// mousedown fires before blur, so we can safely update then close
+								e.preventDefault();
+								onChange(opt.value);
+								setOpen(false);
+							}}
+							className={cn(
+								'flex w-full items-center px-3 py-1.5 text-left text-xs transition-colors',
+								opt.value === value ? 'bg-primary/10 font-semibold text-primary' : 'text-foreground hover:bg-accent'
+							)}>
+							{opt.label}
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+// ─── Custom Month Caption ──────────────────────────────────────────────────────
+// Replaces the default caption so we get zero native <select> elements
+
+function MonthCaption({ calendarMonth }: { calendarMonth: { date: Date } }) {
+	const { goToMonth, previousMonth, nextMonth } = useDayPicker();
+
+	const displayMonth = calendarMonth.date;
+	const month = displayMonth.getMonth();
+	const year = displayMonth.getFullYear();
+
+	const monthOptions = MONTHS.map((label, i) => ({ value: i, label }));
+	const yearOptions = Array.from({ length: CURRENT_YEAR - START_YEAR + 1 }, (_, i) => {
+		const y = CURRENT_YEAR - i;
+		return { value: y, label: String(y) };
+	});
+
+	const handleMonthChange = (newMonth: number) => {
+		goToMonth(new Date(year, newMonth, 1));
+	};
+
+	const handleYearChange = (newYear: number) => {
+		goToMonth(new Date(newYear, month, 1));
+	};
+
+	return (
+		<div className="flex items-center justify-between px-1 pt-1">
+			{/* Prev */}
+			<button
+				type="button"
+				onClick={() => previousMonth && goToMonth(previousMonth)}
+				disabled={!previousMonth}
+				className={cn(buttonVariants({ variant: 'outline' }), 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 disabled:pointer-events-none')}
+				aria-label="Previous month">
+				<ChevronLeft className="h-4 w-4" />
+			</button>
+
+			{/* Month + Year selects */}
+			<div className="flex items-center gap-1.5">
+				<CustomSelect
+					value={month}
+					options={monthOptions}
+					onChange={handleMonthChange}
+				/>
+				<CustomSelect
+					value={year}
+					options={yearOptions}
+					onChange={handleYearChange}
+					className="w-[68px]"
+				/>
+			</div>
+
+			{/* Next */}
+			<button
+				type="button"
+				onClick={() => nextMonth && goToMonth(nextMonth)}
+				disabled={!nextMonth}
+				className={cn(buttonVariants({ variant: 'outline' }), 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 disabled:pointer-events-none')}
+				aria-label="Next month">
+				<ChevronRight className="h-4 w-4" />
+			</button>
+		</div>
+	);
+}
+
+// ─── Inline Calendar (no shadcn wrapper needed) ────────────────────────────────
+
+type CalendarProps = React.ComponentProps<typeof DayPicker>;
+
+function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+	return (
+		<DayPicker
+			showOutsideDays={showOutsideDays}
+			className={cn('p-3', className)}
+			classNames={{
+				months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+				month: 'space-y-4',
+				month_caption: 'flex justify-center pt-1 relative items-center h-10',
+				caption_label: 'hidden', // hidden — MonthCaption renders its own
+				nav: 'hidden', // hidden — MonthCaption renders its own nav
+				weekdays: 'flex',
+				weekday: 'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
+				week: 'flex w-full mt-2',
+				day: cn(buttonVariants({ variant: 'ghost' }), 'h-9 w-9 p-0 font-normal aria-selected:opacity-100 relative'),
+				range_start: 'bg-primary text-primary-foreground rounded-l-md rounded-r-none',
+				range_end: 'bg-primary text-primary-foreground rounded-r-md rounded-l-none',
+				range_middle: 'bg-accent text-accent-foreground rounded-none',
+				selected: 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+				today: 'bg-accent text-accent-foreground',
+				outside: 'text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',
+				disabled: 'text-muted-foreground opacity-50',
+				hidden: 'invisible',
+				...classNames,
+			}}
+			components={{
+				MonthCaption: (props) => <MonthCaption calendarMonth={props.calendarMonth} />,
+			}}
+			{...props}
+		/>
+	);
+}
+
+// ─── DateOfBirthPicker ────────────────────────────────────────────────────────
 
 export function DateOfBirthPicker({ label, value = '', onChange, placeholder = 'Select date of birth', required, disabled, className }: DateOfBirthPickerProps) {
 	const id = useId();
 	const [open, setOpen] = useState(false);
 	const selected = parseDate(value);
-
 	const defaultMonth = selected || new Date(CURRENT_YEAR - 20, 0, 1);
 
 	const handleSelect = (date: Date | undefined) => {
@@ -45,9 +229,7 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 		}
 	};
 
-	const handleClear = () => {
-		onChange?.('');
-	};
+	const handleClear = () => onChange?.('');
 
 	return (
 		<div className={cn('flex flex-col gap-1.5', className)}>
@@ -59,6 +241,7 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 					{required && <span className="ml-1 text-primary">*</span>}
 				</label>
 			)}
+
 			<Popover
 				open={open}
 				onOpenChange={setOpen}>
@@ -84,6 +267,7 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 						</button>
 					)}
 				</PopoverTrigger>
+
 				<PopoverContent
 					className="w-auto p-0 glossy"
 					align="start">
@@ -93,13 +277,13 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 						onSelect={handleSelect}
 						disabled={disabled}
 						defaultMonth={defaultMonth}
-						captionLayout="dropdown"
-						startMonth={new Date(1920, 0)}
+						startMonth={new Date(START_YEAR, 0)}
 						endMonth={new Date(CURRENT_YEAR, 11)}
 						className="rounded-xl border-0"
 					/>
 				</PopoverContent>
 			</Popover>
+
 			{required && (
 				<input
 					type="text"

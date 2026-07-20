@@ -23,6 +23,7 @@ import {
 	isBookingReservationExpired,
 	readActiveBooking,
 	readCachedFlightSearch,
+	reserveBooking,
 	saveActiveBooking,
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
@@ -285,6 +286,13 @@ function BookingContent() {
 
 			const { booking_id, reference } = createResult.data;
 			saveActiveBooking({ bookingId: booking_id, reference, flightId });
+
+			const reserveResult = await reserveBooking(booking_id, flightId);
+			if (!reserveResult.success) {
+				setError(reserveResult.error || 'Failed to reserve booking');
+				setIsProcessing(false);
+				return;
+			}
 
 			// Step 2: Initiate payment
 			const paymentResult = await initiatePayment(booking_id, flightId, {

@@ -881,7 +881,7 @@ export async function getFlightBookings(): Promise<{
 			headers: { Authorization: `Bearer ${token}` },
 		});
 		const result = await response.json();
-		const bookings = Array.isArray(result.data?.bookings) ? result.data.bookings : Array.isArray(result.data) ? result.data : [];
+		const bookings = Array.isArray(result.data?.itemList) ? result.data.itemList : Array.isArray(result.data) ? result.data : [];
 
 		return {
 			success: Boolean(result.success),
@@ -1295,15 +1295,15 @@ export async function getGeneralSettings() {
 }
 
 export async function updateGeneralSettings(data: Record<string, any>): Promise<{ success: boolean; error?: string }> {
-  const token = getAccessToken();
-  if (!token) return { success: false, error: 'Not authenticated' };
+	const token = getAccessToken();
+	if (!token) return { success: false, error: 'Not authenticated' };
 
-  try {
-    const result = await postJSON<unknown>('/management/settings/general', data);
-    return result;
-  } catch {
-    return { success: false, error: 'Failed to update general settings' };
-  }
+	try {
+		const result = await postJSON<unknown>('/management/settings/general', data);
+		return result;
+	} catch {
+		return { success: false, error: 'Failed to update general settings' };
+	}
 }
 
 export async function getLoyaltySettings() {

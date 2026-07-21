@@ -138,12 +138,12 @@ export function getUserRole(): string | null {
  * - role: "user" or "customer" → "/dashboard"
  * - Case-insensitive comparison
  */
-export function getRedirectPath(role?: string | null): string {
-	if (isAdminUser(role)) {
-		return '/admin';
-	}
-	return '/dashboard';
-}
+// export function getRedirectPath(role?: string | null): string {
+// 	if (isAdminUser(role)) {
+// 		return '/admin';
+// 	}
+// 	return '/dashboard';
+// }
 
 export async function login(credentials: LoginCredentials): Promise<{
 	success: boolean;
@@ -177,7 +177,7 @@ export async function login(credentials: LoginCredentials): Promise<{
 
 			setAuthUser(user);
 
-			const redirectPath = getRedirectPath(user.role);
+			const redirectPath = '/dashboard';
 
 			return {
 				success: true,

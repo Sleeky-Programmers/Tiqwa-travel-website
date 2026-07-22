@@ -64,7 +64,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const displayName = user?.firstName || user?.name || 'Traveler';
 	const email = user?.email || '';
 	const isExpanded = !isCollapsed || isHovered;
-	const sidebarWidth = isExpanded ? 'w-[280px]' : 'w-[72px]';
+	const sidebarMargin = isExpanded ? 'lg:ml-[280px]' : 'lg:ml-[72px]';
 
 	return (
 		<div className="flex min-h-screen">
@@ -95,10 +95,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 				isHovered={isHovered}
 				onHoverChange={setIsHovered}
 				onLogout={logout}
+				isMobileOpen={isSidebarOpen}
 			/>
 
 			{/* Right Section: Navbar + Main Content */}
-			<div className={cn('flex-1 min-h-screen flex flex-col transition-all duration-300 ease-in-out', sidebarWidth.replace('w-', 'ml-'))}>
+			<div className={cn('flex-1 min-h-screen flex flex-col transition-all duration-300 ease-in-out', sidebarMargin)}>
 				<DashboardNavbar />
 
 				<main className="flex-1 pt-4 pb-8">

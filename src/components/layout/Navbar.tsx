@@ -7,6 +7,7 @@ import { LayoutDashboard, Menu, Moon, Plane, Sun, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { Button } from "@/components/ui/Button";
 
 const navLinks = [
@@ -16,10 +17,14 @@ const navLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
+const DEFAULT_BRAND_NAME = "Tiqwa Travel";
+
 export function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme, mounted } = useTheme();
   const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { settings } = useSiteSettings();
+  const brandName = settings?.name || DEFAULT_BRAND_NAME;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -65,7 +70,7 @@ export function Navbar() {
                   <Plane className="h-4 w-4 md:h-5 md:w-5" />
                 </div>
                 <span className="text-base md:text-lg font-bold text-foreground">
-                  Tiqwa Travel
+                  {brandName}
                 </span>
               </Link>
 
@@ -183,7 +188,7 @@ export function Navbar() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white">
                     <Plane className="h-4 w-4" />
                   </div>
-                  <span className="font-bold text-foreground">Tiqwa Travel</span>
+                  <span className="font-bold text-foreground">{brandName}</span>
                 </Link>
                 <button
                   onClick={() => setSidebarOpen(false)}

@@ -9,6 +9,38 @@ export interface WhitelabelResponse<T> {
 }
 
 // ============================================
+// SITE SETTINGS
+// ============================================
+
+export interface SiteSettings {
+	name: string;
+	long_name: string;
+	logo: string | null;
+	copyright: string;
+	physical_address: string;
+	site_url: string;
+	site_domain: string;
+	blog_url: string;
+	facebook_link: string | null;
+	instagram_link: string | null;
+	linkedin_link: string | null;
+	twitter_link: string | null;
+	default_currency: string;
+	phone_number: string;
+	email_address: string;
+	support_phone: string;
+	support_email: string;
+	maintenance_mode: number;
+	payment_gateway: string | null;
+	light_logo: string | null;
+	primary_color: string | null;
+	secondary_color: string | null;
+	primary_lint_color: string | null;
+	secondary_lint_color: string | null;
+	tagline: string;
+}
+
+// ============================================
 // HOMEPAGE TYPES
 // ============================================
 

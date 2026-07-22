@@ -37,6 +37,8 @@ export interface SidebarProps {
 	onHoverChange: (hovered: boolean) => void;
 	/** Logout function */
 	onLogout: () => void;
+	/** Whether the sidebar drawer is open on mobile/tablet viewports */
+	isMobileOpen?: boolean;
 	/** Optional additional className */
 	className?: string;
 }
@@ -66,6 +68,7 @@ export function Sidebar({
 	isHovered,
 	onHoverChange,
 	onLogout,
+	isMobileOpen = false,
 	className,
 }: SidebarProps) {
 	const pathname = usePathname();
@@ -74,7 +77,12 @@ export function Sidebar({
 
 	return (
 		<aside
-			className={cn('fixed left-0 top-0 z-50 h-screen transition-all duration-300 ease-in-out', isExpanded ? 'w-[280px]' : 'w-[72px]', className)}
+			className={cn(
+				'fixed left-0 top-0 z-50 h-screen transition-all duration-300 ease-in-out',
+				isExpanded ? 'w-[280px]' : 'w-[72px]',
+				isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+				className
+			)}
 			onMouseEnter={() => isCollapsed && onHoverChange(true)}
 			onMouseLeave={() => isCollapsed && onHoverChange(false)}>
 			<div className="dashboard-sidebar flex h-full flex-col overflow-hidden">

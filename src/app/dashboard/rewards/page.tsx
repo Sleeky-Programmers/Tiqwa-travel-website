@@ -4,9 +4,7 @@ import { ArrowRight, Award, Check, Clock, Copy, Gift, History, Share2, Sparkles,
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { cn } from '@/lib/utils';
-import { getRewardsData, RewardsData, type } from '@/services/whitelabel-api';
+import { getRewardsData, RewardsData } from '@/services/whitelabel-api';
 
 export default function RewardsPage() {
 	const [rewards, setRewards] = useState<RewardsData | null>(null);

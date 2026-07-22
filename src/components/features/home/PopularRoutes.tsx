@@ -59,7 +59,11 @@ function SectionHeader({ subtitle }: { subtitle?: string }) {
       viewport={{ once: true }}
       className="mb-10 text-center"
     >
-      <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+      <span className="section-badge mb-3 inline-flex">
+        <Plane className="h-3 w-3" />
+        Top Routes
+      </span>
+      <h2 className="section-heading">
         Popular Flight Routes
       </h2>
       <p className="mt-3 text-muted-foreground">
@@ -152,54 +156,69 @@ export function PopularRoutes() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.08 }}
               onClick={() => handleRouteClick(route)}
-              className="glossy-card glossy-hover group overflow-hidden text-left"
+              className="hover-lift glossy-card group overflow-hidden text-left"
             >
               {route.image ? (
-                <div className="relative h-36 w-full overflow-hidden bg-muted/30">
+                <div className="relative h-40 w-full overflow-hidden bg-muted/20">
                   <Image
                     src={route.image}
                     alt={`${route.from} to ${route.to}`}
                     fill
-                    className="object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                    className="object-contain p-6 transition-transform duration-300 group-hover:scale-108"
                     unoptimized={
                       route.image.includes("cloudinary.com") ||
                       route.image.includes("tiqwa.com")
                     }
                   />
+                  {/* Trip type badge */}
+                  {route.tripType && (
+                    <span className="absolute left-3 top-3 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-foreground/80 border border-border/50">
+                      {route.tripType}
+                    </span>
+                  )}
                   {route.badge && (
                     <span
-                      className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeColors[route.badge] ?? badgeColors.Deal}`}
+                      className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeColors[route.badge] ?? badgeColors.Deal}`}
                     >
                       {route.badge}
                     </span>
                   )}
                 </div>
               ) : (
-                <div className="flex h-36 items-center justify-center bg-primary/5">
-                  <Plane className="h-10 w-10 text-primary/40" />
+                <div className="flex h-40 items-center justify-center bg-primary/5 relative">
+                  <Plane className="h-10 w-10 text-primary/30" />
+                  {route.tripType && (
+                    <span className="absolute left-3 top-3 rounded-full bg-white dark:bg-card px-2.5 py-0.5 text-xs font-medium text-foreground/70 border border-border">
+                      {route.tripType}
+                    </span>
+                  )}
                 </div>
               )}
               <div className="p-5">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <span>{route.fromCode}</span>
-                  <ArrowRight className="h-4 w-4 text-primary" />
-                  <span>{route.toCode}</span>
+                <div className="flex items-center gap-2 text-sm font-bold tracking-wide">
+                  <span className="text-foreground">{route.fromCode}</span>
+                  <ArrowRight className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="text-foreground">{route.toCode}</span>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {route.from} → {route.to}
                 </p>
-                <div className="mt-4 flex items-center justify-between">
+
+                <div className="mt-4 flex items-end justify-between">
                   <div>
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-xl font-bold text-primary leading-none">
                       {formatFlightPrice(route.price, route.currency)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {route.tripType}
-                      {route.cabinClass ? ` · ${route.cabinClass}` : ""}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {route.cabinClass ?? "Economy"}
                     </p>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Plane className="h-4 w-4" />
+
+                  {/* Hover-reveal Book Now */}
+                  <div className="translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-primary/30">
+                      Book Now <ArrowRight className="h-3 w-3" />
+                    </span>
                   </div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, Users, Globe, BadgeDollarSign } from "lucide-react";
 import Image from "next/image";
 import { FlightSearchForm } from "@/components/features/FlightSearchForm";
 import { Container } from "@/components/ui/Container";
@@ -12,11 +12,18 @@ interface HeroSectionProps {
   heroImage?: string;
 }
 
+const statsStrip = [
+  { icon: Users, value: "2M+", label: "Travelers" },
+  { icon: Globe, value: "500+", label: "Destinations" },
+  { icon: BadgeDollarSign, value: "Best", label: "Price Guarantee" },
+];
+
 export function HeroSection({ heroImage }: HeroSectionProps) {
   const backgroundImage = heroImage || heroBackgroundImage;
 
   return (
     <section className="relative flex min-h-[100vh] items-center overflow-hidden">
+      {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
           src={backgroundImage}
@@ -26,46 +33,94 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
           priority
           unoptimized={backgroundImage.includes("cloudinary.com")}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/30" />
+        {/* Gradient overlay — tapers smoothly to white at bottom */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/20" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background/60 to-transparent" />
       </div>
 
-      <Container className="relative z-10 py-16 lg:py-20">
+      <Container className="relative z-10 py-16 lg:py-24">
+        {/* Headline block */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.65 }}
           className="mx-auto max-w-3xl text-center"
         >
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
             Fly Anywhere,{" "}
-            <span className="text-primary">Pay Less</span>
+            <span className="text-primary drop-shadow-[0_0_20px_rgba(37,99,235,0.6)]">
+              Pay Less
+            </span>
           </h1>
-          <p className="mt-4 text-lg text-white/80 sm:text-xl">
+          <p className="mt-5 text-lg text-white/80 sm:text-xl max-w-2xl mx-auto">
             Premium flight booking with the best prices guaranteed
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {/* Trust badge pills */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
             {trustBadges.map((badge) => (
               <span
                 key={badge}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/12 px-3.5 py-1.5 text-xs font-medium text-white backdrop-blur-sm shadow-sm"
               >
                 <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                 {badge}
               </span>
             ))}
           </div>
+
+          {/* Stats strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.2 }}
+            className="mt-8 flex items-center justify-center gap-6 sm:gap-10"
+          >
+            {statsStrip.map(({ icon: Icon, value, label }, i) => (
+              <div key={label} className="flex items-center gap-2">
+                {i > 0 && (
+                  <span className="hidden sm:block h-6 w-px bg-white/20" />
+                )}
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-bold text-white leading-none">
+                    {value}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-white/60 mt-0.5">
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </motion.div>
         </motion.div>
 
+        {/* Search form */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
+          transition={{ duration: 0.6, delay: 0.18 }}
           className="mx-auto mt-10 max-w-5xl"
         >
           <FlightSearchForm />
         </motion.div>
       </Container>
+
+      {/* Scroll-down indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="absolute bottom-8 left-0 right-0 flex justify-center z-10"
+      >
+        <motion.div
+          animate={{ y: [0, 6, 0] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/10 backdrop-blur-sm text-white/70"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </motion.div>
+      </motion.div>
     </section>
   );
 }

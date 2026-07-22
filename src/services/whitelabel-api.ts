@@ -20,6 +20,7 @@ import type {
 	PaymentGateway,
 	PaymentMethod,
 	BankAccount,
+	SiteSettings,
 } from '@/types/whitelabel';
 
 // Determine which API base to use
@@ -268,6 +269,10 @@ export async function getFlightDeals(): Promise<FlightDeal[]> {
 
 export async function getPopularAirports(): Promise<PopularAirport[]> {
 	return fetchAPI<PopularAirport[]>('/get/popular-airports');
+}
+
+export async function getSiteSettings(): Promise<SiteSettings> {
+	return fetchAPI<SiteSettings>('/get/site-settings');
 }
 
 export async function getAirports(keyword: string): Promise<Airport[]> {

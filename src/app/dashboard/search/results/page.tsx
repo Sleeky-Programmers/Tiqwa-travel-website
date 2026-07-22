@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowLeft, Building, ChevronLeft, ChevronRight, Clock, Filter, Loader2, Plane, SlidersHorizontal, SortAsc, Users, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -10,6 +10,7 @@ import { FlightCard } from '@/components/features/FlightCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
+import { cn } from '@/lib/utils';
 import { applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption } from '@/services/flightSearch';
 import {
 	CabinClass,
@@ -22,7 +23,6 @@ import {
 } from '@/services/whitelabel-api';
 
 import type { Flight, StopsFilter } from '@/types/flight';
-
 const CABIN_LABELS: Record<CabinClass, string> = {
 	economy: 'Economy',
 	premium_economy: 'Premium Economy',
@@ -194,20 +194,28 @@ function ResultsContent() {
 	const hasActiveFilters = maxPrice !== undefined || stopsFilter !== 'any' || selectedAirlines.length > 0;
 
 	const filterPanel = (
-		<div className="glossy-card space-y-6 p-5 sticky top-24">
+		<div className="rounded-2xl bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] space-y-6 sticky top-24 dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 			<div className="flex items-center justify-between">
-				<h3 className="font-semibold">Filters</h3>
+				<div className="flex items-center gap-2">
+					<Filter className="h-4 w-4 text-muted-foreground" />
+					<h3 className="font-semibold">Filters</h3>
+				</div>
 				{hasActiveFilters && (
 					<button
 						onClick={clearFilters}
-						className="text-xs text-primary hover:underline">
+						className="text-xs text-primary hover:underline flex items-center gap-1">
+						<X className="h-3 w-3" />
 						Clear all
 					</button>
 				)}
 			</div>
 
+			{/* Price Range */}
 			<div>
-				<label className="text-sm font-medium">Max Price: {formatFlightPrice(effectiveMaxPrice, displayCurrency)}</label>
+				<div className="flex items-center justify-between">
+					<label className="text-sm font-medium">Max Price</label>
+					<span className="text-sm font-semibold text-primary">{formatFlightPrice(effectiveMaxPrice, displayCurrency)}</span>
+				</div>
 				<input
 					type="range"
 					min={priceRange.min}
@@ -217,7 +225,12 @@ function ResultsContent() {
 						setMaxPrice(Number(e.target.value));
 						setCurrentPage(1);
 					}}
-					className="mt-2 w-full accent-primary"
+					className="mt-2 w-full h-1.5 rounded-full bg-primary/20 appearance-none accent-primary cursor-pointer"
+					style={{
+						background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${
+							((effectiveMaxPrice - priceRange.min) / (priceRange.max - priceRange.min)) * 100
+						}%, rgba(37,99,235,0.2) ${((effectiveMaxPrice - priceRange.min) / (priceRange.max - priceRange.min)) * 100}%, rgba(37,99,235,0.2) 100%)`,
+					}}
 				/>
 				<div className="mt-1 flex justify-between text-xs text-muted-foreground">
 					<span>{formatFlightPrice(priceRange.min, displayCurrency)}</span>
@@ -225,9 +238,10 @@ function ResultsContent() {
 				</div>
 			</div>
 
+			{/* Stops */}
 			<div>
-				<p className="text-sm font-medium">Stops</p>
-				<div className="mt-2 flex flex-wrap gap-2">
+				<p className="text-sm font-medium mb-2">Stops</p>
+				<div className="flex flex-wrap gap-1.5">
 					{(
 						[
 							{ label: 'Any', value: 'any' as const },
@@ -242,8 +256,10 @@ function ResultsContent() {
 								setStopsFilter(opt.value);
 								setCurrentPage(1);
 							}}
-							className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-								stopsFilter === opt.value ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-primary/10'
+							className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+								stopsFilter === opt.value
+									? 'bg-primary text-white shadow-lg shadow-primary/25'
+									: 'bg-secondary/60 text-secondary-foreground hover:bg-primary/10 hover:text-primary'
 							}`}>
 							{opt.label}
 						</button>
@@ -251,85 +267,124 @@ function ResultsContent() {
 				</div>
 			</div>
 
+			{/* Airlines */}
 			<div>
-				<p className="text-sm font-medium">Airlines</p>
-				<div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
-					{airlines.map((airline) => (
-						<label
-							key={airline}
-							className="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								checked={selectedAirlines.includes(airline)}
-								onChange={() => toggleAirline(airline)}
-								className="accent-primary"
-							/>
-							{airline}
-						</label>
-					))}
+				<p className="text-sm font-medium mb-2">Airlines</p>
+				<div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+					{airlines.length === 0 ? (
+						<p className="text-xs text-muted-foreground">No airlines available</p>
+					) : (
+						airlines.map((airline) => (
+							<label
+								key={airline}
+								className="flex items-center gap-2.5 text-sm p-1.5 rounded-lg hover:bg-primary/5 cursor-pointer transition-colors">
+								<input
+									type="checkbox"
+									checked={selectedAirlines.includes(airline)}
+									onChange={() => toggleAirline(airline)}
+									className="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+								/>
+								<Building className="h-3.5 w-3.5 text-muted-foreground" />
+								<span>{airline}</span>
+							</label>
+						))
+					)}
 				</div>
 			</div>
 		</div>
 	);
 
 	return (
-		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-bold">Flight Results</h1>
-				<p className="text-muted-foreground">
-					{from && to ? `${from} → ${to}` : 'Search for flights'}
-					{departure && ` · ${departure}`}
-					{returnDate && ` · return ${returnDate}`}
-					{tripType && ` · ${tripType}`}
-					{` · ${totalPassengers} passenger${totalPassengers > 1 ? 's' : ''}`}
-					{` · ${CABIN_LABELS[cabin]}`}
-				</p>
+		<div className="space-y-6 page-transition">
+			{/* Page Header */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+				<div>
+					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Flight Results</h1>
+					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+						<Plane className="h-4 w-4" />
+						{from && to ? `${from} → ${to}` : 'Search for flights'}
+						{departure && ` · ${departure}`}
+						{returnDate && ` · Return ${returnDate}`}
+					</p>
+				</div>
+				<div className="flex items-center gap-2">
+					<div className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+						<Users className="h-3 w-3" />
+						{totalPassengers} {totalPassengers > 1 ? 'passengers' : 'passenger'}
+					</div>
+					<div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+						<Plane className="h-3 w-3" />
+						{CABIN_LABELS[cabin]}
+					</div>
+				</div>
 			</div>
 
+			{/* Back to Search */}
 			<Link
 				href="/dashboard/search"
-				className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+				className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
 				<ArrowLeft className="h-4 w-4" />
 				Modify search
 			</Link>
 
+			{/* Error State */}
 			{error && (
-				<div className="flex flex-col gap-3 rounded-xl bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-					<p className="text-sm text-destructive">{error}</p>
+				<div className="flex flex-col gap-3 rounded-2xl bg-destructive/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex items-center gap-3">
+						<div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/20 text-destructive">
+							<X className="h-5 w-5" />
+						</div>
+						<p className="text-sm text-destructive">{error}</p>
+					</div>
 					<Button
 						variant="outline"
 						size="sm"
-						onClick={loadFlights}>
+						onClick={loadFlights}
+						className="rounded-full hover:bg-destructive/10 hover:text-destructive">
 						Retry search
 					</Button>
 				</div>
 			)}
 
+			{/* Controls Bar */}
 			<div className="flex flex-wrap items-center justify-between gap-4">
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-3">
 					<Button
 						variant="outline"
 						size="sm"
-						className="lg:hidden"
+						className="lg:hidden rounded-full hover:bg-primary/10 hover:text-primary"
 						onClick={() => setShowFilters(!showFilters)}>
-						<SlidersHorizontal className="h-4 w-4" />
+						<SlidersHorizontal className="h-4 w-4 mr-1.5" />
 						Filters
+						{hasActiveFilters && (
+							<span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+								{selectedAirlines.length + (stopsFilter !== 'any' ? 1 : 0) + (maxPrice !== undefined ? 1 : 0)}
+							</span>
+						)}
 					</Button>
-					<SlidersHorizontal className="hidden h-4 w-4 text-muted-foreground lg:block" />
+					<p className="text-sm text-muted-foreground hidden sm:block">
+						{filteredFlights.length} flight{filteredFlights.length > 1 ? 's' : ''} found
+					</p>
 				</div>
-				<select
-					value={sortBy}
-					onChange={(e) => handleSortChange(e.target.value as SortOption)}
-					className="rounded-xl border border-input bg-white/60 px-3 py-2 text-sm outline-none focus:border-primary dark:bg-white/5">
-					<option value="price">Price: Low to High</option>
-					<option value="duration">Duration</option>
-					<option value="departure">Departure Time</option>
-				</select>
+				<div className="flex items-center gap-2">
+					<SortAsc className="h-4 w-4 text-muted-foreground" />
+					<select
+						value={sortBy}
+						onChange={(e) => handleSortChange(e.target.value as SortOption)}
+						className="rounded-full border border-border/60 bg-white/60 px-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-white/5">
+						<option value="price">Price: Low to High</option>
+						<option value="duration">Duration</option>
+						<option value="departure">Departure Time</option>
+					</select>
+				</div>
 			</div>
 
-			<div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+			{/* Main Grid */}
+			<div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+				{/* Sidebar - Filters */}
 				<aside className="hidden lg:block">{filterPanel}</aside>
 
+				{/* Mobile Filters */}
 				<AnimatePresence>
 					{showFilters && (
 						<motion.div
@@ -340,7 +395,7 @@ function ResultsContent() {
 							<div className="relative mb-4">
 								<button
 									onClick={() => setShowFilters(false)}
-									className="absolute right-3 top-3 rounded-lg p-1 hover:bg-muted">
+									className="absolute right-3 top-3 rounded-lg p-1.5 hover:bg-primary/10 hover:text-primary transition-colors">
 									<X className="h-4 w-4" />
 								</button>
 								{filterPanel}
@@ -349,35 +404,45 @@ function ResultsContent() {
 					)}
 				</AnimatePresence>
 
+				{/* Results */}
 				<div id="results-section">
 					{isLoading ? (
-						<Card
-							hover={false}
-							className="p-12 text-center">
-							<div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-							<p className="text-muted-foreground">Searching for flights...</p>
-						</Card>
+						<div className="rounded-2xl bg-white p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+							<div className="relative mx-auto mb-4 h-12 w-12">
+								<div className="absolute inset-0 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+								<Plane className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
+							</div>
+							<p className="font-medium">Searching for flights...</p>
+							<p className="mt-1 text-sm text-muted-foreground">Finding the best options for you</p>
+						</div>
 					) : paginatedFlights.length === 0 ? (
-						<Card
-							hover={false}
-							className="p-12 text-center">
-							<p className="text-lg font-medium">No flights found</p>
-							<p className="mt-2 text-sm text-muted-foreground">Try adjusting your search or filters. Use airport codes like LOS or DXB.</p>
+						<div className="rounded-2xl bg-white p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/8">
+								<Plane className="h-8 w-8 text-primary/40" />
+							</div>
+							<p className="text-lg font-semibold">No flights found</p>
+							<p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+								Try adjusting your search or filters. Use airport codes like LOS or DXB for better results.
+							</p>
 							<Link
 								href="/dashboard/search"
-								className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+								className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 hover:scale-105">
 								Search again
+								<ArrowLeft className="h-4 w-4" />
 							</Link>
-						</Card>
+						</div>
 					) : (
 						<>
-							<div className="mb-3 flex items-center justify-between">
+							{/* Results count */}
+							<div className="mb-4 flex items-center justify-between">
 								<p className="text-sm text-muted-foreground">
-									{filteredFlights.length} flight{filteredFlights.length > 1 ? 's' : ''} found
+									Showing {(currentPage - 1) * FLIGHTS_PER_PAGE + 1}-{Math.min(currentPage * FLIGHTS_PER_PAGE, filteredFlights.length)} of {filteredFlights.length}{' '}
+									flights
 								</p>
 							</div>
 
-							<div className="h-[500px] overflow-y-auto pr-2 space-y-4 custom-scroll">
+							{/* Flight List */}
+							<div className="space-y-4">
 								{paginatedFlights.map((flight, i) => (
 									<motion.div
 										key={flight.id}
@@ -393,18 +458,19 @@ function ResultsContent() {
 								))}
 							</div>
 
+							{/* Pagination */}
 							{totalPages > 1 && (
-								<div className="mt-6 flex items-center justify-center gap-2 pt-4 border-t border-border">
+								<div className="mt-8 flex items-center justify-center gap-2 pt-4 border-t border-border/60">
 									<Button
 										variant="outline"
 										size="sm"
 										onClick={() => goToPage(currentPage - 1)}
 										disabled={currentPage === 1}
-										className="h-9 w-9 p-0">
+										className="h-10 w-10 rounded-full p-0 hover:bg-primary/10 hover:text-primary disabled:opacity-50">
 										<ChevronLeft className="h-4 w-4" />
 									</Button>
 
-									<div className="flex items-center gap-1">
+									<div className="flex items-center gap-1.5">
 										{Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
 											let pageNum: number;
 											if (totalPages <= 5) {
@@ -423,7 +489,10 @@ function ResultsContent() {
 													variant={currentPage === pageNum ? 'default' : 'outline'}
 													size="sm"
 													onClick={() => goToPage(pageNum)}
-													className="h-9 w-9 p-0">
+													className={cn(
+														'h-10 w-10 rounded-full p-0 transition-all',
+														currentPage === pageNum ? 'shadow-lg shadow-primary/25' : 'hover:bg-primary/10 hover:text-primary'
+													)}>
 													{pageNum}
 												</Button>
 											);
@@ -435,7 +504,7 @@ function ResultsContent() {
 										size="sm"
 										onClick={() => goToPage(currentPage + 1)}
 										disabled={currentPage === totalPages}
-										className="h-9 w-9 p-0">
+										className="h-10 w-10 rounded-full p-0 hover:bg-primary/10 hover:text-primary disabled:opacity-50">
 										<ChevronRight className="h-4 w-4" />
 									</Button>
 								</div>
@@ -452,8 +521,9 @@ export default function DashboardResultsPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center py-20">
-					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<div className="flex flex-col items-center justify-center py-20">
+					<Loader2 className="h-10 w-10 animate-spin text-primary" />
+					<p className="mt-4 text-sm text-muted-foreground">Loading results...</p>
 				</div>
 			}>
 			<ResultsContent />

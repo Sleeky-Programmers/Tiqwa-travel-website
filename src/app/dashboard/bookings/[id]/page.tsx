@@ -1,12 +1,13 @@
 'use client';
 
-import { ArrowLeft, Loader2, Plane } from 'lucide-react';
+import { ArrowLeft, Building, Calendar, CheckCircle, Clock, ClockIcon, CreditCard, FileText, Loader2, Mail, MapPin, Phone, Plane, User, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { cn } from '@/lib/utils';
 import { formatFlightPrice, getBookingDetails } from '@/services/whitelabel-api';
 import { BookingDetails } from '@/types/whitelabel';
 
@@ -29,24 +30,77 @@ function formatTime(dateString: string): string {
 	});
 }
 
-function getStatusColor(status: string): string {
-	const statusMap: Record<string, string> = {
-		BOOKED: 'bg-green-500/10 text-green-600 dark:text-green-400',
-		CONFIRMED: 'bg-green-500/10 text-green-600 dark:text-green-400',
-		PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-		PENDING_PAYMENT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-		CANCELLED: 'bg-red-500/10 text-red-600 dark:text-red-400',
-		RESERVED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+function getStatusColor(status: string): { bg: string; text: string; border: string; icon: React.ReactNode } {
+	const statusMap: Record<string, { bg: string; text: string; border: string; icon: React.ReactNode }> = {
+		BOOKED: {
+			bg: 'bg-emerald-500/10',
+			text: 'text-emerald-600 dark:text-emerald-400',
+			border: 'border-emerald-500/20',
+			icon: <CheckCircle className="h-3.5 w-3.5" />,
+		},
+		CONFIRMED: {
+			bg: 'bg-emerald-500/10',
+			text: 'text-emerald-600 dark:text-emerald-400',
+			border: 'border-emerald-500/20',
+			icon: <CheckCircle className="h-3.5 w-3.5" />,
+		},
+		PENDING: {
+			bg: 'bg-amber-500/10',
+			text: 'text-amber-600 dark:text-amber-400',
+			border: 'border-amber-500/20',
+			icon: <ClockIcon className="h-3.5 w-3.5" />,
+		},
+		PENDING_PAYMENT: {
+			bg: 'bg-amber-500/10',
+			text: 'text-amber-600 dark:text-amber-400',
+			border: 'border-amber-500/20',
+			icon: <ClockIcon className="h-3.5 w-3.5" />,
+		},
+		CANCELLED: {
+			bg: 'bg-red-500/10',
+			text: 'text-red-600 dark:text-red-400',
+			border: 'border-red-500/20',
+			icon: <XCircle className="h-3.5 w-3.5" />,
+		},
+		RESERVED: {
+			bg: 'bg-blue-500/10',
+			text: 'text-blue-600 dark:text-blue-400',
+			border: 'border-blue-500/20',
+			icon: <ClockIcon className="h-3.5 w-3.5" />,
+		},
 	};
-	return statusMap[status] || 'bg-muted text-muted-foreground';
+	return (
+		statusMap[status] || {
+			bg: 'bg-muted',
+			text: 'text-muted-foreground',
+			border: 'border-border',
+			icon: null,
+		}
+	);
 }
 
 function getDisplayStatus(status: string): string {
 	if (status === 'PENDING' || status === 'PENDING_PAYMENT') {
 		return 'Pending';
 	}
-	// Capitalize first letter and replace underscore with space for other statuses
 	return status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, ' ');
+}
+
+function getDepartureDate(booking: BookingDetails): string | null {
+	return booking.outbound?.[0]?.departure_time || null;
+}
+
+function isBookingPast(booking: BookingDetails): boolean {
+	const departureTime = getDepartureDate(booking);
+	if (!departureTime) return false;
+	return new Date(departureTime) < new Date();
+}
+
+function getArrivalDate(booking: BookingDetails): string | null {
+	const outbound = booking.outbound;
+	if (!outbound || outbound.length === 0) return null;
+	const lastSegment = outbound[outbound.length - 1];
+	return lastSegment?.arrival_time || null;
 }
 
 function BookingDetailsContent() {
@@ -81,23 +135,30 @@ function BookingDetailsContent() {
 
 	if (isLoading) {
 		return (
-			<div className="flex h-[60vh] items-center justify-center">
-				<div className="text-center">
-					<div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-					<p className="mt-4 text-muted-foreground">Loading booking details...</p>
+			<div className="flex flex-col items-center justify-center py-20">
+				<div className="relative">
+					<div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+					<Plane className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
 				</div>
+				<p className="mt-4 text-sm text-muted-foreground">Loading booking details...</p>
 			</div>
 		);
 	}
 
 	if (error || !booking) {
 		return (
-			<div className="flex h-[60vh] items-center justify-center">
-				<div className="text-center">
-					<p className="text-lg font-medium text-destructive">Booking Not Found</p>
-					<p className="mt-2 text-muted-foreground">{error || "The booking you're looking for doesn't exist."}</p>
+			<div className="flex flex-col items-center justify-center py-20">
+				<div className="rounded-2xl bg-white p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+						<XCircle className="h-8 w-8 text-destructive" />
+					</div>
+					<p className="text-lg font-semibold">Booking Not Found</p>
+					<p className="mt-2 text-sm text-muted-foreground max-w-md">{error || "The booking you're looking for doesn't exist or has been removed."}</p>
 					<Link href="/dashboard/bookings">
-						<Button className="mt-4">Back to Bookings</Button>
+						<Button className="mt-6 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+							<ArrowLeft className="mr-2 h-4 w-4" />
+							Back to Bookings
+						</Button>
 					</Link>
 				</div>
 			</div>
@@ -106,28 +167,52 @@ function BookingDetailsContent() {
 
 	const firstSegment = booking.outbound?.[0];
 	const lastSegment = booking.outbound?.[booking.outbound.length - 1];
+	const status = getStatusColor(booking.status);
+	const isPast = isBookingPast(booking);
+	const departureDate = getDepartureDate(booking);
+	const arrivalDate = getArrivalDate(booking);
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-7 page-transition">
 			{/* Header */}
-			<div className="flex flex-wrap items-center justify-between gap-4">
+			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div>
 					<Link
 						href="/dashboard/bookings"
-						className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+						className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
 						<ArrowLeft className="h-4 w-4" />
 						Back to Bookings
 					</Link>
-					<h1 className="mt-2 text-2xl font-bold">Booking Details</h1>
-					<p className="text-sm text-muted-foreground">
-						Reference: <span className="font-mono font-medium">{booking.reference}</span>
-					</p>
+					<h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight">Booking Details</h1>
+					<div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+						<span className="flex items-center gap-1.5">
+							<FileText className="h-4 w-4" />
+							Reference: <span className="font-mono font-medium text-foreground">{booking.reference}</span>
+						</span>
+						{booking.pnr && (
+							<span className="flex items-center gap-1.5">
+								<Building className="h-4 w-4" />
+								PNR: <span className="font-mono">{booking.pnr}</span>
+							</span>
+						)}
+					</div>
 				</div>
-				<div className="flex items-center gap-3">
-					<span className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(booking.status)}`}>{getDisplayStatus(booking.status)}</span>
-					<span className="text-sm text-muted-foreground">
-						PNR: <span className="font-mono">{booking.pnr}</span>
+				<div className="flex flex-wrap items-center gap-3">
+					<span className={cn('inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium', status.bg, status.text, status.border)}>
+						{status.icon}
+						{getDisplayStatus(booking.status)}
 					</span>
+					{isPast ? (
+						<span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3.5 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+							<CheckCircle className="h-3.5 w-3.5" />
+							Completed
+						</span>
+					) : (
+						<span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-sm font-medium text-primary border border-primary/20">
+							<ClockIcon className="h-3.5 w-3.5" />
+							Upcoming
+						</span>
+					)}
 				</div>
 			</div>
 
@@ -135,25 +220,33 @@ function BookingDetailsContent() {
 				{/* Main Content */}
 				<div className="space-y-6 lg:col-span-2">
 					{/* Flight Summary Card */}
-					<Card
-						hover={false}
-						className="p-6">
+					<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 						<div className="flex items-start gap-4">
 							{/* Airline Logo */}
 							{firstSegment?.airline_details?.logo && (
-								<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
+								<div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-white/50 p-1.5 dark:bg-white/5">
 									<img
 										src={firstSegment.airline_details.logo}
 										alt={firstSegment.airline_details.name}
-										className="h-full w-full object-contain p-1.5"
+										className="h-full w-full object-contain"
 									/>
 								</div>
 							)}
 							<div className="flex-1">
-								<p className="font-semibold">{firstSegment?.airline_details?.name || 'Unknown Airline'}</p>
-								<p className="text-sm text-muted-foreground">
-									{firstSegment?.flight_number} • {firstSegment?.cabin_type || 'Economy'}
-								</p>
+								<p className="font-semibold text-lg">{firstSegment?.airline_details?.name || 'Unknown Airline'}</p>
+								<div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+									<span className="font-mono">{firstSegment?.flight_number}</span>
+									<span className="text-muted-foreground/40">•</span>
+									<span>{firstSegment?.cabin_type || 'Economy'}</span>
+									{booking.query_type && (
+										<>
+											<span className="text-muted-foreground/40">•</span>
+											<span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+												{booking.query_type === 'one_way' ? 'One Way' : 'Round Trip'}
+											</span>
+										</>
+									)}
+								</div>
 							</div>
 						</div>
 
@@ -161,174 +254,241 @@ function BookingDetailsContent() {
 						<div className="mt-6 grid gap-4 sm:grid-cols-3">
 							<div>
 								<p className="text-sm text-muted-foreground">From</p>
-								<p className="font-semibold">{firstSegment?.airport_from_details?.city}</p>
-								<p className="text-xs text-muted-foreground">
-									{firstSegment?.airport_from_details?.iata_code} • {formatDate(firstSegment?.departure_time || '')}
-								</p>
-								<p className="text-xs font-medium">{formatTime(firstSegment?.departure_time || '')}</p>
+								<p className="text-xl font-bold">{firstSegment?.airport_from_details?.city}</p>
+								<p className="text-sm text-muted-foreground">{firstSegment?.airport_from_details?.iata_code}</p>
+								{departureDate && (
+									<>
+										<div className="mt-2 flex items-center gap-2 text-sm">
+											<Calendar className="h-4 w-4 text-muted-foreground" />
+											<span>{formatDate(departureDate)}</span>
+										</div>
+										<p className="text-sm font-medium text-primary">{formatTime(departureDate)}</p>
+									</>
+								)}
 							</div>
 
 							<div className="flex flex-col items-center justify-center">
-								<div className="flex items-center gap-2">
-									<div className="h-px w-8 bg-border" />
-									<Plane className="h-4 w-4 rotate-90 text-primary" />
-									<div className="h-px w-8 bg-border" />
+								<div className="flex items-center gap-2 w-full">
+									<div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+									<Plane className="h-5 w-5 rotate-90 text-primary" />
+									<div className="flex-1 h-px bg-gradient-to-l from-transparent via-border to-transparent" />
 								</div>
-								<p className="text-xs text-muted-foreground">
+								<p className="mt-2 text-sm text-muted-foreground">
 									{Math.floor(booking.total_duration / 60)}h {booking.total_duration % 60}m
 								</p>
-								{booking.outbound?.length > 1 && <p className="text-xs text-muted-foreground">{booking.outbound.length - 1} stop(s)</p>}
+								{booking.outbound && booking.outbound.length > 1 && (
+									<p className="text-xs text-muted-foreground">
+										{booking.outbound.length - 1} stop{booking.outbound.length - 1 > 1 ? 's' : ''}
+									</p>
+								)}
 							</div>
 
 							<div className="text-right">
 								<p className="text-sm text-muted-foreground">To</p>
-								<p className="font-semibold">{lastSegment?.airport_to_details?.city}</p>
-								<p className="text-xs text-muted-foreground">
-									{lastSegment?.airport_to_details?.iata_code} • {formatDate(lastSegment?.arrival_time || '')}
-								</p>
-								<p className="text-xs font-medium">{formatTime(lastSegment?.arrival_time || '')}</p>
+								<p className="text-xl font-bold">{lastSegment?.airport_to_details?.city}</p>
+								<p className="text-sm text-muted-foreground">{lastSegment?.airport_to_details?.iata_code}</p>
+								{arrivalDate && (
+									<>
+										<div className="mt-2 flex items-center justify-end gap-2 text-sm">
+											<Calendar className="h-4 w-4 text-muted-foreground" />
+											<span>{formatDate(arrivalDate)}</span>
+										</div>
+										<p className="text-sm font-medium text-primary">{formatTime(arrivalDate)}</p>
+									</>
+								)}
 							</div>
 						</div>
 
-						{/* Flight Segments (if multiple) */}
-						{booking.outbound?.length > 1 && (
-							<div className="mt-4 border-t border-border pt-4">
-								<p className="text-sm font-medium mb-2">Flight Segments</p>
-								{booking.outbound.map((segment, index) => (
-									<div
-										key={index}
-										className="flex items-center gap-4 text-sm">
-										<span className="font-mono text-xs">{segment.flight_number}</span>
-										<span>{segment.airport_from_details?.city}</span>
-										<span className="text-muted-foreground">→</span>
-										<span>{segment.airport_to_details?.city}</span>
-										<span className="text-muted-foreground">
-											{formatTime(segment.departure_time)} - {formatTime(segment.arrival_time)}
-										</span>
-									</div>
-								))}
+						{/* Flight Segments */}
+						{booking.outbound && booking.outbound.length > 1 && (
+							<div className="mt-6 border-t border-border/60 pt-4">
+								<p className="text-sm font-medium mb-3">Flight Segments</p>
+								<div className="space-y-2">
+									{booking.outbound.map((segment, index) => (
+										<div
+											key={index}
+											className="flex flex-wrap items-center gap-3 rounded-lg bg-primary/5 px-3 py-2 text-sm dark:bg-primary/5">
+											<span className="font-mono text-xs bg-primary/10 px-2 py-0.5 rounded">{segment.flight_number}</span>
+											<span className="font-medium">{segment.airport_from_details?.city}</span>
+											<span className="text-muted-foreground">→</span>
+											<span className="font-medium">{segment.airport_to_details?.city}</span>
+											<span className="text-muted-foreground text-xs">
+												{formatTime(segment.departure_time)} - {formatTime(segment.arrival_time)}
+											</span>
+										</div>
+									))}
+								</div>
 							</div>
 						)}
-					</Card>
+					</div>
 
 					{/* Passenger Details */}
-					<Card
-						hover={false}
-						className="p-6">
-						<h3 className="text-lg font-semibold">Passenger Details</h3>
-						<div className="mt-4 space-y-4">
-							{booking.passengers.map((passenger, index) => (
-								<div
-									key={index}
-									className="rounded-lg border border-border p-4">
-									<div className="flex flex-wrap items-start justify-between gap-2">
-										<div>
-											<p className="font-medium">
-												{passenger.title.toUpperCase()} {passenger.first_name} {passenger.middle_name} {passenger.last_name}
-											</p>
-											<p className="text-sm text-muted-foreground">
-												{passenger.passenger_type} • {formatDate(passenger.dob)} • {passenger.gender}
-											</p>
+					<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+						<h3 className="text-lg font-semibold flex items-center gap-2">
+							<User className="h-5 w-5 text-primary" />
+							Passenger Details
+						</h3>
+						<div className="mt-4 space-y-3">
+							{booking.passengers &&
+								booking.passengers.map((passenger, index) => (
+									<div
+										key={index}
+										className="rounded-xl border border-border/60 p-4 transition-colors hover:bg-primary/5 dark:hover:bg-primary/5">
+										<div className="flex flex-wrap items-start justify-between gap-2">
+											<div>
+												<p className="font-semibold">
+													{passenger.title?.toUpperCase()} {passenger.first_name} {passenger.middle_name || ''} {passenger.last_name}
+												</p>
+												<div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+													<span className="flex items-center gap-1">
+														<User className="h-3.5 w-3.5" />
+														{passenger.passenger_type}
+													</span>
+													{passenger.dob && (
+														<span className="flex items-center gap-1">
+															<Calendar className="h-3.5 w-3.5" />
+															{formatDate(passenger.dob)}
+														</span>
+													)}
+													{passenger.gender && <span>{passenger.gender}</span>}
+												</div>
+											</div>
+											{passenger.documents && (
+												<span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary border border-primary/20">
+													{passenger.documents.document_type?.toUpperCase() || 'No document'}
+												</span>
+											)}
 										</div>
-										<span className="rounded bg-primary/90 px-2 py-0.5 text-xs text-white">{passenger.documents?.document_type.toUpperCase() || 'No document'}</span>
-									</div>
-									<div className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
-										<p>
-											<span className="text-muted-foreground">Email:</span> {passenger.email}
-										</p>
-										<p>
-											<span className="text-muted-foreground">Phone:</span> {passenger.phone_number}
-										</p>
-										{passenger.documents && (
-											<>
-												<p>
-													<span className="text-muted-foreground">Document:</span> {passenger.documents.number}
+										<div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+											{passenger.email && (
+												<p className="flex items-center gap-2">
+													<Mail className="h-4 w-4 text-muted-foreground" />
+													<span className="text-muted-foreground">Email:</span>
+													<span>{passenger.email}</span>
 												</p>
-												<p>
-													<span className="text-muted-foreground">Expiry:</span> {formatDate(passenger.documents.expiry_date)}
+											)}
+											{passenger.phone_number && (
+												<p className="flex items-center gap-2">
+													<Phone className="h-4 w-4 text-muted-foreground" />
+													<span className="text-muted-foreground">Phone:</span>
+													<span>{passenger.phone_number}</span>
 												</p>
-											</>
-										)}
+											)}
+											{passenger.documents && (
+												<>
+													<p className="flex items-center gap-2">
+														<FileText className="h-4 w-4 text-muted-foreground" />
+														<span className="text-muted-foreground">Document:</span>
+														<span className="font-mono">{passenger.documents.number}</span>
+													</p>
+													{passenger.documents.expiry_date && (
+														<p className="flex items-center gap-2">
+															<Calendar className="h-4 w-4 text-muted-foreground" />
+															<span className="text-muted-foreground">Expiry:</span>
+															<span>{formatDate(passenger.documents.expiry_date)}</span>
+														</p>
+													)}
+												</>
+											)}
+										</div>
 									</div>
-								</div>
-							))}
+								))}
 						</div>
-					</Card>
+					</div>
 				</div>
 
 				{/* Sidebar */}
 				<div className="space-y-6">
 					{/* Price Summary */}
-					<Card
-						hover={false}
-						className="p-6 sticky top-24">
-						<h3 className="text-lg font-semibold">Price Summary</h3>
+					<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none sticky top-24">
+						<h3 className="text-lg font-semibold flex items-center gap-2">
+							<CreditCard className="h-5 w-5 text-primary" />
+							Price Summary
+						</h3>
 						<div className="mt-4 space-y-2 text-sm">
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Base Fare</span>
-								<span>{formatFlightPrice(booking.pricing?.base_fare || 0, booking.currency)}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Taxes & Fees</span>
-								<span>{formatFlightPrice(booking.pricing?.tax || 0, booking.currency)}</span>
-							</div>
-							{booking.pricing?.markup && (
+							{booking.pricing?.base_fare !== null && booking.pricing?.base_fare !== undefined && (
 								<div className="flex justify-between">
-									<span className="text-muted-foreground">Markup</span>
-									<span>{formatFlightPrice(booking.pricing.markup, booking.currency)}</span>
+									<span className="text-muted-foreground">Base Fare</span>
+									<span className="font-medium">{formatFlightPrice(booking.pricing.base_fare || 0, booking.currency)}</span>
 								</div>
 							)}
-							<div className="border-t border-border pt-2">
-								<div className="flex justify-between font-semibold">
+							{booking.pricing?.tax !== null && booking.pricing?.tax !== undefined && (
+								<div className="flex justify-between">
+									<span className="text-muted-foreground">Taxes & Fees</span>
+									<span className="font-medium">{formatFlightPrice(booking.pricing.tax || 0, booking.currency)}</span>
+								</div>
+							)}
+							{booking.pricing?.markup && booking.pricing.markup.length > 0 && (
+								<div className="flex justify-between">
+									<span className="text-muted-foreground">Markup</span>
+									<span className="font-medium">
+										{formatFlightPrice(
+											booking.pricing.markup.reduce((sum: number, m: any) => sum + (m.price || 0), 0),
+											booking.currency
+										)}
+									</span>
+								</div>
+							)}
+							<div className="border-t border-border/60 pt-3 mt-3">
+								<div className="flex justify-between text-base font-bold">
 									<span>Total Paid</span>
 									<span className="text-primary">{formatFlightPrice(Number(booking.payable_amount || booking.amount), booking.currency)}</span>
 								</div>
 							</div>
 						</div>
-					</Card>
+					</div>
 
 					{/* Booking Info */}
-					<Card
-						hover={false}
-						className="p-6">
-						<h3 className="text-sm font-semibold">Booking Information</h3>
+					<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+						<h3 className="text-sm font-semibold flex items-center gap-2">
+							<FileText className="h-4 w-4 text-primary" />
+							Booking Information
+						</h3>
 						<div className="mt-3 space-y-2 text-sm">
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Booking ID</span>
-								<span className="font-mono">{booking.booking_id}</span>
-							</div>
-							<div className="flex justify-between">
+							{booking.booking_id && (
+								<div className="flex justify-between py-1">
+									<span className="text-muted-foreground">Booking ID</span>
+									<span className="font-mono text-foreground">{booking.booking_id}</span>
+								</div>
+							)}
+							<div className="flex justify-between py-1 border-t border-border/40">
 								<span className="text-muted-foreground">Reference</span>
-								<span className="font-mono">{booking.reference}</span>
+								<span className="font-mono text-foreground">{booking.reference}</span>
 							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Created</span>
-								<span>{formatDate(booking.created_at)}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Expires</span>
-								<span className="text-amber-600">{formatDate(booking.expires_at)}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Passengers</span>
-								<span>{booking.passengers?.length || 1}</span>
-							</div>
+							{booking.created_at && (
+								<div className="flex justify-between py-1 border-t border-border/40">
+									<span className="text-muted-foreground">Created</span>
+									<span className="text-foreground">{formatDate(booking.created_at)}</span>
+								</div>
+							)}
+							{booking.expires_at && (
+								<div className="flex justify-between py-1 border-t border-border/40">
+									<span className="text-muted-foreground">Expires</span>
+									<span className="text-amber-600 dark:text-amber-400 font-medium">{formatDate(booking.expires_at)}</span>
+								</div>
+							)}
+							{booking.passengers && (
+								<div className="flex justify-between py-1 border-t border-border/40">
+									<span className="text-muted-foreground">Passengers</span>
+									<span className="text-foreground font-medium">{booking.passengers.length}</span>
+								</div>
+							)}
+							{booking.bookable_seats && (
+								<div className="flex justify-between py-1 border-t border-border/40">
+									<span className="text-muted-foreground">Bookable Seats</span>
+									<span className="text-foreground font-medium">{booking.bookable_seats}</span>
+								</div>
+							)}
 						</div>
-					</Card>
+					</div>
 
 					{/* Actions */}
 					<div className="flex flex-col gap-2">
-						{/* <Link href={`/dashboard/bookings/${booking.booking_id}/ticket`}>
-							<Button
-								variant="outline"
-								className="w-full">
-								Download Ticket
-							</Button>
-						</Link> */}
 						<Link href="/dashboard/bookings">
 							<Button
 								variant="outline"
-								className="w-full">
+								className="w-full rounded-xl hover:bg-primary/10 hover:text-primary">
+								<ArrowLeft className="mr-2 h-4 w-4" />
 								View All Bookings
 							</Button>
 						</Link>
@@ -343,8 +503,9 @@ export default function BookingDetailsPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center py-20">
-					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<div className="flex flex-col items-center justify-center py-20">
+					<Loader2 className="h-10 w-10 animate-spin text-primary" />
+					<p className="mt-4 text-sm text-muted-foreground">Loading booking details...</p>
 				</div>
 			}>
 			<BookingDetailsContent />

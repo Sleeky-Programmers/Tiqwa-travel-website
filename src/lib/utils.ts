@@ -6,6 +6,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Decode the handful of HTML entities that show up in CMS-authored text fields
+ * (e.g. site settings copyright text) so they can be rendered as plain text
+ * without resorting to dangerouslySetInnerHTML.
+ */
+export function decodeHtmlEntities(input: string): string {
+	return input
+		.replace(/&copy;/gi, '©')
+		.replace(/&reg;/gi, '®')
+		.replace(/&amp;/gi, '&')
+		.replace(/&nbsp;/gi, ' ');
+}
+
+/**
  * Parse the instalments field from the payment method response
  * Returns the maximum number of instalments, then generate options from 2 to max
  */

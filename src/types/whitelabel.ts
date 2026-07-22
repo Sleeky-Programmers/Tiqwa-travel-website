@@ -1,8 +1,48 @@
+// ============================================
+// BASE TYPES
+// ============================================
+
 export interface WhitelabelResponse<T> {
 	success: boolean;
 	data: T;
 	message?: string;
 }
+
+// ============================================
+// SITE SETTINGS
+// ============================================
+
+export interface SiteSettings {
+	name: string;
+	long_name: string;
+	logo: string | null;
+	copyright: string;
+	physical_address: string;
+	site_url: string;
+	site_domain: string;
+	blog_url: string;
+	facebook_link: string | null;
+	instagram_link: string | null;
+	linkedin_link: string | null;
+	twitter_link: string | null;
+	default_currency: string;
+	phone_number: string;
+	email_address: string;
+	support_phone: string;
+	support_email: string;
+	maintenance_mode: number;
+	payment_gateway: string | null;
+	light_logo: string | null;
+	primary_color: string | null;
+	secondary_color: string | null;
+	primary_lint_color: string | null;
+	secondary_lint_color: string | null;
+	tagline: string;
+}
+
+// ============================================
+// HOMEPAGE TYPES
+// ============================================
 
 export interface HeroBanner {
 	id: number;
@@ -28,6 +68,10 @@ export interface HomepageData {
 	holiday_packages: HolidayPackage[];
 }
 
+// ============================================
+// FLIGHT & DEAL TYPES
+// ============================================
+
 export interface FlightDeal {
 	id?: number | string;
 	origin?: string;
@@ -43,6 +87,27 @@ export interface FlightDeal {
 	return_date?: string | null;
 	image?: string;
 }
+
+export interface WhitelabelFlightItem {
+	id: string;
+	amount: number;
+	currency: string;
+	outbound: AirportSegment[];
+	inbound?: AirportSegment[];
+	outbound_stops?: number;
+	inbound_stops?: number;
+	total_duration?: number;
+	pricing?: { payable?: number };
+}
+
+export interface FlightSearchData {
+	itemList: WhitelabelFlightItem[] | { message?: Record<string, string[]> };
+	listing_id?: string;
+}
+
+// ============================================
+// AIRPORT TYPES
+// ============================================
 
 export interface PopularAirport {
 	city: string;
@@ -63,36 +128,90 @@ export interface Airport {
 	popular?: number;
 }
 
+// ============================================
+// AIRPORT & AIRLINE DETAILS (Nested)
+// ============================================
+
+export interface AirportDetails {
+	city: string;
+	name: string;
+	country: string;
+	city_code: string;
+	iata_code: string;
+	country_code: string;
+}
+
+export interface AirlineDetails {
+	code: string;
+	logo: string;
+	name: string;
+}
+
 export interface AirportSegment {
-	airline_details?: { code: string; name: string; logo?: string };
+	airline_details?: AirlineDetails;
 	airport_from?: string;
 	airport_to?: string;
-	airport_from_details?: { city: string; iata_code: string; name: string; country_code: string; country: string };
-	airport_to_details?: { city: string; iata_code: string; name: string; country_code: string; country: string };
+	airport_from_details?: AirportDetails;
+	airport_to_details?: AirportDetails;
 	departure_time: string;
 	arrival_time: string;
 	duration: number;
 	flight_number?: string;
 }
 
-export interface WhitelabelFlightItem {
-	id: string;
-	amount: number;
-	currency: string;
-	outbound: AirportSegment[];
-	inbound?: AirportSegment[];
-	outbound_stops?: number;
-	inbound_stops?: number;
-	total_duration?: number;
-	pricing?: { payable?: number };
+// ============================================
+// OUTBOUND SEGMENT (Full)
+// ============================================
+
+export interface OutboundSegment {
+	baggage: string;
+	layover: string | null;
+	duration: number;
+	overnight: boolean;
+	airport_to: string;
+	cabin_type: string;
+	airport_from: string;
+	arrival_time: string;
+	booking_class: string;
+	flight_number: string;
+	departure_time: string;
+	equipment_type: string | null;
+	marriage_group: string | null;
+	airline_details: AirlineDetails;
+	marketing_airline: string;
+	operating_airline: string;
+	airport_to_details: AirportDetails;
+	airport_from_details: AirportDetails;
 }
 
-export interface FlightSearchData {
-	itemList: WhitelabelFlightItem[] | { message?: Record<string, string[]> };
-	listing_id?: string;
-}
+// ============================================
+// PASSENGER TYPES
+// ============================================
 
 export type PassengerType = 'adult' | 'child' | 'infant';
+
+export interface PassengerDocument {
+	holder: boolean;
+	number: string;
+	expiry_date: string;
+	issuing_date: string;
+	document_type: string;
+	issuing_country: string;
+	nationality_country: string;
+}
+
+export interface Passenger {
+	dob: string;
+	email: string;
+	title: string;
+	gender: string;
+	documents: PassengerDocument;
+	last_name: string;
+	first_name: string;
+	middle_name: string;
+	phone_number: string;
+	passenger_type: string;
+}
 
 export interface BookingPassengerPayload {
 	passenger_type: 'adult' | 'child' | 'infant';
@@ -114,9 +233,25 @@ export interface BookingPassengerPayload {
 	};
 }
 
-export interface CreateBookingData {
-	booking_id: string;
-	reference: string;
+// ============================================
+// PRICING TYPES
+// ============================================
+
+export interface PriceSummary {
+	quantity: number;
+	total_price: number;
+	passenger_type: string;
+}
+
+export interface TravelerPrice {
+	[key: string]: number; // e.g., { adult: 122001 }
+}
+
+export interface Pricing {
+	tax: number | null;
+	markup: any[]; // Can be an array of markup objects
+	payable: number;
+	base_fare: number | null;
 }
 
 export interface ConfirmPriceData {
@@ -125,15 +260,67 @@ export interface ConfirmPriceData {
 	id?: string;
 }
 
+// ============================================
+// BOOKING TYPES
+// ============================================
+
+export interface BookingDetails {
+	reference: string;
+	flight_id: string;
+	booking_id: string;
+	user_id: number;
+	amount: string;
+	payable_amount: string;
+	bookable_seats: number;
+	ticket_number: string | null;
+	booking_account: string;
+	created_at: string;
+	currency: string;
+	document_required: string | null;
+	expires_at: string;
+	fare_basis: string | null;
+	outbound: OutboundSegment[];
+	inbound: OutboundSegment[] | null;
+	routes: string | null;
+	query_type: 'one_way' | 'roundtrip' | string;
+	inbound_stops: number | null;
+	issue_account: string | null;
+	outbound_stops: number | null;
+	pnr: string | null;
+	price_change: string | null;
+	price_summary: PriceSummary[];
+	pricing: Pricing;
+	status: string;
+	total_duration: number;
+	total_inbound_duration: number | null;
+	total_outbound_duration: number;
+	travelers_price: TravelerPrice[];
+	passengers: Passenger[];
+	ticket_issued: number | boolean;
+	flight_addons: string | null;
+	payment: string | null;
+	attendee: string | null;
+	updated_at: string;
+}
+
+export interface CreateBookingData {
+	booking_id: string;
+	reference: string;
+}
+
+// ============================================
+// PAYMENT TYPES
+// ============================================
+
 export interface PaymentInitiateData {
-	access_code: string; // e.g., "9cwwmsgvek3rhed"
-	tranx_reference: string; // e.g., "529368819863"
-	authorization_url: string; // e.g., "https://checkout.paystack.com/..."
+	access_code: string;
+	tranx_reference: string;
+	authorization_url: string;
 }
 
 export interface VerifyPaymentData {
-	status: number; // 200 = success
-	service: string; // "flight"
+	status: number;
+	service: string;
 	booking_id: string;
 	flight_id: string;
 }
@@ -145,10 +332,10 @@ export interface VerifyPaymentResponse {
 }
 
 export interface FinalizeBookingData {
-	reference: string; // e.g., "TW-5IKU6JOE18"
-	booking_id: string; // e.g., "502442798976"
-	flight_id: string; // e.g., "mxa_383f7ae8-fd66-4f2b-98ba-6a85de6a7c0a"
-	status: string; // e.g., "BOOKED"
+	reference: string;
+	booking_id: string;
+	flight_id: string;
+	status: string;
 }
 
 export interface FinalizeBookingResponse {
@@ -157,80 +344,9 @@ export interface FinalizeBookingResponse {
 	message: string;
 }
 
-export interface BookingDetails {
-	reference: string;
-	booking_id: string;
-	flight_id: string;
-	user_id: number;
-	amount: string;
-	payable_amount: string;
-	currency: string;
-	status: string;
-	created_at: string;
-	expires_at: string;
-	outbound: OutboundSegment[];
-	inbound: OutboundSegment[] | null;
-	passengers: Passenger[];
-	pricing: Pricing;
-	pnr: string;
-	total_duration: number;
-}
-
-export interface OutboundSegment {
-	flight_number: string;
-	airport_from: string;
-	airport_to: string;
-	departure_time: string;
-	arrival_time: string;
-	duration: number;
-	cabin_type: string;
-	baggage: string;
-	airline_details: {
-		name: string;
-		code: string;
-		logo: string;
-	};
-	airport_from_details: {
-		city: string;
-		name: string;
-		country: string;
-		iata_code: string;
-	};
-	airport_to_details: {
-		city: string;
-		name: string;
-		country: string;
-		iata_code: string;
-	};
-}
-
-export interface Passenger {
-	first_name: string;
-	last_name: string;
-	middle_name: string | null;
-	email: string;
-	phone_number: string;
-	dob: string;
-	gender: string;
-	title: string;
-	passenger_type: string;
-	documents: {
-		number: string;
-		document_type: string;
-		issuing_country: string;
-		nationality_country: string;
-		expiry_date: string;
-		issuing_date: string;
-		holder: boolean;
-	};
-}
-
-export interface Pricing {
-	base_fare: number;
-	tax: number;
-	markup: number | null;
-	payable: number;
-}
+// ============================================
+// PAYMENT GATEWAY & METHOD TYPES
+// ============================================
 
 export interface PaymentGateway {
 	service: string;

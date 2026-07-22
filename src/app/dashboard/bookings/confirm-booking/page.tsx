@@ -1,8 +1,6 @@
 'use client';
 
-import {
-    ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Plane
-} from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane, Search, Shield, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,9 +12,17 @@ import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import {
-    confirmFlightPrice, createBooking, formatFlightPrice, getBankAccounts, getFlightFromCache,
-    initiatePayment, isBookingReservationExpired, readActiveBooking, readCachedFlightSearch,
-    reserveBooking, saveActiveBooking
+	confirmFlightPrice,
+	createBooking,
+	formatFlightPrice,
+	getBankAccounts,
+	getFlightFromCache,
+	initiatePayment,
+	isBookingReservationExpired,
+	readActiveBooking,
+	readCachedFlightSearch,
+	reserveBooking,
+	saveActiveBooking,
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
@@ -112,14 +118,8 @@ function buildResultsHref(flight: NonNullable<ReturnType<typeof getFlightFromCac
 	return `/dashboard/search/results?from=${encodeURIComponent(flight.from)}&to=${encodeURIComponent(flight.to)}&departure=${departure}&passengers=${passengers}`;
 }
 
-function ConfirmBookingContent() {
-	const searchParams = useSearchParams();
-	const flightId = searchParams.get('flightId') ?? '';
-	const passengersCount = Number(searchParams.get('passengers') ?? '1');
-	const departure = searchParams.get('departure') ?? '';
-	const flight = getFlightFromCache(flightId);
-
-	const getInitialPassenger = (): PassengerData => ({
+function getInitialPassenger(): PassengerData {
+	return {
 		firstName: '',
 		middleName: '',
 		lastName: '',
@@ -134,7 +134,15 @@ function ConfirmBookingContent() {
 		documentIssueDate: '',
 		documentExpiryDate: '',
 		nationalityCountry: '',
-	});
+	};
+}
+
+function ConfirmBookingContent() {
+	const searchParams = useSearchParams();
+	const flightId = searchParams.get('flightId') ?? '';
+	const passengersCount = Number(searchParams.get('passengers') ?? '1');
+	const departure = searchParams.get('departure') ?? '';
+	const flight = getFlightFromCache(flightId);
 
 	const [passengers, setPassengers] = useState<PassengerData[]>(() => Array.from({ length: Math.max(1, passengersCount) }, () => getInitialPassenger()));
 	const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
@@ -152,6 +160,7 @@ function ConfirmBookingContent() {
 	const [selectedInstalment, setSelectedInstalment] = useState<number | null>(null);
 	const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 	const [copied, setCopied] = useState(false);
+	const [expandedSection, setExpandedSection] = useState<string | null>('flight');
 
 	const unitPrice = confirmedPrice ?? flight?.price ?? 0;
 	const currency = flight?.currency ?? 'NGN';
@@ -268,7 +277,6 @@ function ConfirmBookingContent() {
 		}));
 
 		try {
-			// Step 1: Create booking
 			const createResult = await createBooking(flightId, passengerPayloads);
 			if (!createResult.success) {
 				setError(createResult.error);
@@ -279,14 +287,13 @@ function ConfirmBookingContent() {
 			const { booking_id, reference } = createResult.data;
 			saveActiveBooking({ bookingId: booking_id, reference, flightId });
 
-			 const reserveResult = await reserveBooking(booking_id, flightId);
-    if (!reserveResult.success) {
-      setError(reserveResult.error || 'Failed to reserve booking');
-      setIsProcessing(false);
-      return;
-    }
+			const reserveResult = await reserveBooking(booking_id, flightId);
+			if (!reserveResult.success) {
+				setError(reserveResult.error || 'Failed to reserve booking');
+				setIsProcessing(false);
+				return;
+			}
 
-			// Step 2: Initiate payment
 			const paymentResult = await initiatePayment(booking_id, flightId, {
 				currency,
 				paymentMethod: method,
@@ -321,95 +328,112 @@ function ConfirmBookingContent() {
 		}
 	};
 
-	if (bookingSuccess) {
-		// Walk-In Transfer: Show pending UI with bank details
-		if (selectedPaymentMethod === 'WALK_IN_TRANSFER') {
-			return (
-				<div className="space-y-6">
-					<div className="glossy-card p-8">
-						<div className="text-center">
-							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
-								<Clock className="h-10 w-10 text-amber-500" />
-							</div>
-							<h2 className="text-2xl font-bold">Booking is Pending Payment</h2>
-							<p className="mt-2 text-muted-foreground">Your booking has been created. Please complete the bank transfer to confirm your booking.</p>
+	// ============================================
+	// SUCCESS STATE - Walk In Transfer
+	// ============================================
+	if (bookingSuccess && selectedPaymentMethod === 'WALK_IN_TRANSFER') {
+		return (
+			<div className="space-y-7 page-transition">
+				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-primary/5 to-transparent p-8 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:from-amber-500/20 dark:via-primary/10">
+					<div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />
+					<div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
 
-							{/* Booking Reference */}
-							<div className="mt-4 rounded-lg bg-primary/80 text-white p-3 py-6">
-								<p className="text-sm font-medium">Booking Reference</p>
-								<p className="font-mono text-sm tracking-widest">{bookingReference}</p>
-							</div>
+					<div className="relative z-10 text-center">
+						<div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-amber-500/15">
+							<Clock className="h-10 w-10 text-amber-500" />
 						</div>
+						<h2 className="text-2xl font-bold">Booking is Pending Payment</h2>
+						<p className="mt-2 text-muted-foreground max-w-md mx-auto">Your booking has been created. Please complete the bank transfer to confirm your booking.</p>
 
-						{/* Bank Details */}
-						<div className="mt-6">
-							<h3 className="flex items-center gap-2 text-sm font-semibold">
-								<Landmark className="h-4 w-4" />
-								Bank Transfer Details
-							</h3>
-							<p className="text-xs text-muted-foreground">Use your booking reference as payment description.</p>
-							<div className="mt-3 space-y-3">
-								{bankAccounts.length === 0 ? (
-									<p className="text-sm text-amber-600">No bank accounts available. Please contact support.</p>
-								) : (
-									bankAccounts.map((account, index) => (
-										<div
-											key={index}
-											className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-											<p className="font-semibold">{account.bank_name || account.bank?.name}</p>
-											<p className="text-sm">
-												Account Name: <span className="font-medium">{account.account_name}</span>
-											</p>
-											<p className="text-sm">
-												Account Number: <span className="font-mono font-medium text-primary">{account.account_number}</span>
-											</p>
-										</div>
-									))
-								)}
-							</div>
+						<div className="mt-6 inline-block rounded-xl bg-primary/10 px-6 py-4">
+							<p className="text-sm font-medium text-muted-foreground">Booking Reference</p>
+							<p className="font-mono text-lg tracking-widest font-bold text-primary">{bookingReference}</p>
 						</div>
+					</div>
 
-						{/* Important Note */}
-						<div className="mt-6 rounded-lg bg-amber-500/10 p-4 text-sm text-amber-700">
-							<p className="font-medium">⚠️ Important</p>
-							<p>Your booking will remain on hold until payment is confirmed. You'll receive a confirmation email once verified.</p>
+					{/* Bank Details */}
+					<div className="relative z-10 mt-8">
+						<h3 className="flex items-center justify-center gap-2 text-sm font-semibold">
+							<Landmark className="h-4 w-4 text-primary" />
+							Bank Transfer Details
+						</h3>
+						<p className="text-center text-xs text-muted-foreground">Use your booking reference as payment description.</p>
+
+						<div className="mt-4 grid gap-3 sm:grid-cols-2">
+							{bankAccounts.length === 0 ? (
+								<p className="col-span-2 text-center text-sm text-amber-600 dark:text-amber-400">No bank accounts available. Please contact support.</p>
+							) : (
+								bankAccounts.map((account, index) => (
+									<div
+										key={index}
+										className="rounded-xl border border-primary/20 bg-white/50 p-4 backdrop-blur-sm dark:bg-white/5">
+										<p className="font-semibold text-primary">{account.bank_name || account.bank?.name}</p>
+										<p className="mt-1 text-sm">
+											<span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{account.account_name}</span>
+										</p>
+										<p className="text-sm">
+											<span className="text-muted-foreground">Account Number:</span> <span className="font-mono font-bold text-primary">{account.account_number}</span>
+										</p>
+									</div>
+								))
+							)}
 						</div>
+					</div>
 
-						{/* Actions */}
-						<div className="mt-6 flex flex-col gap-3 sm:flex-row">
-							<Link href="/dashboard/bookings">
-								<Button className="w-full sm:w-auto">View My Bookings</Button>
-							</Link>
-							<Button
-								variant="outline"
-								className="w-full sm:w-auto"
-								onClick={() => {
-									const details = bankAccounts.map((a) => `${a.bank_name}: ${a.account_number} (${a.account_name})`).join('\n');
-									navigator.clipboard.writeText(details);
-									setCopied(true);
-									setTimeout(() => setCopied(false), 3000);
-								}}>
-								<Copy className="mr-2 h-4 w-4" />
-								{copied ? 'Copied!' : 'Copy Bank Details'}
+					{/* Important Note */}
+					<div className="relative z-10 mt-6 rounded-xl bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/20">
+						<p className="font-medium flex items-center gap-2">
+							<AlertCircle className="h-4 w-4" />
+							Important
+						</p>
+						<p className="mt-1">Your booking will remain on hold until payment is confirmed. You'll receive a confirmation email once verified.</p>
+					</div>
+
+					{/* Actions */}
+					<div className="relative z-10 mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+						<Link href="/dashboard/bookings">
+							<Button className="w-full sm:w-auto rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+								<ArrowLeft className="mr-2 h-4 w-4" />
+								View My Bookings
 							</Button>
-						</div>
+						</Link>
+						<Button
+							variant="outline"
+							className="w-full sm:w-auto rounded-xl hover:bg-primary/10 hover:text-primary"
+							onClick={() => {
+								const details = bankAccounts.map((a) => `${a.bank_name}: ${a.account_number} (${a.account_name})`).join('\n');
+								navigator.clipboard.writeText(details);
+								setCopied(true);
+								setTimeout(() => setCopied(false), 3000);
+							}}>
+							<Copy className="mr-2 h-4 w-4" />
+							{copied ? 'Copied!' : 'Copy Bank Details'}
+						</Button>
 					</div>
 				</div>
-			);
-		}
+			</div>
+		);
+	}
 
-		// Other payment methods: Redirecting to payment
+	if (bookingSuccess) {
 		return (
-			<div className="space-y-6">
-				<div className="glossy-card p-12 text-center">
-					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-						<CheckCircle className="h-10 w-10 text-green-500" />
+			<div className="space-y-7 page-transition">
+				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 via-primary/5 to-transparent p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:from-emerald-500/20 dark:via-primary/10">
+					<div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
+
+					<div className="relative z-10">
+						<div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15">
+							<CheckCircle className="h-10 w-10 text-emerald-500" />
+						</div>
+						<h2 className="text-2xl font-bold">Redirecting to Payment...</h2>
+						<p className="mt-2 text-muted-foreground">
+							Booking reference: <span className="font-mono font-medium text-primary">{bookingReference}</span>
+						</p>
+						<div className="mt-6 flex items-center justify-center gap-3">
+							<Loader2 className="h-6 w-6 animate-spin text-primary" />
+							<span className="text-sm text-muted-foreground">Please wait...</span>
+						</div>
 					</div>
-					<h2 className="text-2xl font-bold">Redirecting to Payment...</h2>
-					<p className="mt-2 text-muted-foreground">
-						Booking reference: <span className="font-mono font-medium">{bookingReference}</span>
-					</p>
-					<Loader2 className="mx-auto mt-4 h-6 w-6 animate-spin text-primary" />
 				</div>
 			</div>
 		);
@@ -417,77 +441,119 @@ function ConfirmBookingContent() {
 
 	if (!flight) {
 		return (
-			<div className="text-center">
-				<p className="text-lg font-medium">Flight not found</p>
-				<p className="mt-2 text-sm text-muted-foreground">Please select a flight from the search results.</p>
-				<Link
-					href="/dashboard/search"
-					className="mt-4 inline-block text-primary hover:underline">
-					Search for flights
-				</Link>
+			<div className="flex flex-col items-center justify-center py-20">
+				<div className="rounded-2xl bg-white p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+						<Plane className="h-8 w-8 text-destructive/60" />
+					</div>
+					<p className="text-lg font-semibold">Flight not found</p>
+					<p className="mt-2 text-sm text-muted-foreground max-w-md">Please select a flight from the search results.</p>
+					<Link href="/dashboard/search">
+						<Button className="mt-6 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+							<Search className="mr-2 h-4 w-4" />
+							Search for flights
+						</Button>
+					</Link>
+				</div>
 			</div>
 		);
 	}
 
-	// Show payment options
+	// ============================================
+	// PAYMENT OPTIONS
+	// ============================================
 	if (showPaymentOptions) {
 		return (
-			<div className="space-y-6">
+			<div className="space-y-7 page-transition">
 				<div>
-					<h1 className="text-2xl font-bold">Choose Payment Method</h1>
-					<p className="mt-2 text-sm text-muted-foreground">Select how you want to pay for your flight booking.</p>
+					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Choose Payment Method</h1>
+					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+						<CreditCard className="h-4 w-4" />
+						Select how you want to pay for your flight booking.
+					</p>
 				</div>
 
 				<button
 					onClick={() => setShowPaymentOptions(false)}
-					className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+					className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
 					<ArrowLeft className="h-4 w-4" />
 					Back to passenger details
 				</button>
 
-				<Card
-					hover={false}
-					className="p-6">
+				<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 					<PaymentOptions
 						onSelect={handlePaymentSelect}
 						isLoading={isProcessing}
 					/>
-				</Card>
+				</div>
 
-				{error && <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+				{error && (
+					<div className="flex items-center gap-2.5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+						<AlertCircle className="h-5 w-5" />
+						{error}
+					</div>
+				)}
 			</div>
 		);
 	}
 
+	// ============================================
+	// MAIN BOOKING FORM
+	// ============================================
 	return (
-		<div className="space-y-6">
-			<div>
-				<h1 className="text-2xl font-bold">Complete Your Booking</h1>
-				<p className="mt-2 text-sm text-muted-foreground">Enter passenger details to proceed to secure payment.</p>
+		<div className="space-y-7 page-transition">
+			{/* Header */}
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+				<div>
+					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Complete Your Booking</h1>
+					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+						<User className="h-4 w-4" />
+						Enter passenger details to proceed to secure payment.
+					</p>
+				</div>
+				<div className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+					<Shield className="h-3 w-3" />
+					Secure Booking
+				</div>
 			</div>
 
 			<Link
 				href={resultsHref}
-				className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
+				className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
 				<ArrowLeft className="h-4 w-4" />
 				Back to results
 			</Link>
 
-			{error && <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
-
-			{reservationWarning && (
-				<p className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-400">
-					<Clock className="mt-0.5 h-4 w-4 shrink-0" />
-					{reservationWarning}
-				</p>
+			{/* Error & Warning */}
+			{error && (
+				<div className="flex items-center gap-2.5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+					<AlertCircle className="h-5 w-5" />
+					{error}
+				</div>
 			)}
 
-			<div className="grid gap-8 lg:grid-cols-3">
+			{reservationWarning && (
+				<div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/20">
+					<Clock className="mt-0.5 h-5 w-5 shrink-0" />
+					{reservationWarning}
+				</div>
+			)}
+
+			<div className="grid gap-6 lg:grid-cols-3">
+				{/* Left: Passenger Forms */}
 				<div className="space-y-6 lg:col-span-2">
+					<div className="flex items-center gap-3 mb-2">
+						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">{passengers.length}</div>
+						<h2 className="text-lg font-semibold">Passenger{passengers.length > 1 ? 's' : ''} Details</h2>
+					</div>
+
 					{passengers.map((passenger, index) => (
-						<Card
+						<div
 							key={index}
-							hover={false}>
+							className="relative rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
+							<div className="absolute -top-3 -left-3 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white shadow-lg shadow-primary/25">
+								{index + 1}
+							</div>
 							<PassengerForm
 								data={passenger}
 								onChange={(data) => handlePassengerChange(index, data)}
@@ -501,106 +567,130 @@ function ConfirmBookingContent() {
 								}}
 								isDomestic={isDomestic}
 							/>
-						</Card>
+						</div>
 					))}
 				</div>
 
+				{/* Right: Flight Summary */}
 				<div>
-					<Card
-						hover={false}
-						className="sticky top-24">
-						<div className="flex items-center gap-3">
-							<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
-								{flight.airlineLogo && !imageError ? (
-									<Image
-										src={flight.airlineLogo}
-										alt={`${flight.airline} logo`}
-										fill
-										className="object-contain p-1.5"
-										onError={() => setImageError(true)}
-									/>
-								) : (
-									<div className="flex h-full w-full items-center justify-center rounded-xl bg-primary/10 text-primary">
-										<Plane className="h-5 w-5" />
+					<div className="sticky top-24 space-y-6">
+						{/* Flight Summary Card */}
+						<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+							<div className="flex items-center gap-3 pb-4 border-b border-border/60">
+								<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-white/50 p-1.5 dark:bg-white/5">
+									{flight.airlineLogo && !imageError ? (
+										<Image
+											src={flight.airlineLogo}
+											alt={`${flight.airline} logo`}
+											fill
+											className="object-contain"
+											onError={() => setImageError(true)}
+										/>
+									) : (
+										<div className="flex h-full w-full items-center justify-center rounded-xl bg-primary/10 text-primary">
+											<Plane className="h-5 w-5" />
+										</div>
+									)}
+								</div>
+								<div className="flex-1 min-w-0">
+									<p className="font-semibold truncate">{flight.airline}</p>
+									<p className="text-sm text-muted-foreground truncate">
+										{flight.from} → {flight.to}
+									</p>
+								</div>
+							</div>
+
+							<div className="mt-4 space-y-3">
+								<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+									<span className="text-muted-foreground">Departure</span>
+									<span className="font-medium">{flight.departure}</span>
+								</div>
+								<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+									<span className="text-muted-foreground">Arrival</span>
+									<span className="font-medium">{flight.arrival}</span>
+								</div>
+								<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+									<span className="text-muted-foreground">Duration</span>
+									<span className="font-medium">{flight.duration}</span>
+								</div>
+								<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+									<span className="text-muted-foreground">Stops</span>
+									<span className="font-medium">
+										{getFlightStops(flight) === 0 ? 'Non-stop' : `${getFlightStops(flight)} stop${getFlightStops(flight) > 1 ? 's' : ''}`}
+									</span>
+								</div>
+								{departure && (
+									<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+										<span className="text-muted-foreground">Date</span>
+										<span className="font-medium">{departure}</span>
 									</div>
 								)}
-							</div>
-							<div>
-								<p className="font-semibold">{flight.airline}</p>
-								<p className="text-sm text-muted-foreground">
-									{flight.from} → {flight.to}
-								</p>
-							</div>
-						</div>
-
-						<div className="mt-4 space-y-2 text-sm">
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Departure</span>
-								<span>{flight.departure}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Arrival</span>
-								<span>{flight.arrival}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Duration</span>
-								<span>{flight.duration}</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Stops</span>
-								<span>{getFlightStops(flight) === 0 ? 'Non-stop' : getFlightStops(flight)}</span>
-							</div>
-							{departure && (
-								<div className="flex justify-between">
-									<span className="text-muted-foreground">Date</span>
-									<span>{departure}</span>
+								<div className="flex justify-between text-sm py-1.5">
+									<span className="text-muted-foreground">Passengers</span>
+									<span className="font-medium">{passengers.length}</span>
 								</div>
-							)}
-							<div className="flex justify-between">
-								<span className="text-muted-foreground">Passengers</span>
-								<span>{passengers.length}</span>
 							</div>
+
+							{/* Price */}
+							<div className="mt-4 pt-4 border-t border-border/60">
+								{isConfirmingPrice ? (
+									<div className="flex items-center gap-2 text-sm text-muted-foreground">
+										<Loader2 className="h-4 w-4 animate-spin" />
+										Confirming latest price...
+									</div>
+								) : (
+									<>
+										<div className="flex justify-between text-sm">
+											<span className="text-muted-foreground">
+												{formatFlightPrice(unitPrice, currency)} × {passengers.length}
+											</span>
+											<span>{formatFlightPrice(total, currency)}</span>
+										</div>
+										<div className="mt-2 flex justify-between text-xl font-bold">
+											<span>Total</span>
+											<span className="text-primary">{formatFlightPrice(total, currency)}</span>
+										</div>
+									</>
+								)}
+							</div>
+
+							<Button
+								className="mt-6 w-full rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-[1.02]"
+								size="lg"
+								disabled={isProcessing || isConfirmingPrice}
+								onClick={handleProceedToPayment}>
+								{isProcessing ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Processing...
+									</>
+								) : (
+									<>
+										<CreditCard className="mr-2 h-4 w-4" />
+										Proceed to Payment
+									</>
+								)}
+							</Button>
+
+							<p className="mt-3 text-center text-xs text-muted-foreground">🔒 Your information is secure and encrypted</p>
 						</div>
 
-						<div className="mt-4 border-t border-border pt-4">
-							{isConfirmingPrice ? (
-								<p className="flex items-center gap-2 text-sm text-muted-foreground">
-									<Loader2 className="h-4 w-4 animate-spin" />
-									Confirming latest price...
-								</p>
-							) : (
-								<>
-									<div className="flex justify-between text-sm">
-										<span className="text-muted-foreground">
-											{formatFlightPrice(unitPrice, currency)} × {passengers.length}
-										</span>
-										<span>{formatFlightPrice(total, currency)}</span>
-									</div>
-									<div className="mt-2 flex justify-between text-lg font-bold">
-										<span>Total</span>
-										<span className="text-primary">{formatFlightPrice(total, currency)}</span>
-									</div>
-								</>
-							)}
+						{/* Trust Badges */}
+						<div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+							<span className="flex items-center gap-1.5">
+								<Shield className="h-4 w-4 text-emerald-500" />
+								Secure Payment
+							</span>
+							<span className="flex items-center gap-1.5">
+								<Lock className="h-4 w-4 text-emerald-500" />
+								Encrypted Data
+							</span>
+							<span className="flex items-center gap-1.5">
+								<CheckCircle className="h-4 w-4 text-emerald-500" />
+								Instant Confirmation
+							</span>
 						</div>
-
-						<Button
-							className="mt-6 w-full"
-							size="lg"
-							disabled={isProcessing || isConfirmingPrice}
-							onClick={handleProceedToPayment}>
-							{isProcessing ? (
-								<>
-									<Loader2 className="h-4 w-4 animate-spin" />
-									Processing...
-								</>
-							) : (
-								'Proceed to Payment'
-							)}
-						</Button>
-
-						<p className="mt-3 text-center text-xs text-muted-foreground">Select your preferred payment method after confirming details.</p>
-					</Card>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -611,8 +701,9 @@ export default function DashboardConfirmBookingPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex min-h-[80vh] items-center justify-center py-20">
-					<Loader2 className="h-8 w-8 animate-spin text-primary" />
+				<div className="flex flex-col items-center justify-center py-20">
+					<Loader2 className="h-10 w-10 animate-spin text-primary" />
+					<p className="mt-4 text-sm text-muted-foreground">Loading booking details...</p>
 				</div>
 			}>
 			<ConfirmBookingContent />

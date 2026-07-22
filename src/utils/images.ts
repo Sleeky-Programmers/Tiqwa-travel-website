@@ -32,3 +32,6 @@ export const getDestinationImage = (city: string): string => {
 
 export const heroBackgroundImage =
   "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1920&h=1080&fit=crop";
+
+export const searchHeroBackgroundImage =
+  "https://images.unsplash.com/photo-1767868277770-d8cb69800992?w=1920&h=1080&fit=crop&q=80";

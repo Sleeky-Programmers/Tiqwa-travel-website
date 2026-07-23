@@ -147,7 +147,7 @@ export function Sidebar({
 				)}
 
 				{/* Navigation */}
-				<nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
+				<nav className="flex-1 overflow-y-auto px-3 py-4 thin-scroll">
 					{navItems.map((section) => (
 						<div
 							key={section.section}

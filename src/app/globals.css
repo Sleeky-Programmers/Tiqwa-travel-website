@@ -355,31 +355,37 @@ body {
 }
 
 /* ── Scrollbar (global default) ── */
-@layer base {
-	* {
-		scrollbar-width: thin;
-		scrollbar-color: var(--muted) var(--secondary);
-	}
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--primary) var(--secondary);
+}
 
-	*::-webkit-scrollbar {
-		width: 6px;
-		height: 6px;
-	}
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
 
-	*::-webkit-scrollbar-track {
-		background: var(--secondary);
-		border-radius: 10px;
-	}
+::-webkit-scrollbar-thumb {
+	@apply bg-primary rounded-xl;
+}
 
-	*::-webkit-scrollbar-thumb {
-		background: var(--primary);
-		border-radius: 10px;
-		transition: background 0.2s ease;
-	}
+::-webkit-scrollbar-thumb:hover {
+	background: var(--primary-dark);
+}
 
-	*::-webkit-scrollbar-thumb:hover {
-		background: var(--primary-dark);
-	}
+::-webkit-scrollbar-track {
+	@apply bg-secondary;
+}
+
+/* ── Thin scrollbar (sidebar / narrow panels) ── */
+.thin-scroll {
+	scrollbar-width: thin;
+	scrollbar-color: var(--primary) var(--secondary);
+}
+
+.thin-scroll::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
 }
 
 /* ── Scrollbar utilities (opt-in per-element overrides) ── */

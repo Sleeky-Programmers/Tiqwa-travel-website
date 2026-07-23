@@ -973,6 +973,24 @@ export async function getBankAccounts() {
 	return fetchAPIResult<BankAccount[]>('/get/bank-accounts');
 }
 
+// ==================== CONTACT ====================
+
+export interface ContactMessagePayload {
+	name: string;
+	email: string;
+	subject: string;
+	phone: string;
+	message: string;
+}
+
+export async function sendContactMessage(payload: ContactMessagePayload): Promise<{ success: boolean; error?: string }> {
+	const result = await postJSON<unknown>('/send-message', payload);
+	if (!result.success) {
+		return { success: false, error: result.error };
+	}
+	return { success: true };
+}
+
 // ==================== ADMIN MANAGEMENT ENDPOINTS ====================
 
 // ---------- Dashboard ----------

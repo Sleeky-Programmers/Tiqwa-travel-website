@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Link as UiLink } from '@/components/ui/Link';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { FlightBooking, formatFlightPrice, getFlightBookings, getRewardsData } from '@/services/whitelabel-api';
@@ -174,13 +175,11 @@ export default function DashboardPage() {
 						})}
 					</p>
 				</div>
-				<Link href="/dashboard/search">
-					<Button className="rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-105">
-						<Plane className="mr-2 h-4 w-4" />
-						Book a Flight
-						<ArrowRight className="ml-2 h-4 w-4" />
-					</Button>
-				</Link>
+				<Button href="/dashboard/search" shape="pill" className="shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-105">
+					<Plane className="mr-2 h-4 w-4" />
+					Book a Flight
+					<ArrowRight className="ml-2 h-4 w-4" />
+				</Button>
 			</div>
 
 			{/* Stats Grid */}
@@ -215,11 +214,9 @@ export default function DashboardPage() {
 						<h2 className="text-base font-semibold">Quick Actions</h2>
 						<p className="text-xs text-muted-foreground mt-0.5">Your most used features</p>
 					</div>
-					<Link
-						href="/dashboard/search"
-						className="text-sm text-primary hover:underline flex items-center gap-1">
+					<UiLink href="/dashboard/search" className="flex items-center gap-1">
 						View all <ChevronRight className="h-4 w-4" />
-					</Link>
+					</UiLink>
 				</div>
 				<div className="grid gap-4 sm:grid-cols-3">
 					{quickActions.map((action, index) => (
@@ -250,11 +247,9 @@ export default function DashboardPage() {
 						<h2 className="text-base font-semibold">Recent Bookings</h2>
 						<p className="text-xs text-muted-foreground mt-0.5">Your latest flight reservations</p>
 					</div>
-					<Link
-						href="/dashboard/bookings"
-						className="text-sm text-primary hover:underline flex items-center gap-1">
+					<UiLink href="/dashboard/bookings" className="flex items-center gap-1">
 						View all <ChevronRight className="h-4 w-4" />
-					</Link>
+					</UiLink>
 				</div>
 
 				<div className="space-y-3">
@@ -269,12 +264,13 @@ export default function DashboardPage() {
 							</div>
 							<p className="font-semibold text-base">No bookings yet</p>
 							<p className="mt-1 text-sm text-muted-foreground">Start exploring destinations</p>
-							<Link
+							<Button
 								href="/dashboard/search"
-								className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-105">
+								shape="pill"
+								className="mt-4 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-105">
 								<Plane className="h-4 w-4" />
 								Book your first flight
-							</Link>
+							</Button>
 						</div>
 					) : (
 						recentBookings.map((booking) => (
@@ -337,15 +333,15 @@ export default function DashboardPage() {
 							<p className="text-sm text-muted-foreground">Search and book flights instantly — best prices guaranteed</p>
 						</div>
 					</div>
-					<Link href="/dashboard/search">
-						<Button
-							size="lg"
-							className="rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105">
-							<Plane className="mr-2 h-4 w-4" />
-							Book Now
-							<ArrowRight className="ml-2 h-4 w-4" />
-						</Button>
-					</Link>
+					<Button
+						href="/dashboard/search"
+						size="lg"
+						shape="pill"
+						className="shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105">
+						<Plane className="mr-2 h-4 w-4" />
+						Book Now
+						<ArrowRight className="ml-2 h-4 w-4" />
+					</Button>
 				</div>
 			</div>
 		</div>

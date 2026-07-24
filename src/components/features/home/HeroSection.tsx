@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { CheckCircle2, ChevronDown, Users, Globe, BadgeDollarSign } from "lucide-react";
+import { CheckCircle2, ChevronDown, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { FlightSearchForm } from "@/components/features/FlightSearchForm";
 import { Container } from "@/components/ui/Container";
@@ -11,12 +11,6 @@ import { heroBackgroundImage } from "@/utils/images";
 interface HeroSectionProps {
   heroImage?: string;
 }
-
-const statsStrip = [
-  { icon: Users, value: "2M+", label: "Travelers" },
-  { icon: Globe, value: "500+", label: "Destinations" },
-  { icon: BadgeDollarSign, value: "Best", label: "Price Guarantee" },
-];
 
 export function HeroSection({ heroImage }: HeroSectionProps) {
   const backgroundImage = heroImage || heroBackgroundImage;
@@ -46,14 +40,20 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
           transition={{ duration: 0.65 }}
           className="mx-auto max-w-3xl text-center"
         >
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+          {/* Eyebrow badge */}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/12 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur-sm shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Now flying 500+ airlines worldwide
+          </span>
+
+          <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
             Fly Anywhere,{" "}
-            <span className="text-primary drop-shadow-[0_0_20px_rgba(37,99,235,0.6)]">
+            <span className="text-primary drop-shadow-[0_0_24px_rgba(255,90,54,0.55)]">
               Pay Less
             </span>
           </h1>
           <p className="mt-5 text-lg text-white/80 sm:text-xl max-w-2xl mx-auto">
-            Premium flight booking with the best prices guaranteed
+            Premium flight booking with the best prices guaranteed — free cancellation, no hidden fees, instant e-tickets.
           </p>
 
           {/* Trust badge pills */}
@@ -68,39 +68,14 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
               </span>
             ))}
           </div>
-
-          {/* Stats strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.2 }}
-            className="mt-8 flex items-center justify-center gap-6 sm:gap-10"
-          >
-            {statsStrip.map(({ icon: Icon, value, label }, i) => (
-              <div key={label} className="flex items-center gap-2">
-                {i > 0 && (
-                  <span className="hidden sm:block h-6 w-px bg-white/20" />
-                )}
-                <div className="flex flex-col items-center">
-                  <span className="text-2xl font-bold text-white leading-none">
-                    {value}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-white/60 mt-0.5">
-                    <Icon className="h-3 w-3" />
-                    {label}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </motion.div>
         </motion.div>
 
-        {/* Search form */}
+        {/* Search form — overlaps the hero/next-section boundary */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.18 }}
-          className="mx-auto mt-10 max-w-5xl"
+          className="relative z-20 mx-auto mt-10 max-w-5xl md:-mb-20"
         >
           <FlightSearchForm />
         </motion.div>

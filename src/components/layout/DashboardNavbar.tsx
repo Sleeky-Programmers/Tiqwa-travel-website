@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { Link as MenuLink, linkVariants } from '@/components/ui/Link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
@@ -100,48 +101,6 @@ export function DashboardNavbar() {
 						</kbd>
 					</Link>
 
-					{/* Notifications */}
-					<div
-						className="relative"
-						ref={notificationsRef}>
-						<button
-							type="button"
-							onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-							className="relative rounded-full border border-border/40 bg-white/60 p-2 text-foreground/70 backdrop-blur-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary dark:bg-white/5"
-							aria-label="Notifications">
-							<Bell className="h-4 w-4" />
-							<span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[8px] font-bold text-white">3</span>
-						</button>
-
-						{isNotificationsOpen && (
-							<div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border/40 bg-white/90 p-2 shadow-2xl backdrop-blur-xl dark:bg-gray-900/90 z-[9999]">
-								<div className="flex items-center justify-between border-b border-border/40 px-3 py-2">
-									<span className="text-sm font-semibold">Notifications</span>
-									<button className="text-xs text-primary hover:underline">Mark all read</button>
-								</div>
-								<div className="max-h-72 divide-y divide-border/30 overflow-y-auto">
-									{notifications.map((notif) => (
-										<div
-											key={notif.id}
-											className="flex items-start gap-3 px-3 py-2.5 hover:bg-primary/5 rounded-lg transition-colors cursor-pointer">
-											<div className={cn('rounded-lg bg-primary/10 p-2', notif.color)}>
-												<notif.icon className="h-4 w-4" />
-											</div>
-											<div className="flex-1 min-w-0">
-												<p className="text-sm font-medium">{notif.title}</p>
-												<p className="text-xs text-muted-foreground truncate">{notif.message}</p>
-												<p className="text-[10px] text-muted-foreground/60 mt-0.5">{notif.time}</p>
-											</div>
-										</div>
-									))}
-								</div>
-								<div className="border-t border-border/40 px-3 py-2">
-									<button className="w-full text-center text-xs text-primary hover:underline">View all notifications</button>
-								</div>
-							</div>
-						)}
-					</div>
-
 					{/* Theme toggle */}
 					{mounted && (
 						<button
@@ -202,27 +161,27 @@ export function DashboardNavbar() {
 								</div>
 
 								<div className="py-1">
-									<Link
+									<MenuLink
 										href="/dashboard/profile"
-										className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-primary/5 hover:text-foreground"
+										variant="menu-item"
 										onClick={() => setIsUserMenuOpen(false)}>
 										<User className="h-4 w-4" />
 										Profile
-									</Link>
-									<Link
+									</MenuLink>
+									<MenuLink
 										href="/dashboard/settings"
-										className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-primary/5 hover:text-foreground"
+										variant="menu-item"
 										onClick={() => setIsUserMenuOpen(false)}>
 										<Settings className="h-4 w-4" />
 										Settings
-									</Link>
-									<Link
+									</MenuLink>
+									<MenuLink
 										href="/dashboard/help"
-										className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground/70 transition-colors hover:bg-primary/5 hover:text-foreground"
+										variant="menu-item"
 										onClick={() => setIsUserMenuOpen(false)}>
 										<HelpCircle className="h-4 w-4" />
 										Help Center
-									</Link>
+									</MenuLink>
 								</div>
 
 								<div className="border-t border-border/40 pt-1">
@@ -232,7 +191,7 @@ export function DashboardNavbar() {
 											logout();
 											setIsUserMenuOpen(false);
 										}}
-										className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive/80 transition-colors hover:bg-destructive/10 hover:text-destructive">
+										className={cn(linkVariants({ variant: 'menu-item' }), 'w-full text-destructive/80 hover:bg-destructive/10 hover:text-destructive')}>
 										<LogOut className="h-4 w-4" />
 										Sign Out
 									</button>

@@ -1,7 +1,6 @@
 'use client';
 
 import { CheckCircle, Loader2, RefreshCw, XCircle } from 'lucide-react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
@@ -241,9 +240,7 @@ function VerifyPaymentContent() {
 							{isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
 							Check Again
 						</Button>
-						<Link href="/">
-							<Button variant="outline">Return Home</Button>
-						</Link>
+						<Button href="/" variant="outline">Return Home</Button>
 					</div>
 				</div>
 			</Container>
@@ -258,9 +255,7 @@ function VerifyPaymentContent() {
 					<XCircle className="mx-auto h-16 w-16 text-destructive" />
 					<h2 className="mt-4 text-xl font-semibold">No Reference Found</h2>
 					<p className="mt-2 text-muted-foreground">No payment reference was provided. Please check your email for booking confirmation.</p>
-					<Link href="/">
-						<Button className="mt-6">Return Home</Button>
-					</Link>
+					<Button href="/" className="mt-6">Return Home</Button>
 				</div>
 			</Container>
 		);
@@ -272,7 +267,7 @@ function VerifyPaymentContent() {
 			<Container className="flex min-h-[60vh] items-center justify-center">
 				<div className="glossy-card p-12 pt-24 text-center max-w-md">
 					<CheckCircle className="mx-auto h-16 w-16 text-green-500" />
-					<h2 className="mt-4 text-2xl font-bold">Payment Successful! 🎉</h2>
+					<h2 className="mt-4 text-2xl font-extrabold">Payment Successful! 🎉</h2>
 					<p className="mt-2 text-muted-foreground">Your booking has been confirmed. A confirmation email has been sent to your email address.</p>
 					{bookingDetails?.reference && (
 						<div className="mt-4 rounded-lg bg-muted text-white p-3">
@@ -281,16 +276,8 @@ function VerifyPaymentContent() {
 						</div>
 					)}
 					<div className="mt-6 flex flex-col gap-3 sm:flex-row">
-						<Link href="/dashboard/bookings">
-							<Button className="w-full sm:w-auto">View My Bookings</Button>
-						</Link>
-						<Link href="/">
-							<Button
-								variant="outline"
-								className="w-full sm:w-auto">
-								Return Home
-							</Button>
-						</Link>
+						<Button href="/dashboard/bookings" className="w-full sm:w-auto">View My Bookings</Button>
+						<Button href="/" variant="outline" className="w-full sm:w-auto">Return Home</Button>
 					</div>
 				</div>
 			</Container>
@@ -317,9 +304,7 @@ function VerifyPaymentContent() {
 						{isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
 						Try Again
 					</Button>
-					<Link href="/">
-						<Button variant="outline">Return Home</Button>
-					</Link>
+					<Button href="/" variant="outline">Return Home</Button>
 				</div>
 			</div>
 		</Container>

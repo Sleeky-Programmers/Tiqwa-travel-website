@@ -29,6 +29,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# design handoff bundle (screenshots for external AI design tools — not source)
+/design-handoff/
+/design-handoff-*.zip
+
 # env files
 .env*
 

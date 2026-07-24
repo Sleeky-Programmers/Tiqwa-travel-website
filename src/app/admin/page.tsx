@@ -1,12 +1,12 @@
 'use client';
 
 import { motion } from 'motion/react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { AdminStats } from '@/components/admin/AdminStats';
 import { BookingTable } from '@/components/admin/BookingTable';
 import { RecentActivity } from '@/components/admin/RecentActivity';
+import { Link } from '@/components/ui/Link';
 import { getFlightBookings } from '@/services/whitelabel-api';
 
 import type { FlightBooking } from '@/services/whitelabel-api';
@@ -108,9 +108,7 @@ export default function AdminDashboardPage() {
 						<div className="space-y-4 lg:col-span-2">
 							<div className="flex items-center justify-between">
 								<h2 className="text-lg font-semibold">Recent Bookings</h2>
-								<Link
-									href="/admin/bookings"
-									className="text-sm text-primary hover:underline">
+								<Link href="/admin/bookings" className="text-sm">
 									View all
 								</Link>
 							</div>

@@ -3,13 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format, addDays } from "date-fns";
-import Image from "next/image";
 import { motion } from "motion/react";
-import { ArrowRight, Plane } from "lucide-react";
+import { ArrowRight, Bookmark, Plane } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { FlightDeal } from "@/types/whitelabel";
 import { formatFlightPrice, getFlightDeals } from "@/services/whitelabel-api";
+
+const GRADIENT_CLASSES = [
+  "gradient-card-0",
+  "gradient-card-1",
+  "gradient-card-2",
+  "gradient-card-3",
+  "gradient-card-4",
+  "gradient-card-5",
+];
 
 interface RouteCard {
   id: string;
@@ -46,10 +54,6 @@ function mapDealsToRoutes(deals: FlightDeal[]): RouteCard[] {
     }))
     .filter((route) => route.from && route.to && route.fromCode && route.toCode);
 }
-
-const badgeColors: Record<string, string> = {
-  Deal: "bg-primary/10 text-primary",
-};
 
 function SectionHeader({ subtitle }: { subtitle?: string }) {
   return (
@@ -156,70 +160,42 @@ export function PopularRoutes() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.08 }}
               onClick={() => handleRouteClick(route)}
-              className="hover-lift glossy-card group overflow-hidden text-left"
+              className={`hover-lift group relative overflow-hidden rounded-2xl p-6 text-left text-white shadow-lg ${GRADIENT_CLASSES[i % GRADIENT_CLASSES.length]}`}
             >
-              {route.image ? (
-                <div className="relative h-40 w-full overflow-hidden bg-muted/20">
-                  <Image
-                    src={route.image}
-                    alt={`${route.from} to ${route.to}`}
-                    fill
-                    className="object-contain p-6 transition-transform duration-300 group-hover:scale-108"
-                    unoptimized={
-                      route.image.includes("cloudinary.com") ||
-                      route.image.includes("tiqwa.com")
-                    }
-                  />
-                  {/* Trip type badge */}
-                  {route.tripType && (
-                    <span className="absolute left-3 top-3 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-foreground/80 border border-border/50">
-                      {route.tripType}
-                    </span>
-                  )}
-                  {route.badge && (
-                    <span
-                      className={`absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeColors[route.badge] ?? badgeColors.Deal}`}
-                    >
-                      {route.badge}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <div className="flex h-40 items-center justify-center bg-primary/5 relative">
-                  <Plane className="h-10 w-10 text-primary/30" />
-                  {route.tripType && (
-                    <span className="absolute left-3 top-3 rounded-full bg-white dark:bg-card px-2.5 py-0.5 text-xs font-medium text-foreground/70 border border-border">
-                      {route.tripType}
-                    </span>
-                  )}
-                </div>
+              {/* Trip type badge */}
+              {route.tripType && (
+                <span className="inline-flex rounded-full bg-black/20 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium">
+                  {route.tripType}
+                </span>
               )}
-              <div className="p-5">
-                <div className="flex items-center gap-2 text-sm font-bold tracking-wide">
-                  <span className="text-foreground">{route.fromCode}</span>
-                  <ArrowRight className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="text-foreground">{route.toCode}</span>
+
+              {/* Bookmark icon */}
+              <span className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-colors group-hover:bg-white/30">
+                <Bookmark className="h-3.5 w-3.5" />
+              </span>
+
+              <div className="mt-8 flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+                <span>{route.fromCode}</span>
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-80" />
+                <span>{route.toCode}</span>
+              </div>
+              <p className="mt-1 text-sm text-white/80">
+                {route.from} → {route.to}
+              </p>
+
+              <div className="mt-6 flex items-end justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-white/70">From</p>
+                  <p className="text-xl font-bold leading-none">
+                    {formatFlightPrice(route.price, route.currency)}
+                  </p>
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {route.from} → {route.to}
-                </p>
 
-                <div className="mt-4 flex items-end justify-between">
-                  <div>
-                    <p className="text-xl font-bold text-primary leading-none">
-                      {formatFlightPrice(route.price, route.currency)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {route.cabinClass ?? "Economy"}
-                    </p>
-                  </div>
-
-                  {/* Hover-reveal Book Now */}
-                  <div className="translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-primary/30">
-                      Book Now <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </div>
+                {/* Hover-reveal Book Now */}
+                <div className="translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm">
+                    Book Now <ArrowRight className="h-3 w-3" />
+                  </span>
                 </div>
               </div>
             </motion.button>

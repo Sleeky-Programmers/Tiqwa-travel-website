@@ -2,7 +2,6 @@
 
 import { ArrowLeft, Building, ChevronLeft, ChevronRight, Clock, Filter, Loader2, Plane, SlidersHorizontal, SortAsc, Users, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -10,6 +9,7 @@ import { FlightCard } from '@/components/features/FlightCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
+import { Link, linkVariants } from '@/components/ui/Link';
 import { cn } from '@/lib/utils';
 import { applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption } from '@/services/flightSearch';
 import {
@@ -203,7 +203,7 @@ function ResultsContent() {
 				{hasActiveFilters && (
 					<button
 						onClick={clearFilters}
-						className="text-xs text-primary hover:underline flex items-center gap-1">
+						className={linkVariants({ variant: 'default', className: 'text-xs flex items-center gap-1' })}>
 						<X className="h-3 w-3" />
 						Clear all
 					</button>
@@ -320,10 +320,7 @@ function ResultsContent() {
 			</div>
 
 			{/* Back to Search */}
-			<Link
-				href="/dashboard/search"
-				className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
-				<ArrowLeft className="h-4 w-4" />
+			<Link href="/dashboard/search" variant="back">
 				Modify search
 			</Link>
 
@@ -339,8 +336,9 @@ function ResultsContent() {
 					<Button
 						variant="outline"
 						size="sm"
+						shape="pill"
 						onClick={loadFlights}
-						className="rounded-full hover:bg-destructive/10 hover:text-destructive">
+						className="hover:bg-destructive/10 hover:text-destructive">
 						Retry search
 					</Button>
 				</div>
@@ -352,7 +350,8 @@ function ResultsContent() {
 					<Button
 						variant="outline"
 						size="sm"
-						className="lg:hidden rounded-full hover:bg-primary/10 hover:text-primary"
+						shape="pill"
+						className="lg:hidden hover:bg-primary/10 hover:text-primary"
 						onClick={() => setShowFilters(!showFilters)}>
 						<SlidersHorizontal className="h-4 w-4 mr-1.5" />
 						Filters
@@ -424,12 +423,13 @@ function ResultsContent() {
 							<p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
 								Try adjusting your search or filters. Use airport codes like LOS or DXB for better results.
 							</p>
-							<Link
+							<Button
 								href="/dashboard/search"
-								className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 hover:scale-105">
+								shape="pill"
+								className="mt-4 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 hover:scale-105">
 								Search again
 								<ArrowLeft className="h-4 w-4" />
-							</Link>
+							</Button>
 						</div>
 					) : (
 						<>

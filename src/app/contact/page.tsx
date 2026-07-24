@@ -28,7 +28,8 @@ export default function ContactPage() {
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-3xl font-bold sm:text-4xl">Contact Us</h1>
+          <span className="section-badge mb-3 inline-flex">Get In Touch</span>
+          <h1 className="text-3xl font-extrabold sm:text-4xl">Contact Us</h1>
           <p className="mt-3 text-muted-foreground">Have a question or need help? We&apos;d love to hear from you.</p>
           <div className="mt-10 grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">

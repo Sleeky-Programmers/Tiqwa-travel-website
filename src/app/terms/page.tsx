@@ -18,7 +18,7 @@ export default function TermsPage() {
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-3xl font-bold sm:text-4xl">Terms of Service</h1>
+          <h1 className="text-3xl font-extrabold sm:text-4xl">Terms of Service</h1>
           <p className="mt-3 text-sm text-muted-foreground">Last updated: June 7, 2026</p>
           <div className="mt-10 space-y-8">
             {sections.map((section) => (

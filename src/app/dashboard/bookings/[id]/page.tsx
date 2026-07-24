@@ -1,11 +1,11 @@
 'use client';
 
 import { ArrowLeft, Building, Calendar, CheckCircle, Clock, ClockIcon, CreditCard, FileText, Loader2, Mail, MapPin, Phone, Plane, User, XCircle } from 'lucide-react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { Link as UiLink } from '@/components/ui/Link';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { formatFlightPrice, getBookingDetails } from '@/services/whitelabel-api';
@@ -154,12 +154,10 @@ function BookingDetailsContent() {
 					</div>
 					<p className="text-lg font-semibold">Booking Not Found</p>
 					<p className="mt-2 text-sm text-muted-foreground max-w-md">{error || "The booking you're looking for doesn't exist or has been removed."}</p>
-					<Link href="/dashboard/bookings">
-						<Button className="mt-6 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
-							<ArrowLeft className="mr-2 h-4 w-4" />
-							Back to Bookings
-						</Button>
-					</Link>
+					<Button href="/dashboard/bookings" shape="pill" className="mt-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+						<ArrowLeft className="mr-2 h-4 w-4" />
+						Back to Bookings
+					</Button>
 				</div>
 			</div>
 		);
@@ -177,12 +175,9 @@ function BookingDetailsContent() {
 			{/* Header */}
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div>
-					<Link
-						href="/dashboard/bookings"
-						className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
-						<ArrowLeft className="h-4 w-4" />
+					<UiLink href="/dashboard/bookings" variant="back">
 						Back to Bookings
-					</Link>
+					</UiLink>
 					<h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight">Booking Details</h1>
 					<div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
 						<span className="flex items-center gap-1.5">
@@ -484,14 +479,10 @@ function BookingDetailsContent() {
 
 					{/* Actions */}
 					<div className="flex flex-col gap-2">
-						<Link href="/dashboard/bookings">
-							<Button
-								variant="outline"
-								className="w-full rounded-xl hover:bg-primary/10 hover:text-primary">
-								<ArrowLeft className="mr-2 h-4 w-4" />
-								View All Bookings
-							</Button>
-						</Link>
+						<Button href="/dashboard/bookings" variant="outline" className="w-full hover:bg-primary/10 hover:text-primary">
+							<ArrowLeft className="mr-2 h-4 w-4" />
+							View All Bookings
+						</Button>
 					</div>
 				</div>
 			</div>

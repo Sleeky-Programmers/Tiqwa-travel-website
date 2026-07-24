@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { motion } from "motion/react";
 import {
   BadgeDollarSign,
@@ -52,7 +51,8 @@ export default function AboutPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            <span className="section-badge mb-3 inline-flex">Our Story</span>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
               About Tiqwa Travel
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
@@ -135,7 +135,7 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="mb-10 text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight">Leadership Team</h2>
+            <h2 className="section-heading">Leadership Team</h2>
             <p className="mt-3 text-muted-foreground">
               The people building the future of travel
             </p>
@@ -180,7 +180,7 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="mb-10 text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight">Trust & Safety</h2>
+            <h2 className="section-heading">Trust & Safety</h2>
             <p className="mt-3 text-muted-foreground">
               Your security and peace of mind are our top priorities
             </p>
@@ -226,7 +226,7 @@ export default function AboutPage() {
             viewport={{ once: true }}
             className="mb-10 text-center"
           >
-            <h2 className="text-3xl font-bold tracking-tight">What People Say</h2>
+            <h2 className="section-heading">What People Say</h2>
             <p className="mt-3 text-muted-foreground">
               Trusted by travelers and airline partners alike
             </p>
@@ -264,20 +264,18 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="border-t border-border bg-primary/5 py-16 dark:bg-primary/10">
+      <section className="band-dark py-16">
         <Container className="text-center">
-          <h2 className="text-2xl font-bold sm:text-3xl">
+          <h2 className="text-2xl font-extrabold text-ink-foreground sm:text-3xl">
             Join millions of happy travelers
           </h2>
-          <p className="mt-3 text-muted-foreground">
+          <p className="mt-3 text-ink-muted">
             Start your next adventure with Tiqwa Travel today
           </p>
-          <Link href="/search" className="mt-6 inline-block">
-            <Button size="lg">
-              Search Flights
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          <Button href="/search" size="lg" className="mt-6">
+            Search Flights
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         </Container>
       </section>
     </main>

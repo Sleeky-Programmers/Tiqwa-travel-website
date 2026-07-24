@@ -2,7 +2,6 @@
 
 import { Plane } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -66,9 +65,9 @@ export function FlightCard({ flight, passengers = 1, departure = '', isPublic }:
 					<p className="text-2xl font-bold text-primary">{formatFlightPrice(flight.price, flight.currency)}</p>
 					<p className="text-xs text-muted-foreground">per person</p>
 				</div>
-				<Link href={isPublic ? `/booking?${bookingParams.toString()}` : `/dashboard/bookings/confirm-booking?${bookingParams.toString()}`}>
-					<Button size="sm">Select</Button>
-				</Link>
+				<Button href={isPublic ? `/booking?${bookingParams.toString()}` : `/dashboard/bookings/confirm-booking?${bookingParams.toString()}`} size="sm">
+					Select
+				</Button>
 			</div>
 		</Card>
 	);

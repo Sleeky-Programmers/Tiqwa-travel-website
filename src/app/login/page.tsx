@@ -1,7 +1,6 @@
 'use client';
 
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
@@ -9,6 +8,7 @@ import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { Input } from '@/components/ui/Input';
+import { Link } from '@/components/ui/Link';
 import { useAuth } from '@/contexts/AuthContext';
 import { login } from '@/services/auth';
 
@@ -47,7 +47,7 @@ function LoginContent() {
 				<Container className="flex min-h-[80vh] items-center justify-center py-20">
 					<div className="glossy-card w-full max-w-md p-8">
 						<div className="text-center">
-							<h1 className="text-2xl font-bold">Welcome Back</h1>
+							<h1 className="text-2xl font-extrabold">Welcome Back</h1>
 							<p className="mt-2 text-sm text-muted-foreground">Sign in to your Tiqwa account</p>
 						</div>
 
@@ -82,9 +82,7 @@ function LoginContent() {
 								</button>
 							</div>
 							<div className="text-right">
-								<Link
-									href="/forgot-password"
-									className="text-sm text-primary hover:underline">
+								<Link href="/forgot-password" className="text-sm">
 									Forgot password?
 								</Link>
 							</div>
@@ -98,9 +96,7 @@ function LoginContent() {
 
 						<p className="mt-6 text-center text-sm text-muted-foreground">
 							Don&apos;t have an account?{' '}
-							<Link
-								href="/signup"
-								className="text-primary hover:underline">
+							<Link href="/signup">
 								Create account
 							</Link>
 						</p>

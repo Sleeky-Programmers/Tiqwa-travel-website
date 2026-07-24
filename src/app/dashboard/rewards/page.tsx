@@ -259,9 +259,10 @@ export default function RewardsPage() {
 					</div>
 					<Button
 						size="lg"
+						shape="pill"
 						onClick={shareReferral}
 						disabled={!rewards?.referral_code}
-						className="rounded-full shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105">
+						className="shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105">
 						<Share2 className="mr-2 h-4 w-4" />
 						Share Now
 						<ArrowRight className="ml-2 h-4 w-4" />

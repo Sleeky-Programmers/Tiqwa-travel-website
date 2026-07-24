@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Container";
+import { Link } from "@/components/ui/Link";
 import { forgotPassword } from "@/services/auth";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
@@ -40,10 +40,7 @@ export default function ForgotPasswordPage() {
           <p className="mt-2 text-muted-foreground">
             We&apos;ve sent a password reset link to {email}
           </p>
-          <Link
-            href="/login"
-            className="mt-6 inline-block text-primary hover:underline"
-          >
+          <Link href="/login" className="mt-6 inline-block">
             Back to Login
           </Link>
         </div>
@@ -58,7 +55,7 @@ export default function ForgotPasswordPage() {
       <Container className="flex min-h-[80vh] items-center justify-center py-20">
         <div className="glossy-card w-full max-w-md p-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Forgot Password</h1>
+            <h1 className="text-2xl font-extrabold">Forgot Password</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Enter your email to receive a reset link
             </p>
@@ -90,7 +87,7 @@ export default function ForgotPasswordPage() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Remember your password?{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href="/login">
               Back to Login
             </Link>
           </p>

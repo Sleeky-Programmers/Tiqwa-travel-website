@@ -1,52 +1,33 @@
 "use client";
 
-import {
-  Sparkles,
-  Headphones,
-  ShieldCheck,
-  BadgeDollarSign,
-  Clock,
-} from "lucide-react";
-
-const badges = [
-  { icon: Sparkles, text: "2M+ Travelers Trust Tiqwa" },
-  { icon: ShieldCheck, text: "100% Secure Booking" },
-  { icon: BadgeDollarSign, text: "Best Price Guarantee" },
-  { icon: Headphones, text: "24/7 Customer Support" },
-  { icon: Clock, text: "Instant Confirmation" },
-  // Duplicated for seamless loop
-  { icon: Sparkles, text: "2M+ Travelers Trust Tiqwa" },
-  { icon: ShieldCheck, text: "100% Secure Booking" },
-  { icon: BadgeDollarSign, text: "Best Price Guarantee" },
-  { icon: Headphones, text: "24/7 Customer Support" },
-  { icon: Clock, text: "Instant Confirmation" },
-];
+import { motion } from "motion/react";
+import { stats } from "@/data/mockData";
+import { Container } from "@/components/ui/Container";
 
 export function TrustBanner() {
   return (
-    <section className="border-y border-border bg-primary/4 dark:bg-primary/8 py-4 overflow-hidden">
-      {/* Marquee container */}
-      <div className="relative flex overflow-hidden">
-        {/* Edge fades */}
-        <div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-r from-primary/4 to-transparent dark:from-primary/8" />
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-l from-primary/4 to-transparent dark:from-primary/8" />
-
-        <div className="marquee-track">
-          {badges.map((badge, i) => {
-            const Icon = badge.icon;
-            return (
-              <span
-                key={i}
-                className="inline-flex items-center gap-2 whitespace-nowrap px-6 text-sm font-medium text-foreground/75"
-              >
-                <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                {badge.text}
-                <span className="mx-4 h-4 w-px bg-border" />
-              </span>
-            );
-          })}
+    <section className="band-dark pt-28 pb-12 md:pt-32 md:pb-14">
+      <Container>
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          {stats.map((stat, i) => (
+            <motion.div
+              key={stat.id}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08 }}
+              className="text-center"
+            >
+              <p className="text-3xl font-extrabold text-primary sm:text-4xl">
+                {stat.value}
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-wider text-ink-muted sm:text-sm">
+                {stat.label}
+              </p>
+            </motion.div>
+          ))}
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

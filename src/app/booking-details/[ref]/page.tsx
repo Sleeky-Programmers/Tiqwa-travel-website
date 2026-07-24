@@ -1,7 +1,6 @@
 'use client';
 
-import { ArrowLeft, Loader2, Plane } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, Plane } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -9,6 +8,7 @@ import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
+import { Link } from '@/components/ui/Link';
 import { formatFlightPrice, getBookingDetails } from '@/services/whitelabel-api';
 
 import type { BookingDetails } from '@/types/whitelabel';
@@ -49,11 +49,9 @@ function BookingDetailsContent() {
 				<Container className="py-28">
 					<div className="glossy-card mx-auto max-w-lg p-8 text-center">
 						<p className="text-destructive">{error ?? 'Booking not found'}</p>
-						<Link
-							href="/dashboard/bookings"
-							className="mt-4 inline-block">
-							<Button variant="outline">Back to Bookings</Button>
-						</Link>
+						<Button href="/dashboard/bookings" variant="outline" className="mt-4">
+							Back to Bookings
+						</Button>
 					</div>
 				</Container>
 			</PublicLayout>
@@ -64,10 +62,7 @@ function BookingDetailsContent() {
 		<PublicLayout>
 			<div className="page-fade-in py-28">
 				<Container size="md">
-					<Link
-						href="/bookings"
-						className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-						<ArrowLeft className="h-4 w-4" />
+					<Link href="/dashboard/bookings" variant="back" className="mb-6">
 						Back to bookings
 					</Link>
 

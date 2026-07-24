@@ -12,6 +12,7 @@ import { AdminTable } from '@/components/admin/AdminTable';
 import { BookingDetailsModal } from '@/components/admin/BookingDetailsModal';
 import { BookingStatusBadge } from '@/components/admin/StatusBadge';
 import { Button } from '@/components/ui/Button';
+import { linkVariants } from '@/components/ui/Link';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { bookingStatusOptions, formatNaira } from '@/data/admin-mock-data';
 import { getFlightBookings } from '@/services/whitelabel-api';
@@ -173,7 +174,7 @@ function AdminBookingsContent() {
 				<button
 					type="button"
 					onClick={() => setSelectedBooking(booking)}
-					className="font-mono text-xs font-medium text-primary hover:underline">
+					className={linkVariants({ variant: 'default', className: 'font-mono text-xs' })}>
 					{booking.reference}
 				</button>
 			),

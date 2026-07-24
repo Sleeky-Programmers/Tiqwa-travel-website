@@ -1,6 +1,9 @@
 'use client';
 
-import { AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane, Search, Shield, User } from 'lucide-react';
+import {
+    AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane,
+    Search, Shield, User
+} from 'lucide-react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -11,17 +14,9 @@ import { Button } from '@/components/ui/Button';
 import { Link, linkVariants } from '@/components/ui/Link';
 import { cn } from '@/lib/utils';
 import {
-	confirmFlightPrice,
-	createBooking,
-	formatFlightPrice,
-	getBankAccounts,
-	getFlightFromCache,
-	initiatePayment,
-	isBookingReservationExpired,
-	readActiveBooking,
-	readCachedFlightSearch,
-	reserveBooking,
-	saveActiveBooking,
+    confirmFlightPrice, createBooking, formatFlightPrice, getBankAccounts, getFlightFromCache,
+    initiatePayment, isBookingReservationExpired, readActiveBooking, readCachedFlightSearch,
+    reserveBooking, saveActiveBooking
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
@@ -167,12 +162,17 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				return `${resultsPath}?${urlParams.toString()}`;
 			}
 
-			return `${resultsPath}?from=${encodeURIComponent(currentFlight.from)}&to=${encodeURIComponent(currentFlight.to)}&departure=${departureDate}&passengers=${passengers}`;
+			return `${resultsPath}?from=${encodeURIComponent(currentFlight.from)}&to=${encodeURIComponent(
+				currentFlight.to
+			)}&departure=${departureDate}&passengers=${passengers}`;
 		},
 		[resultsPath]
 	);
 
-	const resultsHref = useMemo(() => (flight ? buildResultsHref(flight, departure, passengersCount) : searchPath), [flight, departure, passengersCount, buildResultsHref, searchPath]);
+	const resultsHref = useMemo(
+		() => (flight ? buildResultsHref(flight, departure, passengersCount) : searchPath),
+		[flight, departure, passengersCount, buildResultsHref, searchPath]
+	);
 
 	const confirmPrice = useCallback(async () => {
 		if (!flightId) {
@@ -397,7 +397,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 					{/* Actions */}
 					<div className="relative z-10 mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-						<Button href="/dashboard/bookings" className="w-full sm:w-auto shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+						<Button
+							href="/dashboard/bookings"
+							className="w-full sm:w-auto shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
 							<ArrowLeft className="mr-2 h-4 w-4" />
 							View My Bookings
 						</Button>
@@ -452,7 +454,10 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 					</div>
 					<p className="text-lg font-semibold">Flight not found</p>
 					<p className="mt-2 text-sm text-muted-foreground max-w-md">Please select a flight from the search results.</p>
-					<Button href={searchPath} shape="pill" className="mt-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+					<Button
+						href={searchPath}
+						shape="pill"
+						className="mt-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
 						<Search className="mr-2 h-4 w-4" />
 						Search for flights
 					</Button>
@@ -519,7 +524,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				</div>
 			</div>
 
-			<Link href={resultsHref} variant="back">
+			<Link
+				href={resultsHref}
+				variant="back">
 				Back to results
 			</Link>
 
@@ -550,9 +557,6 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 						<div
 							key={index}
 							className="relative rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
-							<div className="absolute -top-3 -left-3 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white shadow-lg shadow-primary/25">
-								{index + 1}
-							</div>
 							<PassengerForm
 								data={passenger}
 								onChange={(data) => handlePassengerChange(index, data)}

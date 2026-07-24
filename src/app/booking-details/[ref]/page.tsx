@@ -65,7 +65,7 @@ function BookingDetailsContent() {
 			<div className="page-fade-in py-28">
 				<Container size="md">
 					<Link
-						href="/bookings"
+						href="/dashboard/bookings"
 						className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
 						<ArrowLeft className="h-4 w-4" />
 						Back to bookings

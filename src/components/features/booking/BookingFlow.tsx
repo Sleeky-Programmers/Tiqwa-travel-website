@@ -2,13 +2,14 @@
 
 import { AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane, Search, Shield, User } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PaymentOptions } from '@/components/features/booking/PaymentOptions';
 import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
+import { Link, linkVariants } from '@/components/ui/Link';
+import { cn } from '@/lib/utils';
 import {
 	confirmFlightPrice,
 	createBooking,
@@ -396,12 +397,10 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 					{/* Actions */}
 					<div className="relative z-10 mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-						<Link href="/dashboard/bookings">
-							<Button className="w-full sm:w-auto rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
-								<ArrowLeft className="mr-2 h-4 w-4" />
-								View My Bookings
-							</Button>
-						</Link>
+						<Button href="/dashboard/bookings" className="w-full sm:w-auto shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+							<ArrowLeft className="mr-2 h-4 w-4" />
+							View My Bookings
+						</Button>
 						<Button
 							variant="outline"
 							className="w-full sm:w-auto rounded-xl hover:bg-primary/10 hover:text-primary"
@@ -453,12 +452,10 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 					</div>
 					<p className="text-lg font-semibold">Flight not found</p>
 					<p className="mt-2 text-sm text-muted-foreground max-w-md">Please select a flight from the search results.</p>
-					<Link href={searchPath}>
-						<Button className="mt-6 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
-							<Search className="mr-2 h-4 w-4" />
-							Search for flights
-						</Button>
-					</Link>
+					<Button href={searchPath} shape="pill" className="mt-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+						<Search className="mr-2 h-4 w-4" />
+						Search for flights
+					</Button>
 				</div>
 			</div>
 		);
@@ -480,7 +477,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 				<button
 					onClick={() => setShowPaymentOptions(false)}
-					className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
+					className={cn(linkVariants({ variant: 'back' }), 'hover:gap-3')}>
 					<ArrowLeft className="h-4 w-4" />
 					Back to passenger details
 				</button>
@@ -522,10 +519,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				</div>
 			</div>
 
-			<Link
-				href={resultsHref}
-				className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-all hover:text-primary hover:gap-3">
-				<ArrowLeft className="h-4 w-4" />
+			<Link href={resultsHref} variant="back">
 				Back to results
 			</Link>
 

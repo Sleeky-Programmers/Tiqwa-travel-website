@@ -1,8 +1,7 @@
 'use client';
 
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -10,6 +9,7 @@ import { FlightCard } from '@/components/features/FlightCard';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
+import { Link, linkVariants } from '@/components/ui/Link';
 import { applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption } from '@/services/flightSearch';
 import {
 	CabinClass,
@@ -203,7 +203,7 @@ function ResultsContent() {
 				{hasActiveFilters && (
 					<button
 						onClick={clearFilters}
-						className="text-xs text-primary hover:underline">
+						className={linkVariants({ variant: 'default', className: 'text-xs' })}>
 						Clear all
 					</button>
 				)}
@@ -279,10 +279,7 @@ function ResultsContent() {
 		<PublicLayout>
 			<div className="page-fade-in py-28">
 				<Container>
-					<Link
-						href="/search"
-						className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-primary">
-						<ArrowLeft className="h-4 w-4" />
+					<Link href="/search" variant="back" className="mb-6">
 						Modify search
 					</Link>
 
@@ -292,7 +289,7 @@ function ResultsContent() {
 						transition={{ duration: 0.4 }}>
 						<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
-								<h1 className="text-2xl font-bold sm:text-3xl">Flight Results</h1>
+								<h1 className="text-2xl font-extrabold sm:text-3xl">Flight Results</h1>
 								<p className="mt-1 text-muted-foreground">
 									{from && to ? `${from} → ${to}` : 'Search for flights'}
 									{departure && ` · ${departure}`}
@@ -367,9 +364,7 @@ function ResultsContent() {
 									<div className="glossy-card p-12 text-center">
 										<p className="text-lg font-medium">No flights found</p>
 										<p className="mt-2 text-sm text-muted-foreground">Try adjusting your search or filters. Use airport codes like LOS or DXB.</p>
-										<Link
-											href="/search"
-											className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+										<Link href="/search" className="mt-4 inline-block text-sm font-medium">
 											Search again
 										</Link>
 									</div>

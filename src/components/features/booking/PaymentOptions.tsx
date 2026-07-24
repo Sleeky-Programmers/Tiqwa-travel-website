@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { linkVariants } from '@/components/ui/Link';
 import { parseInstalments } from '@/lib/utils';
 import { getPaymentGateways, getPaymentMethods } from '@/services/whitelabel-api';
 
@@ -126,7 +127,7 @@ export function PaymentOptions({ onSelect, isLoading = false }: PaymentOptionsPr
 						setShowInstalments(false);
 						setSelectedMethod(null);
 					}}
-					className="text-sm text-primary hover:underline">
+					className={linkVariants({ variant: 'default' })}>
 					← Back to payment methods
 				</button>
 
@@ -184,7 +185,7 @@ export function PaymentOptions({ onSelect, isLoading = false }: PaymentOptionsPr
 							setSelectedMethod(null);
 						}
 					}}
-					className="text-sm text-primary hover:underline">
+					className={linkVariants({ variant: 'default' })}>
 					← Back
 				</button>
 				<div className="space-y-3">

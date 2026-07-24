@@ -2,7 +2,6 @@
 
 import { format, isValid, parseISO } from 'date-fns';
 import { Calendar } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { BookingStatusBadge } from '@/components/admin/StatusBadge';
@@ -160,12 +159,10 @@ export function CustomerDetailsModal({ customer, open, onOpenChange }: CustomerD
 				</div>
 
 				<DialogFooter className="flex-col gap-2 sm:flex-row">
-					<Link href={`/admin/bookings?search=${encodeURIComponent(customer.email)}`}>
-						<Button variant="ghost">
-							<Calendar className="h-4 w-4" />
-							View All Bookings
-						</Button>
-					</Link>
+					<Button href={`/admin/bookings?search=${encodeURIComponent(customer.email)}`} variant="ghost">
+						<Calendar className="h-4 w-4" />
+						View All Bookings
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

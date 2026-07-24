@@ -2,7 +2,6 @@
 
 import { format, isValid, parseISO } from 'date-fns';
 import { ArrowRight, Calendar, CheckCircle, ChevronRight, Clock, ClockIcon, CreditCard, Filter, MapPin, Plane, Search, Users, XCircle } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -134,15 +133,15 @@ export default function BookingsPage() {
 						View and manage your flight reservations
 					</p>
 				</div>
-				<Link href="/dashboard/search">
-					<Button
-						size="default"
-						className="rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-105">
-						<Search className="mr-2 h-4 w-4" />
-						Book New Flight
-						<ArrowRight className="ml-2 h-4 w-4" />
-					</Button>
-				</Link>
+				<Button
+					href="/dashboard/search"
+					size="default"
+					shape="pill"
+					className="shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-105">
+					<Search className="mr-2 h-4 w-4" />
+					Book New Flight
+					<ArrowRight className="ml-2 h-4 w-4" />
+				</Button>
 			</div>
 
 			{/* Tabs */}
@@ -188,12 +187,13 @@ export default function BookingsPage() {
 							: 'No cancelled bookings found.'}
 					</p>
 					{activeTab === 'upcoming' && (
-						<Link
+						<Button
 							href="/dashboard/search"
-							className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 hover:scale-105">
+							shape="pill"
+							className="mt-4 shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 hover:scale-105">
 							<Search className="h-4 w-4" />
 							Search for flights
-						</Link>
+						</Button>
 					)}
 				</div>
 			) : (
@@ -282,15 +282,14 @@ export default function BookingsPage() {
 													)}
 												</div>
 											</div>
-											<Link href={`/dashboard/bookings/${booking.reference}`}>
-												<Button
-													size="sm"
-													variant="outline"
-													className="rounded-xl hover:bg-primary/10 hover:text-primary">
-													View Details
-													<ChevronRight className="ml-1 h-4 w-4" />
-												</Button>
-											</Link>
+											<Button
+												href={`/dashboard/bookings/${booking.reference}`}
+												size="sm"
+												variant="outline"
+												className="hover:bg-primary/10 hover:text-primary">
+												View Details
+												<ChevronRight className="ml-1 h-4 w-4" />
+											</Button>
 										</div>
 									</div>
 								</div>

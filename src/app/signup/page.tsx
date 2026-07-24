@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Container";
+import { Link } from "@/components/ui/Link";
 import { signup } from "@/services/auth";
 import { formatPhoneNumber } from '@/utils/phone';
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -84,7 +84,7 @@ export default function SignupPage() {
       <Container className="flex min-h-[80vh] items-center justify-center py-20">
         <div className="glossy-card w-full max-w-md p-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Create Account</h1>
+            <h1 className="text-2xl font-extrabold">Create Account</h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Join Tiqwa Travel today
             </p>
@@ -181,7 +181,7 @@ export default function SignupPage() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link href="/login">
               Sign in
             </Link>
           </p>

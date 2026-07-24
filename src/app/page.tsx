@@ -5,6 +5,7 @@ import { HolidayPackages } from "@/components/features/home/HolidayPackages";
 import { WhyChooseUs } from "@/components/features/home/WhyChooseUs";
 import { DreamDestinations } from "@/components/features/home/DreamDestinations";
 import { TestimonialsSection } from "@/components/features/home/TestimonialsSection";
+import { CtaBand } from "@/components/features/home/CtaBand";
 import {
   getHomepageData,
   getPopularAirports,
@@ -32,6 +33,7 @@ export default async function HomePage() {
       <WhyChooseUs />
       <DreamDestinations popularAirports={popularAirports} />
       <TestimonialsSection />
+      <CtaBand />
     </div>
     </PublicLayout>
   );

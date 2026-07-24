@@ -3,7 +3,7 @@
 import { Star, MessageSquareQuote } from "lucide-react";
 import { motion } from "motion/react";
 import { Container } from "@/components/ui/Container";
-import { testimonials, stats } from "@/data/mockData";
+import { testimonials } from "@/data/mockData";
 
 export function TestimonialsSection() {
   return (
@@ -18,7 +18,7 @@ export function TestimonialsSection() {
         >
           <span className="section-badge mb-3 inline-flex">
             <Star className="h-3 w-3 fill-primary" />
-            What Travelers Say
+            {" "}Testimonials
           </span>
           <h2 className="section-heading">Loved by Travelers Worldwide</h2>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
@@ -26,27 +26,8 @@ export function TestimonialsSection() {
           </p>
         </motion.div>
 
-        {/* Stats strip */}
-        <div className="mb-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {stats.map((stat, i) => (
-            <motion.div
-              key={stat.id}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="stat-card p-5 text-center"
-            >
-              <p className="text-2xl font-bold text-primary sm:text-3xl">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
-            </motion.div>
-          ))}
-        </div>
-
         {/* Testimonial cards — quote-wall style */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2">
           {testimonials.map((t, i) => (
             <motion.div
               key={t.id}
@@ -54,7 +35,7 @@ export function TestimonialsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.08 }}
-              className="hover-lift glossy-card relative flex flex-col overflow-hidden p-6"
+              className="hover-lift relative flex flex-col overflow-hidden rounded-2xl bg-background-card border border-border p-6 shadow-sm"
             >
               {/* Quote watermark */}
               <span className="quote-watermark">&ldquo;</span>
@@ -79,7 +60,7 @@ export function TestimonialsSection() {
 
               <div className="mt-4 flex items-center gap-3 border-t border-border/60 pt-4 relative z-10">
                 {/* Avatar circle */}
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-400 text-xs font-bold text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-300 text-xs font-bold text-white">
                   {t.name.charAt(0)}
                 </div>
                 <div>

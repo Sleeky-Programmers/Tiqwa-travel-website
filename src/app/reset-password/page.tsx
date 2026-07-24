@@ -1,12 +1,12 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Container";
+import { Link } from "@/components/ui/Link";
 import { resetPassword } from "@/services/auth";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
@@ -65,7 +65,7 @@ function ResetPasswordContent() {
     <Container className="flex min-h-[80vh] items-center justify-center py-20">
       <div className="glossy-card w-full max-w-md p-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Reset Password</h1>
+          <h1 className="text-2xl font-extrabold">Reset Password</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Enter your new password below
           </p>
@@ -118,7 +118,7 @@ function ResetPasswordContent() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/login">
             Back to Login
           </Link>
         </p>

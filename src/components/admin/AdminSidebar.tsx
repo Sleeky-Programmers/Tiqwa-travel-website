@@ -4,6 +4,7 @@ import { Calendar, CreditCard, LayoutDashboard, LogOut, Plane, Settings, Users }
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { Link as NavLink, linkVariants } from '@/components/ui/Link';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -65,17 +66,15 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
 					}
 
 					return (
-						<Link
+						<NavLink
 							key={item.href}
 							href={item.href}
-							onClick={onNavigate}
-							className={cn(
-								'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all',
-								active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-primary/5 hover:text-foreground'
-							)}>
+							variant="sidebar"
+							active={active}
+							onClick={onNavigate}>
 							<item.icon className="h-4 w-4" />
 							{item.label}
-						</Link>
+						</NavLink>
 					);
 				})}
 			</nav>
@@ -85,7 +84,7 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
 				<button
 					type="button"
 					onClick={handleLogout}
-					className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-destructive transition-all hover:bg-destructive/10">
+					className={cn(linkVariants({ variant: 'menu-item' }), 'w-full text-destructive hover:bg-destructive/10 hover:text-destructive')}>
 					<LogOut className="h-4 w-4" />
 					Logout
 				</button>

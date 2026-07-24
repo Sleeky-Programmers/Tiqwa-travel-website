@@ -1,9 +1,9 @@
 'use client';
 
 import { Award, Calendar, ChevronLeft, ChevronRight, HelpCircle, Home, LayoutDashboard, LogOut, Plane, Search, Settings, User } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { Link } from '@/components/ui/Link';
 import { cn } from '@/lib/utils';
 
 export interface NavItem {
@@ -164,13 +164,9 @@ export function Sidebar({
 										<Link
 											key={item.href}
 											href={item.href}
-											className={cn(
-												'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-												active
-													? 'sidebar-active-bar bg-primary/10 text-primary shadow-sm'
-													: 'text-foreground/60 hover:bg-primary/5 hover:text-foreground hover:translate-x-0.5',
-												!isExpanded && 'justify-center px-2'
-											)}
+											variant="sidebar"
+											active={active}
+											className={!isExpanded ? 'justify-center px-2' : undefined}
 											title={!isExpanded ? item.label : undefined}>
 											<item.icon
 												className={cn('h-4 w-4 shrink-0 transition-all duration-200', active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')}
@@ -201,13 +197,11 @@ export function Sidebar({
 
 					<Link
 						href="/"
-						className={cn(
-							'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground/70 transition-all duration-200 hover:bg-primary/5 hover:text-foreground',
-							!isExpanded && 'justify-center px-2'
-						)}
+						variant="sidebar"
+						className={cn('text-muted-foreground/70', !isExpanded && 'justify-center px-2')}
 						title={!isExpanded ? 'Back to Home' : undefined}>
 						<Home className="h-4 w-4" />
-						{isExpanded && <span className="transition-transform duration-150 group-hover:translate-x-0.5">Back to Home</span>}
+						{isExpanded && <span>Back to Home</span>}
 					</Link>
 				</div>
 			</div>

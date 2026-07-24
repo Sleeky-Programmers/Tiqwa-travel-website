@@ -24,11 +24,12 @@ export function HolidayPackages({ packages }: HolidayPackagesProps) {
           viewport={{ once: true }}
           className="mb-10 text-center"
         >
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Holiday Packages
+          <span className="section-badge mb-3 inline-flex">Holiday Packages</span>
+          <h2 className="section-heading">
+            Curated Getaways
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Curated getaways at exclusive prices
+            All-inclusive escapes at exclusive prices — flights, stays, and experiences bundled
           </p>
         </motion.div>
 
@@ -45,29 +46,31 @@ export function HolidayPackages({ packages }: HolidayPackagesProps) {
                 href={pkg.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="glossy-card glossy-hover group block overflow-hidden"
+                className="hover-lift group relative block h-72 overflow-hidden rounded-2xl shadow-lg"
               >
-                <div className="relative h-48 w-full overflow-hidden">
-                  <Image
-                    src={pkg.thumbnail}
-                    alt={pkg.title}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-5">
-                  <p className="text-sm text-muted-foreground">{pkg.location}</p>
+                <Image
+                  src={pkg.thumbnail}
+                  alt={pkg.title}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-108"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+
+                <span className="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ink">
+                  Featured
+                </span>
+
+                <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+                  <p className="text-xs uppercase tracking-wider text-white/70">{pkg.location}</p>
                   <h3 className="mt-1 text-xl font-bold">{pkg.title}</h3>
                   {pkg.subtitle && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {pkg.subtitle}
-                    </p>
+                    <p className="mt-1 text-sm text-white/70">{pkg.subtitle}</p>
                   )}
-                  <div className="mt-4 flex items-center justify-between">
-                    <p className="text-2xl font-bold text-primary">
-                      {formatFlightPrice(pkg.amount, pkg.currency)}
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-lg font-bold text-primary">
+                      From {formatFlightPrice(pkg.amount, pkg.currency)}
                     </p>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+                    <ExternalLink className="h-4 w-4 text-white/70 transition-colors group-hover:text-white" />
                   </div>
                 </div>
               </Link>

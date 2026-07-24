@@ -23,7 +23,8 @@ export default function FAQPage() {
     <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-3xl font-bold sm:text-4xl">Frequently Asked Questions</h1>
+          <span className="section-badge mb-3 inline-flex">Help Center</span>
+          <h1 className="text-3xl font-extrabold sm:text-4xl">Frequently Asked Questions</h1>
           <p className="mt-3 text-muted-foreground">Find answers to common questions about booking with Tiqwa Travel</p>
           <div className="mt-10 space-y-3">
             {faqs.map((faq, i) => (

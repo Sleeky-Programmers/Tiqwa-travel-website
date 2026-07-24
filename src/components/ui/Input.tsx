@@ -11,13 +11,14 @@ interface InputProps extends React.ComponentProps<"input"> {
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, label, error, id, helperText, ...props }, ref) => {
+  ({ className, type, label, error, id, helperText, required, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     const field = (
       <InputPrimitive
         ref={ref}
         id={inputId}
         type={type}
+        required={required}
         data-slot="input"
         className={cn(
           "h-10 w-full min-w-0 rounded-xl border border-input bg-white/60 px-4 py-2.5 text-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5",
@@ -33,6 +34,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label htmlFor={inputId} className="text-xs font-medium text-foreground">
             {label}
+            {required && <span className="ml-1 text-primary">*</span>}
           </label>
         )}
         {field}

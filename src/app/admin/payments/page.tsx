@@ -2,7 +2,7 @@
 
 import { Building2, Calendar, CreditCard, FileText, Landmark, Search, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AdminTable } from '@/components/admin/AdminTable';
 import { PaymentInvoiceModal } from '@/components/admin/PaymentInvoiceModal';
@@ -69,6 +69,7 @@ export default function AdminPaymentsPage() {
 	const [payments, setPayments] = useState<Payment[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [activeTab, setActiveTab] = useState<TabType>('all');
+	const searchInputRef = useRef<HTMLInputElement>(null);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedMethod, setSelectedMethod] = useState<string>('ALL');
 	const [selectedGateway, setSelectedGateway] = useState<string>('ALL');
@@ -282,6 +283,7 @@ export default function AdminPaymentsPage() {
 				{/* Search Input with Button */}
 				<div className="relative flex flex-1 min-w-[200px]">
 					<Input
+						ref={searchInputRef}
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -290,7 +292,7 @@ export default function AdminPaymentsPage() {
 					/>
 					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 					<Button
-						onClick={() => {}}
+						onClick={() => searchInputRef.current?.focus()}
 						size="sm"
 						className="rounded-l-none h-9 px-4 border-l-0 shrink-0">
 						<Search className="h-4 w-4" />

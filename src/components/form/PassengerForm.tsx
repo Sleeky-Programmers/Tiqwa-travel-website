@@ -95,7 +95,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 						<button
 							type="button"
 							onClick={() => setIsTitleOpen(!isTitleOpen)}
-							className="flex h-9 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
+							className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
 							<span className={cn(!data.title && 'text-muted-foreground')}>{data.title ? TITLE_OPTIONS.find((opt) => opt.value === data.title)?.label : 'Select'}</span>
 							<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isTitleOpen && 'rotate-180')} />
 						</button>
@@ -219,7 +219,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 							<button
 								type="button"
 								onClick={() => setIsDocumentTypeOpen(!isDocumentTypeOpen)}
-								className="flex h-9 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
+								className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
 								<span className={cn(!data.documentType && 'text-muted-foreground')}>
 									{data.documentType ? documentOptions.find((opt) => opt.value === data.documentType)?.label : `Select document type${isDomestic ? '' : ''}`}
 								</span>

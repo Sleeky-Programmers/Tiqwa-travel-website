@@ -27,8 +27,6 @@ function useBreadcrumb(pathname: string): string | null {
 		'/dashboard/bookings': 'My Bookings',
 		'/dashboard/profile': 'Profile',
 		'/dashboard/rewards': 'Rewards',
-		'/dashboard/help': 'Help Center',
-		'/dashboard/settings': 'Settings',
 	};
 	return map[pathname] ?? null;
 }
@@ -122,15 +120,15 @@ export function DashboardNavbar() {
 							type="button"
 							onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
 							className="flex items-center gap-2.5 rounded-full border border-border/40 bg-white/60 py-1 pl-1 pr-3 backdrop-blur-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 dark:bg-white/5">
-							<div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-hover text-xs font-semibold text-white shadow-sm ring-2 ring-primary/20">
+							<div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-hover text-xs font-semibold leading-none text-white shadow-sm ring-2 ring-primary/20">
 								{user?.avatar ? (
 									<img
 										src={user.avatar}
 										alt={displayName}
-										className="h-full w-full rounded-full object-cover"
+										className="h-full w-full object-cover"
 									/>
 								) : (
-									getInitials(displayName)
+									<span className="select-none">{getInitials(displayName)}</span>
 								)}
 							</div>
 							<div className="hidden min-w-0 md:block text-left">
@@ -142,21 +140,21 @@ export function DashboardNavbar() {
 
 						{isUserMenuOpen && (
 							<div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border/40 bg-white/90 p-1.5 shadow-2xl backdrop-blur-xl dark:bg-gray-900/90 z-[9999]">
-								<div className="flex items-center gap-3 border-b border-border/40 px-3 py-2.5">
-									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-hover text-sm font-bold text-white shadow-sm ring-2 ring-primary/20">
+								<div className="flex flex-col items-center gap-2 border-b border-border/40 px-3 py-3 text-center">
+									<div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-hover text-base font-bold leading-none text-white shadow-sm ring-2 ring-primary/20">
 										{user?.avatar ? (
 											<img
 												src={user.avatar}
 												alt={displayName}
-												className="h-full w-full rounded-full object-cover"
+												className="h-full w-full object-cover"
 											/>
 										) : (
-											getInitials(displayName)
+											<span className="select-none">{getInitials(displayName)}</span>
 										)}
 									</div>
-									<div>
-										<p className="text-sm font-semibold">{displayName}</p>
-										<p className="text-xs text-muted-foreground">{email}</p>
+									<div className="w-full min-w-0">
+										<p className="truncate text-sm font-semibold">{displayName}</p>
+										<p className="truncate text-xs text-muted-foreground">{email}</p>
 									</div>
 								</div>
 
@@ -169,14 +167,14 @@ export function DashboardNavbar() {
 										Profile
 									</MenuLink>
 									<MenuLink
-										href="/dashboard/settings"
+										href="/dashboard/profile"
 										variant="menu-item"
 										onClick={() => setIsUserMenuOpen(false)}>
 										<Settings className="h-4 w-4" />
 										Settings
 									</MenuLink>
 									<MenuLink
-										href="/dashboard/help"
+										href="/faq"
 										variant="menu-item"
 										onClick={() => setIsUserMenuOpen(false)}>
 										<HelpCircle className="h-4 w-4" />

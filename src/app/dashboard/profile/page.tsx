@@ -110,8 +110,8 @@ export default function ProfilePage() {
 				<div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
 					{/* Avatar */}
 					<div className="relative flex-shrink-0">
-						<div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-hover text-3xl font-bold text-white shadow-lg ring-4 ring-primary/20">
-							{initials}
+						<div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-hover text-3xl font-bold leading-none text-white shadow-lg ring-4 ring-primary/20">
+							<span className="select-none">{initials}</span>
 						</div>
 					</div>
 

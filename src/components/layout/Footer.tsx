@@ -10,7 +10,6 @@ import { decodeHtmlEntities } from "@/lib/utils";
 
 const footerLinks = {
 	Company: [
-		{ href: "/about", label: "About Us" },
 		{ href: "/contact", label: "Contact" },
 		{ href: "/faq", label: "FAQ" },
 	],

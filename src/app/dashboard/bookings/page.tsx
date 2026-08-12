@@ -174,7 +174,7 @@ export default function BookingsPage() {
 					<p className="mt-4 text-sm text-muted-foreground">Loading your bookings...</p>
 				</div>
 			) : filteredBookings.length === 0 ? (
-				<div className="rounded-2xl bg-white p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+				<div className="card-premium p-12 text-center">
 					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/8">
 						<Plane className="h-8 w-8 text-primary/40" />
 					</div>
@@ -209,7 +209,7 @@ export default function BookingsPage() {
 						return (
 							<div
 								key={booking.id || booking.reference}
-								className="group relative overflow-hidden rounded-2xl bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.01] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
+								className="card-premium group relative overflow-hidden hover:scale-[1.01] dark:hover:shadow-2xl">
 								{/* Status Bar */}
 								<div
 									className={cn(

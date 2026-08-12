@@ -187,7 +187,7 @@ export default function DashboardPage() {
 				{statCards.map((stat) => (
 					<div
 						key={stat.title}
-						className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
+						className="card-premium group relative overflow-hidden p-5 hover:scale-[1.02] dark:hover:shadow-2xl">
 						<div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
 						<div className="flex items-start justify-between relative z-10">
@@ -223,7 +223,7 @@ export default function DashboardPage() {
 						<Link
 							key={index}
 							href={action.href}
-							className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
+							className="card-premium group relative overflow-hidden p-5 hover:scale-[1.02] dark:hover:shadow-2xl">
 							<div className="flex items-start gap-4">
 								<div className={cn('rounded-2xl bg-gradient-to-br p-3 text-white shadow-lg transition-all group-hover:scale-110 group-hover:shadow-xl', action.color)}>
 									<action.icon className="h-5 w-5" />
@@ -258,7 +258,7 @@ export default function DashboardPage() {
 							<div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
 						</div>
 					) : recentBookings.length === 0 ? (
-						<div className="relative overflow-hidden rounded-2xl bg-white p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+						<div className="card-premium relative overflow-hidden p-8 text-center">
 							<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/8">
 								<Plane className="h-6 w-6 text-primary/60" />
 							</div>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
 						recentBookings.map((booking) => (
 							<div
 								key={booking.id || booking.reference}
-								className="group relative overflow-hidden rounded-2xl bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.01] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
+								className="card-premium group relative overflow-hidden p-4 hover:scale-[1.01] dark:hover:shadow-2xl">
 								<div className="flex flex-wrap items-center justify-between gap-4">
 									<div className="flex items-center gap-4">
 										<div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -303,6 +303,7 @@ export default function DashboardPage() {
 										</div>
 										<span className={cn('rounded-full border px-3 py-1 text-xs font-medium capitalize', getStatusClass(booking.status))}>{booking.status}</span>
 										<Button
+											href={`/dashboard/bookings/${booking.reference}`}
 											size="sm"
 											variant="ghost"
 											className="rounded-xl hover:bg-primary/10 hover:text-primary">

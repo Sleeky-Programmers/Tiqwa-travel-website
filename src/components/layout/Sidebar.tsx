@@ -125,15 +125,15 @@ export function Sidebar({
 					<div className="border-b border-white/40 dark:border-white/10 px-4 py-4 flex-shrink-0">
 						<div className="flex items-center gap-3">
 							<div className="relative flex-shrink-0">
-								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-hover text-sm font-bold text-white shadow-lg ring-2 ring-primary/20">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-hover text-sm font-bold leading-none text-white shadow-lg ring-2 ring-primary/20">
 									{userAvatar ? (
 										<img
 											src={userAvatar}
 											alt={displayName}
-											className="h-full w-full rounded-full object-cover"
+											className="h-full w-full object-cover"
 										/>
 									) : (
-										getInitials(displayName)
+										<span className="select-none">{getInitials(displayName)}</span>
 									)}
 								</div>
 								<div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400 dark:border-gray-800" />

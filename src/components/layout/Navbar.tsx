@@ -14,7 +14,6 @@ import { Link as NavLink } from "@/components/ui/Link";
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/search", label: "Flights" },
-  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 

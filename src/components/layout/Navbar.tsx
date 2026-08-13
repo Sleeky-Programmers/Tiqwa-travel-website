@@ -181,7 +181,7 @@ export function Navbar() {
               className="fixed top-6 right-4 bottom-6 z-50 w-[320px] max-w-[calc(100%-2rem)] rounded-2xl glossy shadow-2xl overflow-hidden flex flex-col"
             >
               {/* Sidebar gradient header strip */}
-              <div className="h-1 w-full bg-gradient-to-r from-primary via-orange-300 to-primary/50 flex-shrink-0" />
+              <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/60 to-primary/50 flex-shrink-0" />
 
               {/* Header */}
               <div className="flex items-center justify-between p-5 border-b border-border flex-shrink-0">

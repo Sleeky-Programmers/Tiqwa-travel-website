@@ -11,11 +11,18 @@ interface SiteSettingsContextType {
 
 const SiteSettingsContext = createContext<SiteSettingsContextType | undefined>(undefined);
 
-export function SiteSettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface SiteSettingsProviderProps {
+  children: React.ReactNode;
+  initialSettings?: SiteSettings | null;
+}
+
+export function SiteSettingsProvider({ children, initialSettings = null }: SiteSettingsProviderProps) {
+  const [settings, setSettings] = useState<SiteSettings | null>(initialSettings);
+  const [isLoading, setIsLoading] = useState(!initialSettings);
 
   useEffect(() => {
+    if (initialSettings) return;
+
     let cancelled = false;
 
     getSiteSettings()
@@ -32,7 +39,7 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialSettings]);
 
   return (
     <SiteSettingsContext.Provider value={{ settings, isLoading }}>

@@ -2,10 +2,16 @@
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SiteSettingsProvider } from "@/contexts/SiteSettingsContext";
+import type { SiteSettings } from "@/types/whitelabel";
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+interface AppProvidersProps {
+  children: React.ReactNode;
+  initialSettings?: SiteSettings | null;
+}
+
+export function AppProviders({ children, initialSettings }: AppProvidersProps) {
   return (
-    <SiteSettingsProvider>
+    <SiteSettingsProvider initialSettings={initialSettings}>
       <AuthProvider>{children}</AuthProvider>
     </SiteSettingsProvider>
   );

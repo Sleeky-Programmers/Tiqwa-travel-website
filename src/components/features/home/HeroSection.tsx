@@ -56,7 +56,7 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
 					</span>
 
 					<h1 className="mt-5 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl md:text-white">
-						Fly Anywhere, <span className="text-primary drop-shadow-[0_0_24px_rgba(255,90,54,0.55)]">Pay Less</span>
+						Fly Anywhere, <span className="text-primary drop-shadow-[0_0_24px_var(--shadow-primary-glow)]">Pay Less</span>
 					</h1>
 					<p className="mt-5 text-lg text-muted-foreground sm:text-xl max-w-2xl mx-auto md:text-white/80">
 						Premium flight booking with the best prices guaranteed with free cancellation, no hidden fees, instant e-tickets.

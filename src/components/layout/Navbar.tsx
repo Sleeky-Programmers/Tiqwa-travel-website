@@ -87,7 +87,7 @@ export function Navbar() {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-primary/30">
                 <Plane className="h-4 w-4 md:h-5 md:w-5" />
               </div>
-              <span className="text-base md:text-lg font-bold text-foreground">
+              <span className="font-heading text-base md:text-lg font-extrabold text-foreground">
                 {brandName}
               </span>
             </Link>
@@ -193,7 +193,7 @@ export function Navbar() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white">
                     <Plane className="h-4 w-4" />
                   </div>
-                  <span className="font-bold text-foreground">{brandName}</span>
+                  <span className="font-heading font-extrabold text-foreground">{brandName}</span>
                 </Link>
                 <button
                   onClick={() => setSidebarOpen(false)}

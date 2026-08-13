@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { FlightCard } from '@/components/features/FlightCard';
+import { FlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
@@ -404,17 +405,17 @@ function ResultsContent() {
 				</AnimatePresence>
 
 				{/* Results */}
+				<FlightSearchLoader
+					show={isLoading}
+					from={from}
+					to={to}
+					departureDate={departure}
+					returnDate={returnDate}
+					passengers={totalPassengers}
+					cabinLabel={CABIN_LABELS[cabin]}
+				/>
 				<div id="results-section">
-					{isLoading ? (
-						<div className="rounded-2xl bg-white p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
-							<div className="relative mx-auto mb-4 h-12 w-12">
-								<div className="absolute inset-0 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-								<Plane className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
-							</div>
-							<p className="font-medium">Searching for flights...</p>
-							<p className="mt-1 text-sm text-muted-foreground">Finding the best options for you</p>
-						</div>
-					) : paginatedFlights.length === 0 ? (
+					{isLoading ? null : paginatedFlights.length === 0 ? (
 						<div className="rounded-2xl bg-white p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/8">
 								<Plane className="h-8 w-8 text-primary/40" />

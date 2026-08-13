@@ -63,6 +63,7 @@
 
 	/* ── Typography ── */
 	--font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+	--font-heading-family: var(--font-plus-jakarta), var(--font-sans);
 }
 
 .dark {
@@ -116,6 +117,7 @@
 	--color-ink-border: var(--ink-border);
 	--color-popover: var(--popover);
 	--color-popover-foreground: var(--popover-foreground);
+	--font-heading: var(--font-heading-family);
 }
 
 /* ── Base ── */
@@ -125,6 +127,16 @@ body {
 	font-family: var(--font-sans), system-ui, sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--font-heading-family);
+	font-weight: 700;
 }
 
 /* ── Premium Card ── */
@@ -196,7 +208,7 @@ body {
 	opacity: 0.35;
 }
 .dark .dashboard-orb {
-	opacity: 0.18;
+	opacity: 0.45;
 }
 
 .dashboard-orb-primary {
@@ -266,6 +278,7 @@ body {
 .section-badge {
 	align-items: center;
 	color: var(--primary);
+	font-family: var(--font-heading-family);
 	font-size: 0.75rem;
 	font-weight: 700;
 	letter-spacing: 0.12em;
@@ -273,6 +286,7 @@ body {
 }
 
 .section-heading {
+	font-family: var(--font-heading-family);
 	font-size: 1.875rem;
 	line-height: 1.15;
 	font-weight: 800;
@@ -454,6 +468,27 @@ body {
 	}
 	100% {
 		background-position: 200% 0;
+	}
+}
+
+/* ── Flight search loader (orbiting plane) ── */
+@keyframes orbit {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes orbit-counter {
+	to {
+		transform: rotate(-360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animate-\[orbit_3s_linear_infinite\],
+	.animate-\[orbit-counter_3s_linear_infinite\],
+	.animate-\[spin_8s_linear_infinite\] {
+		animation: none;
 	}
 }
 

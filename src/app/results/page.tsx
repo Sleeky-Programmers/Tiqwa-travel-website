@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { FlightCard } from '@/components/features/FlightCard';
+import { FlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
@@ -279,7 +280,10 @@ function ResultsContent() {
 		<PublicLayout>
 			<div className="page-fade-in py-28">
 				<Container>
-					<Link href="/search" variant="back" className="mb-6">
+					<Link
+						href="/search"
+						variant="back"
+						className="mb-6">
 						Modify search
 					</Link>
 
@@ -354,17 +358,23 @@ function ResultsContent() {
 								)}
 							</AnimatePresence>
 
+							<FlightSearchLoader
+								show={isLoading}
+								from={from}
+								to={to}
+								departureDate={departure}
+								returnDate={returnDate}
+								passengers={totalPassengers}
+								cabinLabel={CABIN_LABELS[cabin]}
+							/>
 							<div id="results-section">
-								{isLoading ? (
-									<div className="glossy-card p-12 text-center">
-										<div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-										<p className="text-muted-foreground">Searching for flights...</p>
-									</div>
-								) : paginatedFlights.length === 0 ? (
+								{isLoading ? null : paginatedFlights.length === 0 ? (
 									<div className="glossy-card p-12 text-center">
 										<p className="text-lg font-medium">No flights found</p>
 										<p className="mt-2 text-sm text-muted-foreground">Try adjusting your search or filters. Use airport codes like LOS or DXB.</p>
-										<Link href="/search" className="mt-4 inline-block text-sm font-medium">
+										<Link
+											href="/search"
+											className="mt-4 inline-block text-sm font-medium">
 											Search again
 										</Link>
 									</div>

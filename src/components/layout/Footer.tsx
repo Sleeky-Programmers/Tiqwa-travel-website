@@ -66,7 +66,7 @@ export function Footer() {
 							<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white transition-transform duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-primary/30">
 								<Plane className="h-4 w-4" />
 							</div>
-							<span className="text-lg font-bold text-ink-foreground">
+							<span className="font-heading text-lg font-extrabold text-ink-foreground">
 								{brandName}
 							</span>
 						</Link>

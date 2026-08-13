@@ -60,7 +60,7 @@ export function TestimonialsSection() {
 
               <div className="mt-4 flex items-center gap-3 border-t border-border/60 pt-4 relative z-10">
                 {/* Avatar circle */}
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-orange-300 text-xs font-bold text-white">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/50 text-xs font-bold text-white">
                   {t.name.charAt(0)}
                 </div>
                 <div>

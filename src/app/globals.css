@@ -53,6 +53,7 @@
 	--shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
 	--shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
 	--shadow-primary: 0 4px 16px rgba(255, 90, 54, 0.25);
+	--shadow-primary-glow: rgba(255, 90, 54, 0.55);
 
 	/* ── Radius ── */
 	--radius-sm: 0.5rem;
@@ -92,6 +93,7 @@
 	--shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
 	--shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.35);
 	--shadow-primary: 0 4px 16px rgba(255, 122, 84, 0.3);
+	--shadow-primary-glow: rgba(255, 122, 84, 0.55);
 }
 
 @theme inline {
@@ -224,7 +226,7 @@ h6 {
 	left: -10%;
 	width: 24rem;
 	height: 24rem;
-	background: #a855f7;
+	background: var(--brand-secondary, #a855f7);
 }
 
 .dashboard-orb-tertiary {
@@ -390,7 +392,7 @@ h6 {
 
 /* ── Gradient Text ── */
 .gradient-text-primary {
-	background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 100%);
+	background: linear-gradient(135deg, var(--primary) 0%, var(--brand-secondary, #60a5fa) 100%);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;

@@ -53,8 +53,19 @@ export function PassengerDropdown({
     if (type === "adults" && newCount < 1) return;
     if (totalPassengers + delta > 9) return;
 
+    // Each infant must travel on an adult's lap, so infants can never outnumber adults.
+    if (type === "infants" && newCount > value.adults) return;
+
+    if (type === "adults" && newCount < value.infants) {
+      // Reducing adults below the current infant count — bring infants down to match.
+      onChange({ ...value, adults: newCount, infants: newCount });
+      return;
+    }
+
     onChange({ ...value, [type]: newCount });
   };
+
+  const infantsAtLimit = value.infants >= value.adults;
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
@@ -147,13 +158,17 @@ export function PassengerDropdown({
                 <button
                   type="button"
                   onClick={() => updateCount("infants", 1)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border hover:bg-primary/10"
+                  disabled={infantsAtLimit}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-border hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                   aria-label="Increase infants"
                 >
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
             </div>
+            <p className="-mt-2 text-[11px] text-muted-foreground">
+              Each infant must sit on an adult&apos;s lap — infants can&apos;t exceed the number of adults.
+            </p>
 
             <div className="border-t border-border pt-2 text-xs text-muted-foreground">
               Max 9 passengers total

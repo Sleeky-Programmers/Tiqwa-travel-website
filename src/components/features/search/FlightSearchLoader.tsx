@@ -3,6 +3,7 @@
 import { ArrowRight, Globe2, Plane } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface FlightLoaderContentProps {
 	from?: string;
@@ -12,9 +13,12 @@ interface FlightLoaderContentProps {
 	passengers?: number;
 	cabinLabel?: string;
 	compact?: boolean;
+	messages?: string[];
 }
 
 const SEARCH_MESSAGES = ['Searching for the best fares...', 'Comparing hundreds of airlines...', 'Checking real-time availability...', 'Almost there...'];
+
+export const BOOKING_TRANSITION_MESSAGES = ['Preparing your booking...', 'Reserving your seat...', 'Almost there...'];
 
 function placeLabel(value?: string): string {
 	if (!value) return '';
@@ -28,15 +32,16 @@ function formatDateLabel(value?: string): string {
 	return parsed.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function FlightLoaderContent({ from, to, departureDate, returnDate, passengers, cabinLabel, compact = false }: FlightLoaderContentProps) {
+function FlightLoaderContent({ from, to, departureDate, returnDate, passengers, cabinLabel, compact = false, messages = SEARCH_MESSAGES }: FlightLoaderContentProps) {
 	const [messageIndex, setMessageIndex] = useState(0);
 
 	useEffect(() => {
+		setMessageIndex(0);
 		const interval = setInterval(() => {
-			setMessageIndex((i) => (i + 1) % SEARCH_MESSAGES.length);
+			setMessageIndex((i) => (i + 1) % messages.length);
 		}, 1800);
 		return () => clearInterval(interval);
-	}, []);
+	}, [messages]);
 
 	const origin = placeLabel(from);
 	const destination = placeLabel(to);
@@ -84,7 +89,7 @@ function FlightLoaderContent({ from, to, departureDate, returnDate, passengers, 
 						exit={{ opacity: 0, y: -8 }}
 						transition={{ duration: 0.3 }}
 						className="absolute inset-x-0 text-sm text-muted-foreground">
-						{SEARCH_MESSAGES[messageIndex]}
+						{messages[messageIndex]}
 					</motion.p>
 				</AnimatePresence>
 			</div>
@@ -108,14 +113,25 @@ interface FlightSearchLoaderProps {
 	returnDate?: string;
 	passengers?: number;
 	cabinLabel?: string;
+	messages?: string[];
+	label?: string;
 }
 
-export function FlightSearchLoader({ show, from, to, departureDate, returnDate, passengers, cabinLabel }: FlightSearchLoaderProps) {
+export function FlightSearchLoader({ show, from, to, departureDate, returnDate, passengers, cabinLabel, messages, label }: FlightSearchLoaderProps) {
+	// Render through a portal straight to <body>, the same way Dialog/Popover in this app do.
+	// Rendered inline, position:fixed only escapes to the viewport if no ancestor sets transform/
+	// filter/will-change/contain — and Framer Motion's motion.div wrappers (used throughout the
+	// results list) apply exactly that. A portal sidesteps the whole class of bug entirely.
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
+
 	const origin = placeLabel(from);
 	const destination = placeLabel(to);
-	const ariaLabel = origin && destination ? `Searching for flights from ${origin} to ${destination}` : 'Searching for flights';
+	const ariaLabel = label ?? (origin && destination ? `Searching for flights from ${origin} to ${destination}` : 'Searching for flights');
 
-	return (
+	if (!mounted) return null;
+
+	return createPortal(
 		<AnimatePresence>
 			{show && (
 				<motion.div
@@ -126,7 +142,7 @@ export function FlightSearchLoader({ show, from, to, departureDate, returnDate, 
 					role="status"
 					aria-live="polite"
 					aria-label={ariaLabel}
-					className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-lg">
+					className="fixed inset-0 z-[10000] flex items-center justify-center bg-background/85 backdrop-blur-lg">
 					<motion.div
 						initial={{ opacity: 0, scale: 0.95, y: 10 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -140,11 +156,13 @@ export function FlightSearchLoader({ show, from, to, departureDate, returnDate, 
 							returnDate={returnDate}
 							passengers={passengers}
 							cabinLabel={cabinLabel}
+							messages={messages}
 						/>
 					</motion.div>
 				</motion.div>
 			)}
-		</AnimatePresence>
+		</AnimatePresence>,
+		document.body
 	);
 }
 

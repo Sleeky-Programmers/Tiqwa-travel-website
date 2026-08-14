@@ -1,3 +1,5 @@
+import type { OutboundSegment, Pricing, PriceSummary, TravelerPrice } from '@/types/whitelabel';
+
 export interface Flight {
 	id: string;
 	airline: string;
@@ -23,6 +25,18 @@ export interface Flight {
 	toCountryCode?: string;
 	fromCountry?: string;
 	toCountry?: string;
+	// Full breakdown data — used by the flight summary popup, not the list card.
+	fareBasis?: string | null;
+	cabinType?: string;
+	bookingClass?: string;
+	refundable?: boolean;
+	outboundSegments?: OutboundSegment[];
+	inboundSegments?: OutboundSegment[];
+	totalOutboundDuration?: number;
+	totalInboundDuration?: number | null;
+	pricing?: Pricing;
+	priceSummary?: PriceSummary[];
+	travelersPrice?: TravelerPrice[];
 }
 
 export type StopsFilter = 'any' | 'nonstop' | 'one-stop-max';

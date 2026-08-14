@@ -92,12 +92,17 @@ export interface WhitelabelFlightItem {
 	id: string;
 	amount: number;
 	currency: string;
-	outbound: AirportSegment[];
-	inbound?: AirportSegment[];
+	fare_basis?: string | null;
+	outbound: OutboundSegment[];
+	inbound?: OutboundSegment[];
 	outbound_stops?: number;
 	inbound_stops?: number;
 	total_duration?: number;
-	pricing?: { payable?: number };
+	total_outbound_duration?: number;
+	total_inbound_duration?: number | null;
+	pricing?: Pricing;
+	price_summary?: PriceSummary[];
+	travelers_price?: TravelerPrice[];
 }
 
 export interface FlightSearchData {
@@ -182,6 +187,8 @@ export interface OutboundSegment {
 	operating_airline: string;
 	airport_to_details: AirportDetails;
 	airport_from_details: AirportDetails;
+	fare_rules?: string[];
+	refundable?: boolean;
 }
 
 // ============================================

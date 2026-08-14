@@ -4,6 +4,7 @@ import { ArrowRightLeft, ChevronDown, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+import { FlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
 import { AirportCombobox } from '@/components/ui/AirportCombobox';
 import { Button } from '@/components/ui/Button';
 import { CabinDropdown } from '@/components/ui/CabinDropdown';
@@ -11,6 +12,13 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { getTotalPassengers, PassengerCounts, PassengerDropdown } from '@/components/ui/PassengerDropdown';
 import { cn } from '@/lib/utils';
 import { CabinClass, cacheFlightSearch, FlightSearchParams, parseAirportValue, searchFlightsForForm } from '@/services/whitelabel-api';
+
+const CABIN_LABELS: Record<CabinClass, string> = {
+	economy: 'Economy',
+	premium_economy: 'Premium Economy',
+	business: 'Business',
+	first: 'First Class',
+};
 
 interface FlightSearchFormProps {
 	defaultValues?: {
@@ -290,17 +298,21 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 						className="w-full"
 						size="lg"
 						disabled={isLoading}>
-						{isLoading ? (
-							<div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-						) : (
-							<>
-								<Search className="h-4 w-4" />
-								Search Flights
-							</>
-						)}
+						<Search className="h-4 w-4" />
+						Search Flights
 					</Button>
 				</div>
 			</div>
+
+			<FlightSearchLoader
+				show={isLoading}
+				from={fromDisplay}
+				to={toDisplay}
+				departureDate={departure}
+				returnDate={tripType === 'roundtrip' ? returnDate : undefined}
+				passengers={getTotalPassengers(passengers)}
+				cabinLabel={CABIN_LABELS[cabin]}
+			/>
 		</form>
 	);
 }

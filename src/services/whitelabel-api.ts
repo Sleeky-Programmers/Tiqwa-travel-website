@@ -165,7 +165,7 @@ export function formatAirportLabel(airport: Airport): string {
 	return `${airport.city} (${airport.iata_code})`;
 }
 
-function formatDuration(minutes: number): string {
+export function formatDuration(minutes: number): string {
 	const h = Math.floor(minutes / 60);
 	const m = minutes % 60;
 	if (h === 0) return `${m}m`;
@@ -232,6 +232,18 @@ export function transformFlightItem(item: WhitelabelFlightItem): Flight | null {
 		toCountryCode: last.airport_to_details?.country_code,
 		fromCountry: first.airport_from_details?.country,
 		toCountry: last.airport_to_details?.country,
+		// Full breakdown — used by the flight summary popup.
+		fareBasis: item.fare_basis,
+		cabinType: first.cabin_type,
+		bookingClass: first.booking_class,
+		refundable: first.refundable,
+		outboundSegments: item.outbound,
+		inboundSegments: item.inbound,
+		totalOutboundDuration: item.total_outbound_duration,
+		totalInboundDuration: item.total_inbound_duration,
+		pricing: item.pricing,
+		priceSummary: item.price_summary,
+		travelersPrice: item.travelers_price,
 	};
 }
 

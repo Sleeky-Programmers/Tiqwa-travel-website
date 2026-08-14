@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { FlightCard } from '@/components/features/FlightCard';
-import { FlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
+import { InlineFlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
@@ -92,7 +92,14 @@ function ResultsContent() {
 	const tripType = searchParams.get('tripType') ?? 'oneway';
 
 	const [baseFlights, setBaseFlights] = useState<Flight[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	// Start "not loading" when a matching cached search already exists (the normal path when
+	// arriving from the search form, which shows its own transition UI while the search runs).
+	// Otherwise the results page would flash its own loader for one frame on top of the search
+	// form's still-closing one — two transition overlays visible at once.
+	const [isLoading, setIsLoading] = useState(() => {
+		const cached = readCachedFlightSearch();
+		return !(cached && paramsMatchCache(cached.params, from, to, departure, returnDate, tripType, adults, children, infants, cabin));
+	});
 	const [error, setError] = useState<string | null>(null);
 
 	const [sortBy, setSortBy] = useState<SortOption>('price');
@@ -104,7 +111,6 @@ function ResultsContent() {
 	const [currentPage, setCurrentPage] = useState(1);
 
 	const loadFlights = useCallback(async () => {
-		setIsLoading(true);
 		setError(null);
 		setCurrentPage(1);
 
@@ -114,6 +120,8 @@ function ResultsContent() {
 			setIsLoading(false);
 			return;
 		}
+
+		setIsLoading(true);
 
 		if (!from || !to || !departure) {
 			setBaseFlights([]);
@@ -321,7 +329,9 @@ function ResultsContent() {
 			</div>
 
 			{/* Back to Search */}
-			<Link href="/dashboard/search" variant="back">
+			<Link
+				href="/dashboard/search"
+				variant="back">
 				Modify search
 			</Link>
 
@@ -405,17 +415,19 @@ function ResultsContent() {
 				</AnimatePresence>
 
 				{/* Results */}
-				<FlightSearchLoader
-					show={isLoading}
-					from={from}
-					to={to}
-					departureDate={departure}
-					returnDate={returnDate}
-					passengers={totalPassengers}
-					cabinLabel={CABIN_LABELS[cabin]}
-				/>
 				<div id="results-section">
-					{isLoading ? null : paginatedFlights.length === 0 ? (
+					{isLoading ? (
+						<div className="rounded-2xl bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+							<InlineFlightSearchLoader
+								from={from}
+								to={to}
+								departureDate={departure}
+								returnDate={returnDate}
+								passengers={totalPassengers}
+								cabinLabel={CABIN_LABELS[cabin]}
+							/>
+						</div>
+					) : paginatedFlights.length === 0 ? (
 						<div className="rounded-2xl bg-white p-12 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/8">
 								<Plane className="h-8 w-8 text-primary/40" />
@@ -453,6 +465,9 @@ function ResultsContent() {
 										<FlightCard
 											flight={flight}
 											passengers={totalPassengers}
+											adults={adults}
+											children={children}
+											infants={infants}
 											departure={departure}
 										/>
 									</motion.div>

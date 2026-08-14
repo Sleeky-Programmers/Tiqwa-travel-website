@@ -52,10 +52,18 @@ export function AirportCombobox({
 }: AirportComboboxProps) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const suppressReopenRef = useRef(false);
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(value || "");
   const [airports, setAirports] = useState<Airport[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Keep the field's text mirroring the selected value whenever the user isn't actively editing it.
+  useEffect(() => {
+    if (!open) {
+      setQuery(value || "");
+    }
+  }, [value, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -81,21 +89,14 @@ export function AirportCombobox({
     return () => clearTimeout(timer);
   }, [query, open]);
 
-  useEffect(() => {
-    if (open) {
-      setQuery(value || selectedCode || "");
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [open, value, selectedCode]);
-
   const handleSelect = (airport: Airport) => {
     onSelect(airport.iata_code, airport.city);
+    setQuery(airport.city);
+    // Closing returns focus to the input (finalFocus below), which would otherwise
+    // immediately re-trigger onFocus and pop the suggestions back open.
+    suppressReopenRef.current = true;
     setOpen(false);
-    setQuery("");
   };
-
-  const triggerLabel =
-    value || (selectedCode ? selectedCode : placeholder);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -104,32 +105,44 @@ export function AirportCombobox({
         {required && <span className="ml-1 text-primary">*</span>}
       </label>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          id={id}
-          disabled={disabled}
-          className={cn(
-            "inline-flex h-9 w-full items-center justify-between rounded-xl border border-border bg-white/60 px-3 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10",
-            !value && !selectedCode && "text-muted-foreground"
-          )}
-        >
-          <span className="truncate">{triggerLabel}</span>
-          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-        </PopoverTrigger>
+        <div className="relative">
+          <PopoverTrigger
+            nativeButton={false}
+            render={
+              <input
+                id={id}
+                ref={inputRef}
+                type="text"
+                autoComplete="off"
+                value={query}
+                disabled={disabled}
+                placeholder={placeholder}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (!open) setOpen(true);
+                }}
+                onFocus={() => {
+                  if (suppressReopenRef.current) {
+                    suppressReopenRef.current = false;
+                    return;
+                  }
+                  setOpen(true);
+                }}
+                className={cn(
+                  "h-9 w-full rounded-xl border border-border bg-white/60 px-3 pr-8 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10"
+                )}
+              />
+            }
+          />
+          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 shrink-0 opacity-50" />
+        </div>
         <PopoverContent
           className="glossy w-[var(--anchor-width)] min-w-[280px] p-0"
           align="start"
           sideOffset={4}
+          initialFocus={inputRef}
+          finalFocus={inputRef}
         >
-          <div className="border-b border-border p-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search city or airport code..."
-              className="h-8 w-full rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
           <div className="max-h-60 overflow-y-auto p-1">
             {isLoading && (
               <div className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">

@@ -6,12 +6,14 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { PaymentOptions } from '@/components/features/booking/PaymentOptions';
 import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
 import { Link, linkVariants } from '@/components/ui/Link';
+import { useAuth } from '@/contexts/AuthContext';
+import { clearCheckoutDraft, readCheckoutDraft, writeCheckoutDraft } from '@/lib/checkoutDraft';
 import { cn } from '@/lib/utils';
 import {
     confirmFlightPrice, createBooking, formatFlightPrice, getBankAccounts, getFlightFromCache,
@@ -20,7 +22,7 @@ import {
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
-import type { BankAccount, BookingPassengerPayload } from '@/types/whitelabel';
+import type { BankAccount, BookingPassengerPayload, PassengerType } from '@/types/whitelabel';
 
 export type BookingFlowVariant = 'guest' | 'account';
 
@@ -93,6 +95,16 @@ function validatePassenger(data: PassengerData): string | null {
 	return null;
 }
 
+function buildPassengerTypes(adults: number, children: number, infants: number, total: number): PassengerType[] {
+	const types: PassengerType[] = [
+		...Array.from({ length: adults }, () => 'adult' as const),
+		...Array.from({ length: children }, () => 'child' as const),
+		...Array.from({ length: infants }, () => 'infant' as const),
+	];
+	while (types.length < total) types.push('adult');
+	return types.slice(0, total);
+}
+
 function getInitialPassenger(): PassengerData {
 	return {
 		firstName: '',
@@ -116,13 +128,60 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	const resultsPath = variant === 'guest' ? '/results' : '/dashboard/search/results';
 	const searchPath = variant === 'guest' ? '/search' : '/dashboard/search';
 
+	const { user } = useAuth();
+	const hasPrefilledRef = useRef(false);
+
 	const searchParams = useSearchParams();
 	const flightId = searchParams.get('flightId') ?? '';
 	const passengersCount = Number(searchParams.get('passengers') ?? '1');
 	const departure = searchParams.get('departure') ?? '';
 	const flight = getFlightFromCache(flightId);
 
-	const [passengers, setPassengers] = useState<PassengerData[]>(() => Array.from({ length: Math.max(1, passengersCount) }, () => getInitialPassenger()));
+	const [passengers, setPassengers] = useState<PassengerData[]>(() => {
+		const length = Math.max(1, passengersCount);
+		return readCheckoutDraft(flightId, length) ?? Array.from({ length }, () => getInitialPassenger());
+	});
+
+	// Auto-save passenger details as the user types, so an accidental refresh or back-nav
+	// doesn't wipe out a long passport-details form. Skipped while every field is still empty.
+	useEffect(() => {
+		if (!flightId) return;
+		const hasData = passengers.some((p) => Object.values(p).some((v) => v !== ''));
+		if (!hasData) return;
+
+		const timer = setTimeout(() => writeCheckoutDraft(flightId, passengers), 400);
+		return () => clearTimeout(timer);
+	}, [passengers, flightId]);
+
+	// Passenger type composition (adult/child/infant) from the original search — falls back to
+	// "everyone is an adult" for older links that predate the adults/children/infants breakdown.
+	const [passengerTypes, setPassengerTypes] = useState<PassengerType[]>(() => {
+		const hasBreakdown = searchParams.has('adults');
+		const adultsCount = hasBreakdown ? Math.max(0, Number(searchParams.get('adults') ?? '0') || 0) : passengersCount;
+		const childrenCount = hasBreakdown ? Math.max(0, Number(searchParams.get('children') ?? '0') || 0) : 0;
+		const infantsCount = hasBreakdown ? Math.max(0, Number(searchParams.get('infants') ?? '0') || 0) : 0;
+		return buildPassengerTypes(adultsCount, childrenCount, infantsCount, Math.max(1, passengersCount));
+	});
+
+	// Prefill the first passenger (the account holder) with known profile details.
+	// Runs once, only for logged-in bookings, and only fills fields the user hasn't already typed into.
+	useEffect(() => {
+		if (variant !== 'account' || !user || hasPrefilledRef.current) return;
+		hasPrefilledRef.current = true;
+
+		setPassengers((prev) => {
+			const updated = [...prev];
+			const first = updated[0];
+			updated[0] = {
+				...first,
+				firstName: first.firstName || user.firstName || '',
+				lastName: first.lastName || user.lastName || '',
+				email: first.email || user.email || '',
+				phone: first.phone || (user.phone ? formatPhoneNumber(user.phone) : ''),
+			};
+			return updated;
+		});
+	}, [variant, user]);
 	const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
 	const [isConfirmingPrice, setIsConfirmingPrice] = useState(true);
 	const [isProcessing, setIsProcessing] = useState(false);
@@ -261,8 +320,8 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			setSelectedInstalment(instalment);
 		}
 
-		const passengerPayloads: BookingPassengerPayload[] = passengers.map((p) => ({
-			passenger_type: 'adult',
+		const passengerPayloads: BookingPassengerPayload[] = passengers.map((p, i) => ({
+			passenger_type: passengerTypes[i] ?? 'adult',
 			first_name: p.firstName.trim(),
 			last_name: p.lastName.trim(),
 			middle_name: p.middleName.trim() || null,
@@ -292,6 +351,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 			const { booking_id, reference } = createResult.data;
 			saveActiveBooking({ bookingId: booking_id, reference, flightId });
+			clearCheckoutDraft(flightId);
 
 			const reserveResult = await reserveBooking(booking_id, flightId);
 			if (!reserveResult.success) {
@@ -546,8 +606,8 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			)}
 
 			<div className="grid gap-6 lg:grid-cols-3">
-				{/* Left: Passenger Forms */}
-				<div className="space-y-6 lg:col-span-2">
+				{/* Left: Passenger Forms — shown after the summary on mobile */}
+				<div className="order-2 space-y-6 lg:order-1 lg:col-span-2">
 					<div className="flex items-center gap-3 mb-2">
 						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">{passengers.length}</div>
 						<h2 className="text-lg font-semibold">Passenger{passengers.length > 1 ? 's' : ''} Details</h2>
@@ -563,10 +623,11 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 								onPhoneChange={handlePhoneChange(index)}
 								passengerNumber={index + 1}
 								totalPassengers={passengers.length}
+								passengerType={passengerTypes[index]}
 								showRemove={passengers.length > 1}
 								onRemove={() => {
-									const updated = passengers.filter((_, i) => i !== index);
-									setPassengers(updated);
+									setPassengers((prev) => prev.filter((_, i) => i !== index));
+									setPassengerTypes((prev) => prev.filter((_, i) => i !== index));
 								}}
 								isDomestic={isDomestic}
 							/>
@@ -574,9 +635,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 					))}
 				</div>
 
-				{/* Right: Flight Summary */}
-				<div>
-					<div className="sticky top-24 space-y-6">
+				{/* Right: Flight Summary — shown first on mobile */}
+				<div className="order-1 lg:order-2">
+					<div className="lg:sticky lg:top-24 space-y-6">
 						{/* Flight Summary Card */}
 						<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 							<div className="flex items-center gap-3 pb-4 border-b border-border/60">

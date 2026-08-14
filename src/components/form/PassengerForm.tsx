@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { DateOfBirthPicker } from '@/components/ui/DateOfBirthPicker';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
+import type { PassengerType } from '@/types/whitelabel';
 
 export interface PassengerData {
 	// Personal info
@@ -35,8 +36,15 @@ interface PassengerFormProps {
 	onRemove?: () => void;
 	passengerNumber?: number;
 	totalPassengers?: number;
+	passengerType?: PassengerType;
 	isDomestic?: boolean;
 }
+
+const PASSENGER_TYPE_LABELS: Record<PassengerType, string> = {
+	adult: 'Adult',
+	child: 'Child',
+	infant: 'Infant',
+};
 
 const TITLE_OPTIONS = [
 	{ value: 'mr', label: 'Mr' },
@@ -58,7 +66,7 @@ const INTERNATIONAL_DOCUMENT_TYPES = [
 
 const DOMESTIC_DOCUMENT_TYPES = [{ value: 'id_card', label: 'National ID Card' }];
 
-export function PassengerForm({ data, onChange, onPhoneChange, showRemove = false, onRemove, passengerNumber, totalPassengers, isDomestic = false }: PassengerFormProps) {
+export function PassengerForm({ data, onChange, onPhoneChange, showRemove = false, onRemove, passengerNumber, totalPassengers, passengerType, isDomestic = false }: PassengerFormProps) {
 	const [isTitleOpen, setIsTitleOpen] = useState(false);
 	const [isDocumentTypeOpen, setIsDocumentTypeOpen] = useState(false);
 
@@ -72,7 +80,12 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 		<div className="space-y-4">
 			{/* Header with passenger number and remove button */}
 			<div className="flex items-center justify-between">
-				<h3 className="text-lg font-semibold">Passenger Details {passengerNumber && totalPassengers && `(${passengerNumber} of ${totalPassengers})`}</h3>
+				<div className="flex items-center gap-2">
+					<h3 className="text-lg font-semibold">Passenger Details {passengerNumber && totalPassengers && `(${passengerNumber} of ${totalPassengers})`}</h3>
+					{passengerType && (
+						<span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{PASSENGER_TYPE_LABELS[passengerType]}</span>
+					)}
+				</div>
 				{showRemove && onRemove && (
 					<button
 						type="button"

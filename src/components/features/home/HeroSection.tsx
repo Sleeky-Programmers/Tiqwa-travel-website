@@ -17,7 +17,7 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
 	const backgroundImage = heroImage || heroBackgroundImage;
 
 	return (
-		<section className="relative flex min-h-[100dvh] items-center overflow-hidden pt-28">
+		<section className="relative flex min-h-[100dvh] items-center overflow-hidden pt-4 md:pt-28">
 			{/* Background Image — desktop/tablet only */}
 			<div className="absolute inset-0 z-0 hidden md:block">
 				<Image
@@ -43,12 +43,12 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
 			</div>
 
 			<Container className="relative z-10 py-16 lg:py-24">
-				{/* Headline block */}
+				{/* Headline block — hidden on mobile, shown from md up */}
 				<motion.div
 					initial={{ opacity: 0, y: 24 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.65 }}
-					className="mx-auto max-w-3xl text-center">
+					className="mx-auto hidden max-w-3xl text-center md:block">
 					{/* Eyebrow badge */}
 					<span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm backdrop-blur-sm md:border-white/25 md:bg-white/12 md:text-white">
 						<Sparkles className="h-3.5 w-3.5 text-primary" />

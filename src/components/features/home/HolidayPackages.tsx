@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -38,9 +38,7 @@ export function HolidayPackages({ packages }: HolidayPackagesProps) {
 							viewport={{ once: true }}
 							transition={{ delay: i * 0.08 }}>
 							<Link
-								href={pkg.link}
-								target="_blank"
-								rel="noopener noreferrer"
+								href={`/holiday-packages/${pkg.slug}`}
 								className="hover-lift group relative block h-72 overflow-hidden rounded-2xl shadow-lg">
 								<Image
 									src={pkg.thumbnail}
@@ -58,7 +56,7 @@ export function HolidayPackages({ packages }: HolidayPackagesProps) {
 									{pkg.subtitle && <p className="mt-1 text-sm text-white/70">{pkg.subtitle}</p>}
 									<div className="mt-3 flex items-center justify-between">
 										<p className="text-lg font-bold text-primary">From {formatFlightPrice(pkg.amount, pkg.currency)}</p>
-										<ExternalLink className="h-4 w-4 text-white/70 transition-colors group-hover:text-white" />
+										<ArrowRight className="h-4 w-4 text-white/70 transition-colors group-hover:translate-x-0.5 group-hover:text-white" />
 									</div>
 								</div>
 							</Link>

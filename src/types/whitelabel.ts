@@ -57,9 +57,18 @@ export interface HolidayPackage {
 	link: string;
 	location: string;
 	description?: string;
+	long_description?: string | null;
 	amount: number;
 	currency: string;
+	properties?: unknown;
 	thumbnail: string;
+	created_at?: string;
+	updated_at?: string;
+}
+
+export interface HolidayPackageDetails {
+	package: HolidayPackage;
+	related_packages: HolidayPackage[];
 }
 
 export interface HomepageData {

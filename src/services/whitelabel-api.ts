@@ -9,6 +9,7 @@ import type {
 	CreateBookingData,
 	FlightSearchData,
 	FlightDeal,
+	HolidayPackageDetails,
 	HomepageData,
 	PaymentInitiateData,
 	PopularAirport,
@@ -285,6 +286,12 @@ export async function getPopularAirports(): Promise<PopularAirport[]> {
 
 export async function getSiteSettings(): Promise<SiteSettings> {
 	return fetchAPI<SiteSettings>('/get/site-settings');
+}
+
+// The `link` field on a HolidayPackage points at an external whitelabel-hosted URL that
+// doesn't resolve — package details are fetched from our own API using the slug instead.
+export async function getHolidayPackageDetails(slug: string): Promise<{ success: boolean; data?: HolidayPackageDetails; error?: string }> {
+	return fetchAPIResult<HolidayPackageDetails>(`/holiday-packages/${encodeURIComponent(slug)}/details`);
 }
 
 export async function getAirports(keyword: string): Promise<Airport[]> {

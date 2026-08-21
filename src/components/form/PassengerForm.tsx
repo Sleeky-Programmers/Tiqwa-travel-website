@@ -38,7 +38,14 @@ interface PassengerFormProps {
 	totalPassengers?: number;
 	passengerType?: PassengerType;
 	isDomestic?: boolean;
+	/** Only show/require document fields when the flight's confirm-price response says so. */
+	documentRequired?: boolean;
+	/** Locks every field once the user has moved into the payment step. */
+	disabled?: boolean;
 }
+
+const EXPIRY_MIN_YEAR = new Date().getFullYear();
+const EXPIRY_MAX_YEAR = EXPIRY_MIN_YEAR + 15;
 
 const PASSENGER_TYPE_LABELS: Record<PassengerType, string> = {
 	adult: 'Adult',
@@ -66,7 +73,19 @@ const INTERNATIONAL_DOCUMENT_TYPES = [
 
 const DOMESTIC_DOCUMENT_TYPES = [{ value: 'id_card', label: 'National ID Card' }];
 
-export function PassengerForm({ data, onChange, onPhoneChange, showRemove = false, onRemove, passengerNumber, totalPassengers, passengerType, isDomestic = false }: PassengerFormProps) {
+export function PassengerForm({
+	data,
+	onChange,
+	onPhoneChange,
+	showRemove = false,
+	onRemove,
+	passengerNumber,
+	totalPassengers,
+	passengerType,
+	isDomestic = false,
+	documentRequired = false,
+	disabled = false,
+}: PassengerFormProps) {
 	const [isTitleOpen, setIsTitleOpen] = useState(false);
 	const [isDocumentTypeOpen, setIsDocumentTypeOpen] = useState(false);
 
@@ -90,7 +109,8 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 					<button
 						type="button"
 						onClick={onRemove}
-						className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-destructive transition-all hover:bg-destructive/10">
+						disabled={disabled}
+						className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-destructive transition-all hover:bg-destructive/10 disabled:pointer-events-none disabled:opacity-40">
 						<X className="h-3.5 w-3.5" />
 						Remove
 					</button>
@@ -108,7 +128,8 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 						<button
 							type="button"
 							onClick={() => setIsTitleOpen(!isTitleOpen)}
-							className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
+							disabled={disabled}
+							className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50">
 							<span className={cn(!data.title && 'text-muted-foreground')}>{data.title ? TITLE_OPTIONS.find((opt) => opt.value === data.title)?.label : 'Select'}</span>
 							<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isTitleOpen && 'rotate-180')} />
 						</button>
@@ -135,6 +156,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 				<div className="flex flex-col gap-1.5">
 					<Input
 						required
+						disabled={disabled}
 						placeholder="John"
 						label="First Name"
 						value={data.firstName}
@@ -145,6 +167,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 				{/* Middle Name */}
 				<div className="flex flex-col gap-1.5">
 					<Input
+						disabled={disabled}
 						label="Middle Name"
 						value={data.middleName}
 						placeholder="(Optional)"
@@ -156,6 +179,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 				<div className="flex flex-col gap-1.5">
 					<Input
 						required
+						disabled={disabled}
 						label="Last Name"
 						placeholder="Doe"
 						value={data.lastName}
@@ -175,8 +199,9 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 							key={opt.value}
 							type="button"
 							onClick={() => update('gender', opt.value)}
+							disabled={disabled}
 							className={`
-                h-9 flex-1 rounded-xl border px-3 text-xs font-medium transition-all
+                h-9 flex-1 rounded-xl border px-3 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50
                 ${data.gender === opt.value ? 'border-primary bg-primary text-white' : 'border-border bg-background hover:bg-primary/10'}
               `}>
 							{opt.label}
@@ -189,6 +214,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 			<div className="grid gap-4 sm:grid-cols-2">
 				<Input
 					required
+					disabled={disabled}
 					type="email"
 					label="Email"
 					value={data.email}
@@ -197,6 +223,7 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 				/>
 				<Input
 					required
+					disabled={disabled}
 					type="tel"
 					label="Phone"
 					value={data.phone}
@@ -211,110 +238,115 @@ export function PassengerForm({ data, onChange, onPhoneChange, showRemove = fals
 				label="Date of Birth"
 				value={data.dateOfBirth}
 				disabled={{ after: new Date() }}
+				fieldDisabled={disabled}
 				placeholder="Select date of birth"
 				onChange={(date) => update('dateOfBirth', date)}
 			/>
 
-			{/* Document Section */}
-			<div className="border-t border-border pt-4">
-				<h4 className="text-sm font-semibold">Document Details</h4>
-				<p className="text-xs text-muted-foreground">
-					{isDomestic ? 'National ID Card required for domestic flights' : 'Passport or National ID Card required for international flights'}
-				</p>
+			{/* Document Section — only shown when the flight's confirm-price response requires it */}
+			{documentRequired && (
+				<div className="border-t border-border pt-4">
+					<h4 className="text-sm font-semibold">Document Details</h4>
+					<p className="text-xs text-muted-foreground">
+						{isDomestic ? 'National ID Card required for domestic flights' : 'Passport or National ID Card required for international flights'}
+					</p>
 
-				<div className="mt-3 grid gap-4 sm:grid-cols-2">
-					{/* Document Type */}
-					<div className="flex flex-col gap-1.5">
-						<label className="text-xs font-medium text-foreground">
-							Document Type <span className="ml-1 text-primary">*</span>
-						</label>
-						<div className="relative">
-							<button
-								type="button"
-								onClick={() => setIsDocumentTypeOpen(!isDocumentTypeOpen)}
-								className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
-								<span className={cn(!data.documentType && 'text-muted-foreground')}>
-									{data.documentType ? documentOptions.find((opt) => opt.value === data.documentType)?.label : `Select document type${isDomestic ? '' : ''}`}
-								</span>
-								<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isDocumentTypeOpen && 'rotate-180')} />
-							</button>
-							{isDocumentTypeOpen && (
-								<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
-									{documentOptions.map((opt) => (
-										<button
-											key={opt.value}
-											type="button"
-											onClick={() => {
-												update('documentType', opt.value);
-												setIsDocumentTypeOpen(false);
-											}}
-											className={cn(
-												'w-full px-3 py-2 text-left text-xs transition-colors hover:bg-primary/10',
-												data.documentType === opt.value && 'bg-primary/10 text-primary'
-											)}>
-											{opt.label}
-										</button>
-									))}
-								</div>
-							)}
+					<div className="mt-3 grid gap-4 sm:grid-cols-2">
+						{/* Document Type */}
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-medium text-foreground">
+								Document Type <span className="ml-1 text-primary">*</span>
+							</label>
+							<div className="relative">
+								<button
+									type="button"
+									onClick={() => setIsDocumentTypeOpen(!isDocumentTypeOpen)}
+									disabled={disabled}
+									className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50">
+									<span className={cn(!data.documentType && 'text-muted-foreground')}>
+										{data.documentType ? documentOptions.find((opt) => opt.value === data.documentType)?.label : `Select document type${isDomestic ? '' : ''}`}
+									</span>
+									<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isDocumentTypeOpen && 'rotate-180')} />
+								</button>
+								{isDocumentTypeOpen && (
+									<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+										{documentOptions.map((opt) => (
+											<button
+												key={opt.value}
+												type="button"
+												onClick={() => {
+													update('documentType', opt.value);
+													setIsDocumentTypeOpen(false);
+												}}
+												className={cn(
+													'w-full px-3 py-2 text-left text-xs transition-colors hover:bg-primary/10',
+													data.documentType === opt.value && 'bg-primary/10 text-primary'
+												)}>
+												{opt.label}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
 						</div>
+
+						{/* Document Number */}
+						<Input
+							required
+							disabled={disabled}
+							label="Document Number"
+							placeholder="A000345633"
+							value={data.documentNumber}
+							onChange={(e) => update('documentNumber', e.target.value)}
+						/>
+
+						{/* Document Issue Date — must be in the past */}
+						<DateOfBirthPicker
+							required
+							label="Document Issue Date"
+							value={data.documentIssueDate}
+							placeholder="Select issue date"
+							disabled={{ after: new Date() }}
+							fieldDisabled={disabled}
+							onChange={(date) => update('documentIssueDate', date)}
+						/>
+
+						{/* Document Expiry Date — must be today or later, and the picker needs to reach
+						    at least 10 years out (passports are commonly valid that long). */}
+						<DateOfBirthPicker
+							required
+							label="Document Expiry Date"
+							value={data.documentExpiryDate}
+							placeholder="Select expiry date"
+							disabled={{ before: new Date() }}
+							minYear={EXPIRY_MIN_YEAR}
+							maxYear={EXPIRY_MAX_YEAR}
+							fieldDisabled={disabled}
+							onChange={(date) => update('documentExpiryDate', date)}
+						/>
+
+						{/* Issuing Country */}
+						<Input
+							required
+							disabled={disabled}
+							placeholder="NG"
+							label="Issuing Country"
+							value={data.issuingCountry}
+							onChange={(e) => update('issuingCountry', e.target.value)}
+						/>
+
+						{/* Nationality Country */}
+						<Input
+							required
+							disabled={disabled}
+							placeholder="NG"
+							label="Nationality Country"
+							value={data.nationalityCountry}
+							onChange={(e) => update('nationalityCountry', e.target.value)}
+						/>
 					</div>
-
-					{/* Document Number */}
-					<Input
-						required
-						label="Document Number"
-						placeholder="A000345633"
-						value={data.documentNumber}
-						onChange={(e) => update('documentNumber', e.target.value)}
-					/>
-
-					{/* Document Issue Date */}
-					<DateOfBirthPicker
-						required
-						label="Document Issue Date"
-						value={data.documentIssueDate}
-						placeholder="Select issue date"
-						disabled={{ after: new Date() }}
-						onChange={(date) => update('documentIssueDate', date)}
-					/>
-
-					{/* Document Expiry Date */}
-					<DateOfBirthPicker
-						required
-						// disabled={{ after: new Date() }}
-						label="Document Expiry Date"
-						value={data.documentExpiryDate}
-						placeholder="Select expiry date"
-						onChange={(date) => update('documentExpiryDate', date)}
-					/>
-
-					{/* Issuing Country */}
-					<Input
-						required
-						placeholder="NG"
-						label="Issuing Country"
-						value={data.issuingCountry}
-						onChange={(e) => update('issuingCountry', e.target.value)}
-					/>
-
-					{/* Nationality Country */}
-					<Input
-						required
-						placeholder="NG"
-						label="Nationality Country"
-						value={data.nationalityCountry}
-						onChange={(e) => update('nationalityCountry', e.target.value)}
-					/>
 				</div>
-			</div>
-
-			{/* Hidden field for document_required - set to true */}
-			<input
-				value="true"
-				type="hidden"
-				name="document_required"
-			/>
+			)}
 		</div>
 	);
 }

@@ -2,7 +2,7 @@
 import { format, isValid, parse } from 'date-fns';
 import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
-import { DayPicker, useDayPicker } from 'react-day-picker';
+import { DayPicker, useDayPicker, type Matcher } from 'react-day-picker';
 
 import { buttonVariants } from '@/components/ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -16,7 +16,13 @@ interface DateOfBirthPickerProps {
 	onChange?: (value: string) => void;
 	placeholder?: string;
 	required?: boolean;
-	disabled?: { after: Date };
+	/** Block dates after this (e.g. DOB can't be in the future). */
+	disabled?: { after?: Date; before?: Date };
+	/** Calendar year range — defaults to 1920–current year. Override for fields that need
+	 *  future years (e.g. document expiry, which needs at least current year + 10). */
+	minYear?: number;
+	maxYear?: number;
+	fieldDisabled?: boolean;
 	className?: string;
 }
 
@@ -115,7 +121,7 @@ function CustomSelect({ value, options, onChange, className }: CustomSelectProps
 // ─── Custom Month Caption ──────────────────────────────────────────────────────
 // Replaces the default caption so we get zero native <select> elements
 
-function MonthCaption({ calendarMonth }: { calendarMonth: { date: Date } }) {
+function MonthCaption({ calendarMonth, minYear, maxYear }: { calendarMonth: { date: Date }; minYear: number; maxYear: number }) {
 	const { goToMonth, previousMonth, nextMonth } = useDayPicker();
 
 	const displayMonth = calendarMonth.date;
@@ -123,8 +129,8 @@ function MonthCaption({ calendarMonth }: { calendarMonth: { date: Date } }) {
 	const year = displayMonth.getFullYear();
 
 	const monthOptions = MONTHS.map((label, i) => ({ value: i, label }));
-	const yearOptions = Array.from({ length: CURRENT_YEAR - START_YEAR + 1 }, (_, i) => {
-		const y = CURRENT_YEAR - i;
+	const yearOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) => {
+		const y = maxYear - i;
 		return { value: y, label: String(y) };
 	});
 
@@ -178,9 +184,9 @@ function MonthCaption({ calendarMonth }: { calendarMonth: { date: Date } }) {
 
 // ─── Inline Calendar (no shadcn wrapper needed) ────────────────────────────────
 
-type CalendarProps = React.ComponentProps<typeof DayPicker>;
+type CalendarProps = React.ComponentProps<typeof DayPicker> & { minYear: number; maxYear: number };
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, minYear, maxYear, ...props }: CalendarProps) {
 	return (
 		<DayPicker
 			showOutsideDays={showOutsideDays}
@@ -206,7 +212,13 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 				...classNames,
 			}}
 			components={{
-				MonthCaption: (props) => <MonthCaption calendarMonth={props.calendarMonth} />,
+				MonthCaption: (props) => (
+					<MonthCaption
+						calendarMonth={props.calendarMonth}
+						minYear={minYear}
+						maxYear={maxYear}
+					/>
+				),
 			}}
 			{...props}
 		/>
@@ -215,15 +227,33 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
 
 // ─── DateOfBirthPicker ────────────────────────────────────────────────────────
 
-export function DateOfBirthPicker({ label, value = '', onChange, placeholder = 'Select date of birth', required, disabled, className }: DateOfBirthPickerProps) {
+export function DateOfBirthPicker({
+	label,
+	value = '',
+	onChange,
+	placeholder = 'Select date of birth',
+	required,
+	disabled,
+	minYear = START_YEAR,
+	maxYear = CURRENT_YEAR,
+	fieldDisabled = false,
+	className,
+}: DateOfBirthPickerProps) {
 	const id = useId();
 	const [open, setOpen] = useState(false);
 	const selected = parseDate(value);
-	const defaultMonth = selected || new Date(CURRENT_YEAR - 20, 0, 1);
+	const defaultMonth = selected || new Date(Math.min(Math.max(CURRENT_YEAR - 20, minYear), maxYear), 0, 1);
+
+	// react-day-picker's combined { before; after } shape means "outside this range" (both
+	// required together) — that's not what we want here, so each bound becomes its own matcher.
+	const disabledMatchers: Matcher[] | undefined = disabled
+		? [...(disabled.after ? [{ after: disabled.after }] : []), ...(disabled.before ? [{ before: disabled.before }] : [])]
+		: undefined;
 
 	const handleSelect = (date: Date | undefined) => {
 		if (date) {
-			if (disabled && date > new Date()) return;
+			if (disabled?.after && date > disabled.after) return;
+			if (disabled?.before && date < disabled.before) return;
 			onChange?.(format(date, 'yyyy-MM-dd'));
 			setOpen(false);
 		}
@@ -243,10 +273,11 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 			)}
 
 			<Popover
-				open={open}
-				onOpenChange={setOpen}>
+				open={open && !fieldDisabled}
+				onOpenChange={(next) => !fieldDisabled && setOpen(next)}>
 				<PopoverTrigger
 					id={id}
+					disabled={fieldDisabled}
 					className={cn(
 						'inline-flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-border bg-white/60 px-3 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10',
 						!selected && 'text-muted-foreground'
@@ -255,7 +286,7 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 						<CalendarIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
 						<span className="truncate">{selected ? formatCompactDate(selected) : placeholder}</span>
 					</span>
-					{selected && (
+					{selected && !fieldDisabled && (
 						<button
 							type="button"
 							onClick={(e) => {
@@ -275,10 +306,12 @@ export function DateOfBirthPicker({ label, value = '', onChange, placeholder = '
 						mode="single"
 						selected={selected}
 						onSelect={handleSelect}
-						disabled={disabled}
+						disabled={disabledMatchers}
 						defaultMonth={defaultMonth}
-						startMonth={new Date(START_YEAR, 0)}
-						endMonth={new Date(CURRENT_YEAR, 11)}
+						startMonth={new Date(minYear, 0)}
+						endMonth={new Date(maxYear, 11)}
+						minYear={minYear}
+						maxYear={maxYear}
 						className="rounded-xl border-0"
 					/>
 				</PopoverContent>

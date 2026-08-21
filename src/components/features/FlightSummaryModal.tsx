@@ -131,12 +131,14 @@ function passengerTypeLabel(type: string): string {
 export function FlightSummaryModal({ flight, open, onOpenChange, onContinue, onCloseAnimationEnd, passengers = 1 }: FlightSummaryModalProps) {
 	if (!flight) return null;
 
+	const multiCityRoutes = flight.isMultiCity ? flight.multiCityRoutes ?? [] : null;
 	const outbound = flight.outboundSegments ?? [];
 	const inbound = flight.inboundSegments ?? [];
 
-	const fareRules = Array.from(new Set([...outbound, ...inbound].flatMap((seg) => seg.fare_rules ?? [])));
+	const allSegments = multiCityRoutes ? multiCityRoutes.flat() : [...outbound, ...inbound];
+	const fareRules = Array.from(new Set(allSegments.flatMap((seg) => seg.fare_rules ?? [])));
 
-	const isRefundable = outbound[0]?.refundable ?? false;
+	const isRefundable = (multiCityRoutes ? multiCityRoutes[0]?.[0]?.refundable : outbound[0]?.refundable) ?? false;
 	const payable = flight.pricing?.payable;
 	const showPayable = payable !== undefined && payable !== flight.price;
 
@@ -159,14 +161,26 @@ export function FlightSummaryModal({ flight, open, onOpenChange, onContinue, onC
 				</DialogHeader>
 
 				<div className="space-y-6">
-					<FlightLeg
-						title="Outbound"
-						segments={outbound}
-					/>
-					<FlightLeg
-						title="Return"
-						segments={inbound}
-					/>
+					{multiCityRoutes ? (
+						multiCityRoutes.map((segments, i) => (
+							<FlightLeg
+								key={i}
+								title={`Flight ${i + 1}`}
+								segments={segments}
+							/>
+						))
+					) : (
+						<>
+							<FlightLeg
+								title="Outbound"
+								segments={outbound}
+							/>
+							<FlightLeg
+								title="Return"
+								segments={inbound}
+							/>
+						</>
+					)}
 
 					{/* Fare conditions */}
 					<div className="flex flex-wrap items-center gap-2">

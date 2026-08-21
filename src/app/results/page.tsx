@@ -20,9 +20,11 @@ import {
 	getTotalPassengers,
 	readCachedFlightSearch,
 	searchFlightsForForm,
+	searchMultiCityFlightsForForm,
 } from '@/services/whitelabel-api';
 
 import type { Flight, StopsFilter } from '@/types/flight';
+import type { MultiCityLeg } from '@/types/whitelabel';
 
 const CABIN_LABELS: Record<CabinClass, string> = {
 	economy: 'Economy',
@@ -53,6 +55,16 @@ function parsePassengersFromUrl(searchParams: URLSearchParams) {
 	return { adults: Math.max(1, total), children: 0, infants: 0 };
 }
 
+function legsMatch(a?: MultiCityLeg[] | null, b?: MultiCityLeg[] | null): boolean {
+	if (!a || !b || a.length !== b.length) return false;
+	return a.every(
+		(leg, i) =>
+			extractAirportCode(leg.origin) === extractAirportCode(b[i].origin) &&
+			extractAirportCode(leg.destination) === extractAirportCode(b[i].destination) &&
+			leg.departure_date === b[i].departure_date
+	);
+}
+
 function paramsMatchCache(
 	cached: FlightSearchParams,
 	from: string,
@@ -63,19 +75,20 @@ function paramsMatchCache(
 	adults: number,
 	children: number,
 	infants: number,
-	cabin: CabinClass
+	cabin: CabinClass,
+	legs?: MultiCityLeg[] | null
 ): boolean {
-	return (
-		extractAirportCode(cached.from) === extractAirportCode(from) &&
-		extractAirportCode(cached.to) === extractAirportCode(to) &&
-		cached.departure === departure &&
-		(cached.returnDate ?? '') === returnDate &&
-		cached.tripType === (tripType === 'roundtrip' ? 'roundtrip' : 'oneway') &&
-		cached.adults === adults &&
-		cached.children === children &&
-		cached.infants === infants &&
-		cached.cabin === cabin
-	);
+	const normalizedTripType = tripType === 'roundtrip' ? 'roundtrip' : tripType === 'multicity' ? 'multicity' : 'oneway';
+
+	if (cached.tripType !== normalizedTripType || cached.adults !== adults || cached.children !== children || cached.infants !== infants || cached.cabin !== cabin) {
+		return false;
+	}
+
+	if (normalizedTripType === 'multicity') {
+		return legsMatch(cached.legs, legs);
+	}
+
+	return extractAirportCode(cached.from) === extractAirportCode(from) && extractAirportCode(cached.to) === extractAirportCode(to) && cached.departure === departure && (cached.returnDate ?? '') === returnDate;
 }
 
 // Pagination constants - set to a large number to effectively show all in scroll
@@ -91,6 +104,16 @@ function ResultsContent() {
 	const totalPassengers = getTotalPassengers({ adults, children, infants });
 	const cabin = parseCabin(searchParams.get('cabin'));
 	const tripType = searchParams.get('tripType') ?? 'oneway';
+	const legsParam = searchParams.get('legs');
+	const legs = useMemo<MultiCityLeg[] | null>(() => {
+		if (!legsParam) return null;
+		try {
+			const parsed = JSON.parse(legsParam);
+			return Array.isArray(parsed) ? parsed : null;
+		} catch {
+			return null;
+		}
+	}, [legsParam]);
 
 	const [baseFlights, setBaseFlights] = useState<Flight[]>([]);
 	// Start "not loading" when a matching cached search already exists (the normal path when
@@ -99,7 +122,7 @@ function ResultsContent() {
 	// form's still-closing one — two transition overlays visible at once.
 	const [isLoading, setIsLoading] = useState(() => {
 		const cached = readCachedFlightSearch();
-		return !(cached && paramsMatchCache(cached.params, from, to, departure, returnDate, tripType, adults, children, infants, cabin));
+		return !(cached && paramsMatchCache(cached.params, from, to, departure, returnDate, tripType, adults, children, infants, cabin, legs));
 	});
 	const [error, setError] = useState<string | null>(null);
 
@@ -117,13 +140,33 @@ function ResultsContent() {
 		setCurrentPage(1);
 
 		const cached = readCachedFlightSearch();
-		if (cached && paramsMatchCache(cached.params, from, to, departure, returnDate, tripType, adults, children, infants, cabin)) {
+		if (cached && paramsMatchCache(cached.params, from, to, departure, returnDate, tripType, adults, children, infants, cabin, legs)) {
 			setBaseFlights(cached.flights);
 			setIsLoading(false);
 			return;
 		}
 
 		setIsLoading(true);
+
+		if (tripType === 'multicity') {
+			if (!legs || legs.length < 2) {
+				setBaseFlights([]);
+				setIsLoading(false);
+				return;
+			}
+
+			const multiResult = await searchMultiCityFlightsForForm({ destinations: legs, adults, children, infants, cabin });
+
+			if (multiResult.success && multiResult.flights) {
+				setBaseFlights(multiResult.flights);
+			} else {
+				setError(multiResult.error ?? 'Flight search failed');
+				setBaseFlights([]);
+			}
+
+			setIsLoading(false);
+			return;
+		}
 
 		if (!from || !to || !departure) {
 			setBaseFlights([]);
@@ -153,7 +196,7 @@ function ResultsContent() {
 		}
 
 		setIsLoading(false);
-	}, [from, to, departure, returnDate, adults, children, infants, cabin, tripType]);
+	}, [from, to, departure, returnDate, adults, children, infants, cabin, tripType, legs]);
 
 	useEffect(() => {
 		loadFlights();
@@ -303,8 +346,15 @@ function ResultsContent() {
 							<div>
 								<h1 className="text-2xl font-extrabold sm:text-3xl">Flight Results</h1>
 								<p className="mt-1 text-muted-foreground">
-									{from && to ? `${from} → ${to}` : 'Search for flights'}
-									{departure && ` · ${departure}`}
+									{tripType === 'multicity' && legs
+										? legs
+												.map((leg) => leg.origin)
+												.concat(legs[legs.length - 1]?.destination ?? '')
+												.join(' → ')
+										: from && to
+										? `${from} → ${to}`
+										: 'Search for flights'}
+									{tripType !== 'multicity' && departure && ` · ${departure}`}
 									{returnDate && ` · return ${returnDate}`}
 									{tripType && ` · ${tripType}`}
 									{` · ${totalPassengers} passenger${totalPassengers > 1 ? 's' : ''}`}

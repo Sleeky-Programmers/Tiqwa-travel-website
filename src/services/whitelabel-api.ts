@@ -11,6 +11,10 @@ import type {
 	FlightDeal,
 	HolidayPackageDetails,
 	HomepageData,
+	MultiCityFlightItem,
+	MultiCityLeg,
+	MultiCitySearchData,
+	MultiCitySearchParams,
 	PaymentInitiateData,
 	PopularAirport,
 	Airport,
@@ -47,11 +51,14 @@ export interface FlightSearchParams {
 	to: string;
 	departure: string;
 	returnDate?: string;
-	tripType: 'oneway' | 'roundtrip';
+	tripType: 'oneway' | 'roundtrip' | 'multicity';
 	adults: number;
 	children: number;
 	infants: number;
 	cabin: CabinClass;
+	// Multi-city only — the full set of requested legs. `from`/`to`/`departure` above mirror the
+	// first leg so existing UI (results header, cache-matching) keeps working without special-casing.
+	legs?: MultiCityLeg[];
 }
 
 export function getTotalPassengers(params: Pick<FlightSearchParams, 'adults' | 'children' | 'infants'>): number {
@@ -270,6 +277,80 @@ export function getFlightSearchError(data: FlightSearchData): string | null {
 	return parts[0] ?? 'Flight search failed';
 }
 
+// ==================== MULTI-CITY ====================
+// Response shape differs from single/roundtrip search: an item has `routes` (one per requested
+// leg, each with its own `segments`) instead of `outbound`/`inbound`.
+
+function isMultiCityFlightList(itemList: MultiCitySearchData['itemList']): itemList is MultiCityFlightItem[] {
+	return Array.isArray(itemList);
+}
+
+export function transformMultiCityItem(item: MultiCityFlightItem): Flight | null {
+	const routes = item.routes;
+	if (!routes || routes.length === 0) return null;
+
+	const firstSegment = routes[0].segments[0];
+	const lastRoute = routes[routes.length - 1];
+	const lastSegment = lastRoute.segments[lastRoute.segments.length - 1];
+	if (!firstSegment || !lastSegment) return null;
+
+	const totalStops = routes.reduce((sum, route) => sum + (route.total_segment_stops ?? Math.max(0, route.segments.length - 1)), 0);
+	const totalSegments = routes.reduce((sum, route) => sum + route.segments.length, 0);
+
+	return {
+		id: item.id,
+		airline: firstSegment.airline_details?.name ?? 'Unknown Airline',
+		airlineCode: firstSegment.airline_details?.code,
+		airlineLogo: firstSegment.airline_details?.logo ?? null,
+		from: firstSegment.airport_from_details?.city ?? firstSegment.airport_from ?? '',
+		fromCode: firstSegment.airport_from_details?.iata_code ?? firstSegment.airport_from,
+		to: lastSegment.airport_to_details?.city ?? lastSegment.airport_to ?? '',
+		toCode: lastSegment.airport_to_details?.iata_code ?? lastSegment.airport_to,
+		departure: formatTime(firstSegment.departure_time),
+		arrival: formatTime(lastSegment.arrival_time),
+		duration: formatDuration(item.total_duration),
+		stops: totalStops,
+		price: item.amount ?? item.pricing?.payable ?? 0,
+		currency: item.currency ?? 'NGN',
+		amount: item.amount,
+		outbound_stops: totalStops,
+		segmentCount: totalSegments,
+		flightNumber: firstSegment.flight_number,
+		fromCountryCode: firstSegment.airport_from_details?.country_code,
+		toCountryCode: lastSegment.airport_to_details?.country_code,
+		fromCountry: firstSegment.airport_from_details?.country,
+		toCountry: lastSegment.airport_to_details?.country,
+		fareBasis: item.fare_basis,
+		cabinType: firstSegment.cabin_type,
+		bookingClass: firstSegment.booking_class,
+		refundable: firstSegment.refundable,
+		totalOutboundDuration: item.total_duration,
+		// Multi-city pricing has a different shape (markup is an object, no tax/base_fare) —
+		// normalized into the shared Pricing shape so the rest of the app doesn't need to care.
+		pricing: { tax: null, base_fare: null, markup: [], payable: item.pricing?.payable ?? item.amount ?? 0 },
+		priceSummary: item.price_summary,
+		travelersPrice: item.travelers_price,
+		isMultiCity: true,
+		multiCityRoutes: routes.map((route) => route.segments),
+	};
+}
+
+export function mapMultiCityResults(data: MultiCitySearchData): Flight[] {
+	if (!isMultiCityFlightList(data.itemList)) return [];
+	return data.itemList
+		.map(transformMultiCityItem)
+		.filter((f): f is Flight => f !== null)
+		.map(normalizeFlight);
+}
+
+export function getMultiCitySearchError(data: MultiCitySearchData): string | null {
+	if (isMultiCityFlightList(data.itemList)) return null;
+	const messages = data.itemList.message;
+	if (!messages) return 'No flights found';
+	const parts = Object.entries(messages).flatMap(([, errs]) => errs);
+	return parts[0] ?? 'Flight search failed';
+}
+
 // ==================== PUBLIC ENDPOINTS ====================
 
 export async function getHomepageData(): Promise<HomepageData> {
@@ -362,6 +443,38 @@ export async function searchFlightsForForm(params: FlightSearchParams): Promise<
 			error: err instanceof Error ? err.message : 'Flight search failed',
 		};
 	}
+}
+
+export async function searchMultiCityFlights(params: MultiCitySearchParams): Promise<{ success: boolean; data?: MultiCitySearchData; error?: string }> {
+	return fetchAPIResult<MultiCitySearchData>('/flight/multi-city/search', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			destinations: params.destinations,
+			adults: params.adults,
+			children: params.children ?? 0,
+			infants: params.infants ?? 0,
+			cabin: params.cabin ?? 'economy',
+			return_type: params.return_type ?? null,
+		}),
+		cache: 'no-store',
+	});
+}
+
+export async function searchMultiCityFlightsForForm(params: MultiCitySearchParams): Promise<{ success: boolean; flights?: Flight[]; error?: string }> {
+	const result = await searchMultiCityFlights(params);
+	if (!result.success || !result.data) {
+		return { success: false, error: result.error ?? 'Flight search failed' };
+	}
+
+	const validationError = getMultiCitySearchError(result.data);
+	const flights = mapMultiCityResults(result.data);
+
+	if (flights.length === 0) {
+		return { success: false, error: validationError ?? 'No flights found for this route' };
+	}
+
+	return { success: true, flights };
 }
 
 export function cacheFlightSearch(flights: Flight[], params: FlightSearchParams): void {
@@ -475,9 +588,9 @@ export async function confirmFlightPrice(flightId: string) {
 	});
 }
 
-export async function createBooking(flightId: string, passengers: BookingPassengerPayload[]) {
+export async function createBooking(flightId: string, passengers: BookingPassengerPayload[], documentRequired: boolean) {
 	return postJSON<CreateBookingData>(`/flight/book/create/${flightId}`, {
-		document_required: true,
+		document_required: documentRequired,
 		passengers,
 	});
 }
@@ -546,7 +659,8 @@ export async function getBookingDetails(reference: string) {
 export async function initiateBookingFlow(
 	flightId: string,
 	passengers: BookingPassengerPayload[],
-	currency = 'NGN'
+	currency = 'NGN',
+	documentRequired = false
 ): Promise<
 	| {
 			success: true;
@@ -558,7 +672,7 @@ export async function initiateBookingFlow(
 	| { success: false; error: string }
 > {
 	// 1. Create booking
-	const createResult = await createBooking(flightId, passengers);
+	const createResult = await createBooking(flightId, passengers, documentRequired);
 	if (!createResult.success) {
 		return createResult;
 	}

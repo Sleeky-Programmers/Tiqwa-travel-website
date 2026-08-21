@@ -37,6 +37,10 @@ export interface Flight {
 	pricing?: Pricing;
 	priceSummary?: PriceSummary[];
 	travelersPrice?: TravelerPrice[];
+	// Multi-city — one entry per requested leg (e.g. LOS→ABV, ABV→LHR). When present, this takes
+	// priority over outboundSegments/inboundSegments for rendering the full itinerary breakdown.
+	isMultiCity?: boolean;
+	multiCityRoutes?: OutboundSegment[][];
 }
 
 export type StopsFilter = 'any' | 'nonstop' | 'one-stop-max';

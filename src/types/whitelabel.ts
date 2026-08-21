@@ -198,6 +198,54 @@ export interface OutboundSegment {
 	airport_from_details: AirportDetails;
 	fare_rules?: string[];
 	refundable?: boolean;
+	fare_basis?: string | null;
+}
+
+// ============================================
+// MULTI-CITY SEARCH
+// ============================================
+
+export interface MultiCityLeg {
+	origin: string;
+	destination: string;
+	departure_date: string;
+}
+
+export interface MultiCitySearchParams {
+	destinations: MultiCityLeg[];
+	adults: number;
+	children?: number;
+	infants?: number;
+	cabin?: string;
+	return_type?: null;
+}
+
+export interface MultiCityRoute {
+	segments: OutboundSegment[];
+	total_segment_duration: number;
+	total_segment_stops: number;
+}
+
+export interface MultiCityPricing {
+	markup: { markup_type: string; markup_value: number };
+	payable: number;
+}
+
+export interface MultiCityFlightItem {
+	id: string;
+	amount: number;
+	currency: string;
+	fare_basis: string | null;
+	price_summary: PriceSummary[];
+	pricing: MultiCityPricing;
+	routes: MultiCityRoute[];
+	total_duration: number;
+	travelers_price: TravelerPrice[];
+}
+
+export interface MultiCitySearchData {
+	itemList: MultiCityFlightItem[] | { message?: Record<string, string[]> };
+	listing_id?: string;
 }
 
 // ============================================
@@ -274,6 +322,12 @@ export interface ConfirmPriceData {
 	amount?: number;
 	currency?: string;
 	id?: string;
+	document_required?: boolean;
+	bookable_seats?: number;
+	expires_at?: string;
+	fare_basis?: string | null;
+	inbound?: unknown[];
+	inbound_stops?: number;
 }
 
 // ============================================

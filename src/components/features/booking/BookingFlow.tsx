@@ -1,9 +1,6 @@
 'use client';
 
-import {
-    AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane,
-    Search, Shield, User
-} from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane, Search, Shield, User } from 'lucide-react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,9 +13,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { clearCheckoutDraft, readCheckoutDraft, writeCheckoutDraft } from '@/lib/checkoutDraft';
 import { cn } from '@/lib/utils';
 import {
-    confirmFlightPrice, createBooking, formatFlightPrice, getBankAccounts, getFlightFromCache,
-    initiatePayment, isBookingReservationExpired, readActiveBooking, readCachedFlightSearch,
-    reserveBooking, saveActiveBooking
+	confirmFlightPrice,
+	createBooking,
+	formatFlightPrice,
+	getBankAccounts,
+	getFlightFromCache,
+	initiatePayment,
+	isBookingReservationExpired,
+	readActiveBooking,
+	readCachedFlightSearch,
+	reserveBooking,
+	saveActiveBooking,
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
@@ -61,7 +66,7 @@ function normalizePhone(value: string): string {
 	return value.replace(/[^\d+]/g, '');
 }
 
-function validatePassenger(data: PassengerData): string | null {
+function validatePassenger(data: PassengerData, documentRequired: boolean): string | null {
 	if (!data.firstName.trim()) return 'First name is required.';
 	if (!data.lastName.trim()) return 'Last name is required.';
 	if (!data.title) return 'Title is required.';
@@ -78,6 +83,9 @@ function validatePassenger(data: PassengerData): string | null {
 	if (data.dateOfBirth >= new Date().toISOString().split('T')[0]) {
 		return 'Date of birth must be in the past.';
 	}
+
+	if (!documentRequired) return null;
+
 	if (!data.documentNumber.trim()) return 'Document number is required.';
 	if (!data.documentIssueDate) return 'Document issue date is required.';
 	if (!data.documentExpiryDate) return 'Document expiry date is required.';
@@ -183,6 +191,8 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		});
 	}, [variant, user]);
 	const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
+	// Not required unless the confirm-price response explicitly says so.
+	const [documentRequired, setDocumentRequired] = useState(false);
 	const [isConfirmingPrice, setIsConfirmingPrice] = useState(true);
 	const [isProcessing, setIsProcessing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -241,8 +251,11 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 		setIsConfirmingPrice(true);
 		const result = await confirmFlightPrice(flightId);
-		if (result.success && result.data.amount != null) {
-			setConfirmedPrice(result.data.amount);
+		if (result.success) {
+			if (result.data.amount != null) {
+				setConfirmedPrice(result.data.amount);
+			}
+			setDocumentRequired(Boolean(result.data.document_required));
 		}
 		setIsConfirmingPrice(false);
 	}, [flightId]);
@@ -282,7 +295,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 	const validateAllPassengers = (): string | null => {
 		for (let i = 0; i < passengers.length; i++) {
-			const validationError = validatePassenger(passengers[i]);
+			const validationError = validatePassenger(passengers[i], documentRequired);
 			if (validationError) {
 				return `Passenger ${i + 1}: ${validationError}`;
 			}
@@ -342,7 +355,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		}));
 
 		try {
-			const createResult = await createBooking(flightId, passengerPayloads);
+			const createResult = await createBooking(flightId, passengerPayloads, documentRequired);
 			if (!createResult.success) {
 				setError(createResult.error);
 				setIsProcessing(false);
@@ -568,9 +581,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	// MAIN BOOKING FORM
 	// ============================================
 	return (
-		<div className="space-y-7 page-fade-in">
+		<div className="space-y-7 page-fade-in mt-20">
 			{/* Header */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-20">
 				<div>
 					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Complete Your Booking</h1>
 					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
@@ -630,6 +643,8 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 									setPassengerTypes((prev) => prev.filter((_, i) => i !== index));
 								}}
 								isDomestic={isDomestic}
+								documentRequired={documentRequired}
+								disabled={showPaymentOptions || isProcessing}
 							/>
 						</div>
 					))}

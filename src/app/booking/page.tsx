@@ -12,7 +12,7 @@ export default function BookingPage() {
 		<PublicLayout>
 			<Container
 				size="md"
-				className="py-16">
+				className="py-40 smt-20">
 				<Suspense
 					fallback={
 						<div className="flex min-h-[60vh] items-center justify-center">

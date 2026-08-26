@@ -3,6 +3,7 @@
 import { Check, ChevronDown, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { CountryDropdown } from '@/components/ui/CountryDropdown';
 import { DateOfBirthPicker } from '@/components/ui/DateOfBirthPicker';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
@@ -326,23 +327,23 @@ export function PassengerForm({
 						/>
 
 						{/* Issuing Country */}
-						<Input
+						<CountryDropdown
 							required
 							disabled={disabled}
-							placeholder="NG"
+							placeholder="Select country"
 							label="Issuing Country"
 							value={data.issuingCountry}
-							onChange={(e) => update('issuingCountry', e.target.value)}
+							onChange={(iso2) => update('issuingCountry', iso2)}
 						/>
 
 						{/* Nationality Country */}
-						<Input
+						<CountryDropdown
 							required
 							disabled={disabled}
-							placeholder="NG"
+							placeholder="Select country"
 							label="Nationality Country"
 							value={data.nationalityCountry}
-							onChange={(e) => update('nationalityCountry', e.target.value)}
+							onChange={(iso2) => update('nationalityCountry', iso2)}
 						/>
 					</div>
 				</div>

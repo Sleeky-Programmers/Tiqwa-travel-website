@@ -142,6 +142,22 @@ export interface Airport {
 	popular?: number;
 }
 
+export interface Country {
+	id: number;
+	name: string;
+	nicename?: string | null;
+	currency: string;
+	currency_name: string;
+	currency_symbol: string;
+	region: string;
+	subregion: string;
+	phonecode: string;
+	iso2: string;
+	iso3: string;
+	capital?: string;
+	status: number;
+}
+
 // ============================================
 // AIRPORT & AIRLINE DETAILS (Nested)
 // ============================================

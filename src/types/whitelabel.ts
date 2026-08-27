@@ -142,6 +142,22 @@ export interface Airport {
 	popular?: number;
 }
 
+export interface Country {
+	id: number;
+	name: string;
+	nicename?: string | null;
+	currency: string;
+	currency_name: string;
+	currency_symbol: string;
+	region: string;
+	subregion: string;
+	phonecode: string;
+	iso2: string;
+	iso3: string;
+	capital?: string;
+	status: number;
+}
+
 // ============================================
 // AIRPORT & AIRLINE DETAILS (Nested)
 // ============================================
@@ -287,8 +303,11 @@ export interface BookingPassengerPayload {
 	title: string;
 	email: string;
 	phone_number: string;
-	documents: {
+	// Omitted entirely (not sent, not just empty strings) when the flight's confirm-price
+	// response says document_required is false — see BookingFlow.tsx.
+	documents?: {
 		number: string;
+		issuing_date: string;
 		expiry_date: string;
 		issuing_country: string;
 		nationality_country: string;

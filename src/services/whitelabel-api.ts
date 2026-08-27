@@ -26,6 +26,7 @@ import type {
 	PaymentMethod,
 	BankAccount,
 	SiteSettings,
+	Country,
 } from '@/types/whitelabel';
 
 // Determine which API base to use
@@ -384,6 +385,29 @@ export async function getAirports(keyword: string): Promise<Airport[]> {
 		cache: 'no-store',
 		next: { revalidate: 0 },
 	});
+}
+
+let countriesCache: Country[] | null = null;
+let countriesPromise: Promise<Country[]> | null = null;
+
+// Countries change essentially never — fetch once per session/build and reuse everywhere
+// a country dropdown is rendered instead of re-hitting the API per field.
+export async function getCountries(): Promise<Country[]> {
+	if (countriesCache) return countriesCache;
+	if (!countriesPromise) {
+		countriesPromise = fetchAPI<Country[]>('/get/countries', {
+			next: { revalidate: 86400 },
+		})
+			.then((countries) => {
+				countriesCache = countries;
+				return countries;
+			})
+			.catch((err) => {
+				countriesPromise = null;
+				throw err;
+			});
+	}
+	return countriesPromise;
 }
 
 export async function searchFlights(params: {

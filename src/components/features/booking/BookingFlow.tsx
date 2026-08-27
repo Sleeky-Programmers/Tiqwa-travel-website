@@ -343,15 +343,19 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			title: p.title,
 			email: p.email.trim(),
 			phone_number: normalizePhone(p.phone),
-			documents: {
-				number: p.documentNumber.trim(),
-				issuing_date: p.documentIssueDate,
-				expiry_date: p.documentExpiryDate,
-				issuing_country: p.issuingCountry.trim().toUpperCase(),
-				nationality_country: p.nationalityCountry.trim().toUpperCase(),
-				document_type: p.documentType,
-				holder: true,
-			},
+			...(documentRequired
+				? {
+						documents: {
+							number: p.documentNumber.trim(),
+							issuing_date: p.documentIssueDate,
+							expiry_date: p.documentExpiryDate,
+							issuing_country: p.issuingCountry.trim().toUpperCase(),
+							nationality_country: p.nationalityCountry.trim().toUpperCase(),
+							document_type: p.documentType,
+							holder: true,
+						},
+				  }
+				: {}),
 		}));
 
 		try {

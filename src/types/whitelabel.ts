@@ -303,8 +303,11 @@ export interface BookingPassengerPayload {
 	title: string;
 	email: string;
 	phone_number: string;
-	documents: {
+	// Omitted entirely (not sent, not just empty strings) when the flight's confirm-price
+	// response says document_required is false — see BookingFlow.tsx.
+	documents?: {
 		number: string;
+		issuing_date: string;
 		expiry_date: string;
 		issuing_country: string;
 		nationality_country: string;

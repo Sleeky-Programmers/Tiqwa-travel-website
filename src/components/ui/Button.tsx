@@ -1,6 +1,6 @@
 'use client';
 
-import { cva, type, VariantProps } from 'class-variance-authority';
+import { cva, VariantProps } from 'class-variance-authority';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 

@@ -39,7 +39,7 @@ export function HolidayPackages({ packages }: HolidayPackagesProps) {
 							transition={{ delay: i * 0.08 }}>
 							<Link
 								href={`/holiday-packages/${pkg.slug}`}
-								className="hover-lift group relative block h-72 overflow-hidden rounded-2xl shadow-lg">
+								className="hover-lift group relative block h-72 overflow-hidden rounded-xl shadow-lg">
 								<Image
 									src={pkg.thumbnail}
 									alt={pkg.title}

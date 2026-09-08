@@ -1,8 +1,9 @@
 'use client';
 
-import { Award, Calendar, ChevronLeft, ChevronRight, HelpCircle, Home, LayoutDashboard, LogOut, Plane, Search, Settings, User } from 'lucide-react';
+import { Award, Calendar, ChevronLeft, ChevronRight, HelpCircle, Home, LayoutDashboard, LogOut, Search, Settings, User } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
+import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Link } from '@/components/ui/Link';
 import { cn } from '@/lib/utils';
 
@@ -95,11 +96,8 @@ export function Sidebar({
 					{isExpanded ? (
 						<>
 							<div className="flex items-center gap-2.5">
-								<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white shadow-lg shadow-primary/25">
-									<Plane className="h-4 w-4" />
-								</div>
 								<div>
-									<p className="text-sm font-bold leading-none">Tiqwa Travel</p>
+									<BrandLogo className="text-sm leading-none text-foreground" />
 									<p className="text-[10px] text-muted-foreground uppercase tracking-wider">Premium</p>
 								</div>
 							</div>

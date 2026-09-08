@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Loader2, Plane } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
+import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -47,16 +48,15 @@ export default function AdminLoginPage() {
 				transition={{ duration: 0.4 }}
 				className="glossy-card relative w-full max-w-md p-8">
 				<div className="text-center">
-					<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-						<Plane className="h-7 w-7 text-primary" />
-					</div>
-					<h1 className="text-2xl font-bold">Tiqwa Admin</h1>
+					<BrandLogo
+						href="/admin"
+						name="Tiqwa Admin"
+						className="text-2xl text-foreground"
+					/>
 					<p className="mt-2 text-sm text-muted-foreground">Sign in to the admin dashboard</p>
 				</div>
 
-				{error && (
-					<p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>
-				)}
+				{error && <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 
 				<form
 					onSubmit={handleSubmit}
@@ -94,9 +94,7 @@ export default function AdminLoginPage() {
 					</Button>
 				</form>
 
-				<p className="mt-6 text-center text-xs text-muted-foreground">
-					Mock login — any credentials will redirect to the dashboard
-				</p>
+				<p className="mt-6 text-center text-xs text-muted-foreground">Mock login — any credentials will redirect to the dashboard</p>
 			</motion.div>
 		</div>
 	);

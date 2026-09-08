@@ -1,16 +1,19 @@
 'use client';
 
-import { CheckCircle2, ChevronDown, Sparkles } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 
 import { FlightSearchForm } from '@/components/features/FlightSearchForm';
 import { Container } from '@/components/ui/Container';
-import { trustBadges } from '@/data/mockData';
 import { heroBackgroundImage } from '@/utils/images';
 
+import type { StaticImageData } from 'next/image';
+
+const trustBadges = ['Free cancellation', 'No hidden fees', 'Instant e-ticket'];
+
 interface HeroSectionProps {
-	heroImage?: string;
+	heroImage?: string | StaticImageData;
 }
 
 export function HeroSection({ heroImage }: HeroSectionProps) {
@@ -26,7 +29,7 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
 					fill
 					className="object-cover"
 					priority
-					unoptimized={backgroundImage.includes('cloudinary.com')}
+					unoptimized={typeof backgroundImage === 'string' && backgroundImage.includes('cloudinary.com')}
 				/>
 				{/* Gradient overlay — tapers smoothly to white at bottom */}
 				<div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-black/20" />
@@ -49,12 +52,6 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.65 }}
 					className="mx-auto hidden max-w-3xl text-center md:block">
-					{/* Eyebrow badge */}
-					<span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground shadow-sm backdrop-blur-sm md:border-white/25 md:bg-white/12 md:text-white">
-						<Sparkles className="h-3.5 w-3.5 text-primary" />
-						Now flying 500+ airlines worldwide
-					</span>
-
 					<h1 className="mt-5 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl md:text-white">
 						Fly Anywhere, <span className="text-primary drop-shadow-[0_0_24px_var(--shadow-primary-glow)]">Pay Less</span>
 					</h1>
@@ -67,8 +64,7 @@ export function HeroSection({ heroImage }: HeroSectionProps) {
 						{trustBadges.map((badge) => (
 							<span
 								key={badge}
-								className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3.5 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm md:border-white/25 md:bg-white/12 md:text-white">
-								<CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+								className="inline-flex items-center rounded-full bg-primary px-3.5 py-2 text-xs font-medium text-white shadow-sm">
 								{badge}
 							</span>
 						))}

@@ -267,6 +267,24 @@ h6 {
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Keep admin controls compact while customer-facing controls have roomier targets. */
+.admin-button[data-button-size='default'] {
+	height: 2rem;
+}
+
+.admin-button[data-button-size='sm'] {
+	height: 1.75rem;
+}
+
+.admin-button[data-button-size='lg'] {
+	height: 2.5rem;
+}
+
+.admin-button[data-button-size='icon'] {
+	height: 2rem;
+	width: 2rem;
+}
+
 .glossy-hover:hover {
 	box-shadow: var(--shadow-lg);
 	transform: translateY(-3px);

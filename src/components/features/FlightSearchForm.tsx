@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRightLeft, ChevronDown, Plus, Search, X } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronDown, Plus, Repeat, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
@@ -11,14 +11,8 @@ import { CabinDropdown } from '@/components/ui/CabinDropdown';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { getTotalPassengers, PassengerCounts, PassengerDropdown } from '@/components/ui/PassengerDropdown';
 import { cn } from '@/lib/utils';
-import {
-	CabinClass,
-	cacheFlightSearch,
-	FlightSearchParams,
-	parseAirportValue,
-	searchFlightsForForm,
-	searchMultiCityFlightsForForm,
-} from '@/services/whitelabel-api';
+import { CabinClass, cacheFlightSearch, FlightSearchParams, parseAirportValue, searchFlightsForForm, searchMultiCityFlightsForForm } from '@/services/whitelabel-api';
+
 import type { MultiCityLeg } from '@/types/whitelabel';
 
 const CABIN_LABELS: Record<CabinClass, string> = {
@@ -99,33 +93,35 @@ function TripTypeDropdown({ value, onChange }: { value: TripType; onChange: (typ
 	const selectedLabel = options.find((opt) => opt.value === value)?.label || 'One Way';
 
 	return (
-		<div className="flex flex-col gap-1.5">
-			<span className="text-xs font-medium text-foreground">Trip Type</span>
-			<div className="relative">
-				<button
-					type="button"
-					onClick={() => setOpen(!open)}
-					className="flex h-9 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5">
-					<span>{selectedLabel}</span>
-					<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} />
-				</button>
-				{open && (
-					<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
-						{options.map((opt) => (
-							<button
-								key={opt.value}
-								type="button"
-								onClick={() => {
-									onChange(opt.value);
-									setOpen(false);
-								}}
-								className={cn('w-full px-3 py-2 text-left text-xs transition-colors hover:bg-primary/10', value === opt.value && 'bg-primary/10 text-primary')}>
-								{opt.label}
-							</button>
-						))}
-					</div>
-				)}
-			</div>
+		<div className="relative">
+			<button
+				type="button"
+				onClick={() => setOpen(!open)}
+				className="inline-flex h-9 items-center gap-1.5 rounded-full bg-transparent px-0 text-xs font-semibold text-foreground transition-colors hover:text-primary">
+				<Repeat className="h-3.5 w-3.5 text-primary" />
+				<span>{selectedLabel}</span>
+				<ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', open && 'rotate-180')} />
+			</button>
+			{open && (
+				<div className="absolute left-0 top-full z-20 mt-2 w-44 overflow-hidden rounded-2xl border border-border bg-background-card p-1.5 shadow-xl">
+					{options.map((opt) => (
+						<button
+							key={opt.value}
+							type="button"
+							onClick={() => {
+								onChange(opt.value);
+								setOpen(false);
+							}}
+							className={cn(
+								'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-primary/10',
+								value === opt.value && 'bg-primary-light text-primary'
+							)}>
+							{opt.label}
+							{value === opt.value && <Check className="h-3.5 w-3.5" />}
+						</button>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -309,25 +305,23 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="glossy rounded-2xl p-6 shadow-xl">
+			className="glossy rounded-2xl p-5 shadow-xl sm:p-7">
 			{error && <p className="mb-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 
-			{/* Row 1: Trip Type, Cabin, Passengers - Takes 50% width on desktop */}
-			<div className="mb-6 w-full lg:w-1/2">
-				<div className="grid gap-4 sm:grid-cols-3">
-					<TripTypeDropdown
-						value={tripType}
-						onChange={handleTripTypeChange}
-					/>
-					<CabinDropdown
-						value={cabin}
-						onChange={setCabin}
-					/>
-					<PassengerDropdown
-						value={passengers}
-						onChange={setPassengers}
-					/>
-				</div>
+			{/* Row 1: Trip Type, Cabin, Passengers — inline pill row */}
+			<div className="mb-5 flex flex-wrap items-center gap-3 sm:gap-6">
+				<TripTypeDropdown
+					value={tripType}
+					onChange={handleTripTypeChange}
+				/>
+				<CabinDropdown
+					value={cabin}
+					onChange={setCabin}
+				/>
+				<PassengerDropdown
+					value={passengers}
+					onChange={setPassengers}
+				/>
 			</div>
 
 			{tripType === 'multicity' ? (
@@ -335,59 +329,61 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 					{legs.map((leg, i) => (
 						<div
 							key={i}
-							className="grid items-end gap-3 rounded-xl border border-border/60 p-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
-							<AirportCombobox
-								label={`Flight ${i + 1} — From`}
-								value={leg.fromDisplay}
-								selectedCode={leg.fromCode}
-								onSelect={(code, displayName) => updateLeg(i, { fromCode: code, fromDisplay: displayName })}
-								placeholder="Lagos, Nigeria"
-								required
-							/>
-							<AirportCombobox
-								label="To"
-								value={leg.toDisplay}
-								selectedCode={leg.toCode}
-								onSelect={(code, displayName) => updateLeg(i, { toCode: code, toDisplay: displayName })}
-								placeholder="Dubai, UAE"
-								required
-							/>
-							<DatePicker
-								label="Date"
-								value={leg.date}
-								onChange={(date) => updateLeg(i, { date })}
-								placeholder="Select date"
-								required
-								fromDate={i > 0 && legs[i - 1].date ? new Date(legs[i - 1].date) : new Date()}
-							/>
-							<button
-								type="button"
-								onClick={() => removeLeg(i)}
-								disabled={legs.length <= MIN_LEGS}
-								aria-label={`Remove flight ${i + 1}`}
-								className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground transition-all hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30">
-								<X className="h-4 w-4" />
-							</button>
+							className="rounded-xl bg-secondary/50 p-3">
+							<p className="mb-3 text-sm font-semibold text-foreground">Flight {i + 1}</p>
+							<div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
+								<AirportCombobox
+									label="From"
+									value={leg.fromDisplay}
+									selectedCode={leg.fromCode}
+									onSelect={(code, displayName) => updateLeg(i, { fromCode: code, fromDisplay: displayName })}
+									placeholder="Lagos, Nigeria"
+									required
+								/>
+								<AirportCombobox
+									label="To"
+									value={leg.toDisplay}
+									selectedCode={leg.toCode}
+									onSelect={(code, displayName) => updateLeg(i, { toCode: code, toDisplay: displayName })}
+									placeholder="Dubai, UAE"
+									required
+								/>
+								<DatePicker
+									label="Date"
+									value={leg.date}
+									onChange={(date) => updateLeg(i, { date })}
+									placeholder="Select date"
+									required
+									fromDate={i > 0 && legs[i - 1].date ? new Date(legs[i - 1].date) : new Date()}
+								/>
+								<button
+									type="button"
+									onClick={() => removeLeg(i)}
+									disabled={legs.length <= MIN_LEGS}
+									aria-label={`Remove flight ${i + 1}`}
+									className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-background-card text-muted-foreground transition-all hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30">
+									<X className="h-4 w-4" />
+								</button>
+							</div>
 						</div>
 					))}
 
-					<div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-						<button
-							type="button"
-							onClick={addLeg}
-							disabled={legs.length >= MAX_LEGS}
-							className="flex items-center gap-1.5 rounded-xl border border-dashed border-border px-3 py-2 text-xs font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-40">
-							<Plus className="h-3.5 w-3.5" />
-							Add another flight
-						</button>
-						<Button
-							type="submit"
-							size="lg"
-							disabled={isLoading}>
-							<Search className="h-4 w-4" />
-							Search Flights
-						</Button>
-					</div>
+					<button
+						type="button"
+						onClick={addLeg}
+						disabled={legs.length >= MAX_LEGS}
+						className="flex w-full items-center gap-1.5 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-40">
+						<Plus className="h-3.5 w-3.5" />
+						Add another flight
+					</button>
+
+					<Button
+						type="submit"
+						size="lg"
+						disabled={isLoading}>
+						<Search className="h-4 w-4" />
+						Search Flights
+					</Button>
 				</div>
 			) : (
 				/* Row 2: From, To, Departure Date, Return Date, Search Button - all on same row */
@@ -410,8 +406,8 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 							type="button"
 							onClick={handleSwap}
 							aria-label="Swap cities"
-							className="hidden absolute -right-5 top-[calc(50%+0.75rem)] z-10 md:flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-all hover:bg-primary/10 hover:text-primary">
-							<ArrowRightLeft className="h-3 w-3" />
+							className="hidden absolute -right-5 top-[calc(50%+0.75rem)] z-10 md:flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all hover:bg-primary-hover">
+							<ArrowRightLeft className="h-4 w-4" />
 						</button>
 					</div>
 
@@ -420,8 +416,8 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 							type="button"
 							onClick={handleSwap}
 							aria-label="Swap cities"
-							className="md:hidden absolute right-1/2 top-[calc(50%+0.75rem)] z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-all hover:bg-primary/10 hover:text-primary">
-							<ArrowRightLeft className="h-3 w-3" />
+							className="md:hidden absolute right-1/2 top-[calc(50%+0.75rem)] z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all hover:bg-primary-hover">
+							<ArrowRightLeft className="h-4 w-4" />
 						</button>
 					</div>
 
@@ -463,7 +459,7 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 					<div className="flex items-end">
 						<Button
 							type="submit"
-							className="w-full"
+							className="h-14 w-full"
 							size="lg"
 							disabled={isLoading}>
 							<Search className="h-4 w-4" />

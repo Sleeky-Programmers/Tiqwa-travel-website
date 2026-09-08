@@ -303,9 +303,9 @@ function ResultsContent() {
 								setStopsFilter(opt.value);
 								setCurrentPage(1);
 							}}
-							className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+							className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
 								stopsFilter === opt.value
-									? 'bg-primary text-white shadow-lg shadow-primary/25'
+									? 'bg-foreground text-background shadow-sm'
 									: 'bg-secondary/60 text-secondary-foreground hover:bg-primary/10 hover:text-primary'
 							}`}>
 							{opt.label}

@@ -122,7 +122,7 @@ export function PassengerForm({
 			<div className="grid gap-4 sm:grid-cols-4">
 				{/* Title */}
 				<div className="flex flex-col gap-1.5">
-					<label className="text-xs font-medium text-foreground">
+					<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 						Title <span className="ml-1 text-primary">*</span>
 					</label>
 					<div className="relative">
@@ -191,7 +191,7 @@ export function PassengerForm({
 
 			{/* Gender */}
 			<div>
-				<label className="text-xs font-medium text-foreground">
+				<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 					Gender <span className="ml-1 text-primary">*</span>
 				</label>
 				<div className="mt-1 flex gap-2">
@@ -255,7 +255,7 @@ export function PassengerForm({
 					<div className="mt-3 grid gap-4 sm:grid-cols-2">
 						{/* Document Type */}
 						<div className="flex flex-col gap-1.5">
-							<label className="text-xs font-medium text-foreground">
+							<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 								Document Type <span className="ml-1 text-primary">*</span>
 							</label>
 							<div className="relative">

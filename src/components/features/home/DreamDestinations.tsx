@@ -64,7 +64,7 @@ export function DreamDestinations({ popularAirports = [] }: DreamDestinationsPro
 						whileInView={{ opacity: 1, y: 0 }}
 						viewport={{ once: true }}
 						transition={{ delay: 0.1 }}
-						className="glossy-card flex flex-col items-center justify-center py-16 text-center">
+						className="glossy-card rounded-xl flex flex-col items-center justify-center py-16 text-center">
 						<div className="rounded-full bg-primary/10 p-4 mb-4">
 							<Plane className="h-8 w-8 text-primary" />
 						</div>
@@ -107,7 +107,7 @@ export function DreamDestinations({ popularAirports = [] }: DreamDestinationsPro
 							viewport={{ once: true }}
 							transition={{ delay: i * 0.08 }}
 							onClick={() => handleClick(dest.name, popularAirports.length > 0 ? popularAirports[i]?.iata_code : undefined)}
-							className={`hover-lift group relative col-span-2 overflow-hidden rounded-2xl text-left shadow-lg sm:col-span-1 ${
+							className={`hover-lift group relative col-span-2 overflow-hidden rounded-xl text-left shadow-lg sm:col-span-1 ${
 								i === 0 ? 'row-span-2 h-56 lg:h-auto' : 'h-40 lg:h-auto'
 							}`}>
 							<Image
@@ -119,9 +119,7 @@ export function DreamDestinations({ popularAirports = [] }: DreamDestinationsPro
 							/>
 							<div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
 
-							<span className="absolute right-3 top-3 rounded-full bg-black/25 px-2.5 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
-								{dest.tag}
-							</span>
+							<span className="absolute right-3 top-3 rounded-full bg-black/25 px-2.5 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">{dest.tag}</span>
 							<span className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm text-white">
 								<Bookmark className="h-3.5 w-3.5" />
 							</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronsUpDown, Minus, Plus } from "lucide-react";
+import { ChevronDown, Minus, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -37,7 +37,6 @@ export function getTotalPassengers(value: PassengerCounts): number {
 }
 
 export function PassengerDropdown({
-  label = "Passengers",
   value,
   onChange,
   className,
@@ -68,19 +67,18 @@ export function PassengerDropdown({
   const infantsAtLimit = value.infants >= value.adults;
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
-      <span className="text-xs font-medium text-foreground">{label}</span>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          className={cn(
-            "inline-flex h-9 w-full items-center justify-between rounded-xl border border-border bg-white/60 px-3 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 dark:bg-white/5 dark:hover:bg-white/10",
-            !totalPassengers && "text-muted-foreground"
-          )}
-        >
-          <span className="truncate">{getPassengerDisplayText(value)}</span>
-          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
-        </PopoverTrigger>
-        <PopoverContent className="glossy w-72 p-4" align="start">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          "inline-flex h-9 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-foreground/80 transition-colors outline-none hover:bg-primary/5 hover:text-foreground",
+          className
+        )}
+      >
+        <User className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="truncate">{getPassengerDisplayText(value)}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+      </PopoverTrigger>
+      <PopoverContent className="w-72 rounded-2xl p-4 shadow-xl" align="start">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -176,6 +174,5 @@ export function PassengerDropdown({
           </div>
         </PopoverContent>
       </Popover>
-    </div>
   );
 }

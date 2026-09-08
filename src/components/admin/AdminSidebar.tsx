@@ -1,9 +1,10 @@
 'use client';
 
-import { Calendar, CreditCard, LayoutDashboard, LogOut, Plane, Settings, Users } from 'lucide-react';
+import { Calendar, CreditCard, LayoutDashboard, LogOut, Settings, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
+import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Link as NavLink, linkVariants } from '@/components/ui/Link';
 import { cn } from '@/lib/utils';
 
@@ -41,10 +42,11 @@ export function AdminSidebar({ onNavigate }: AdminSidebarProps) {
 					href="/admin"
 					className="flex items-center gap-2 group"
 					onClick={onNavigate}>
-					<div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-white transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-primary/30">
-						<Plane className="h-4 w-4" />
-					</div>
-					<span className="text-base font-bold text-foreground">Tiqwa Admin</span>
+					<BrandLogo
+						href="/admin"
+						name="Tiqwa Admin"
+						className="text-base text-foreground transition-colors group-hover:text-primary"
+					/>
 				</Link>
 			</div>
 

@@ -56,10 +56,10 @@ export function FlightCard({ flight, passengers = 1, adults, children, infants, 
 	};
 
 	return (
-		<Card className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-			<div className="flex items-start gap-4">
-				{/* Airline Logo */}
-				<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
+		<Card className="flex flex-col gap-5 p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-6">
+			{/* Airline block */}
+			<div className="flex items-center gap-3 lg:w-52 lg:shrink-0">
+				<div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
 					{flight.airlineLogo && !imageError ? (
 						<Image
 							src={flight.airlineLogo}
@@ -75,21 +75,35 @@ export function FlightCard({ flight, passengers = 1, adults, children, infants, 
 					)}
 				</div>
 
-				<div>
-					<p className="font-semibold">{flight.airline}</p>
-					<p className="text-sm text-muted-foreground">
+				<div className="min-w-0">
+					<p className="truncate font-semibold">{flight.airline}</p>
+					<p className="truncate text-sm text-muted-foreground">
 						{flight.from} → {flight.to}
 					</p>
-					<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-						<span>
-							{flight.departure} – {flight.arrival}
-						</span>
-						<span>{flight.duration}</span>
-						<span>{stops === 0 ? 'Non-stop' : `${stops} stop${stops > 1 ? 's' : ''}`}</span>
-					</div>
 				</div>
 			</div>
-			<div className="flex items-center gap-4 sm:flex-col sm:items-end">
+
+			{/* Time / duration timeline */}
+			<div className="flex flex-1 items-center gap-3 sm:gap-5">
+				<div className="text-center">
+					<p className="text-lg font-bold leading-none">{flight.departure}</p>
+					<p className="mt-1 text-xs text-muted-foreground">{flight.fromCode}</p>
+				</div>
+				<div className="flex flex-1 flex-col items-center gap-1.5">
+					<span className="text-xs text-muted-foreground">{flight.duration}</span>
+					<div className="h-px w-full border-t border-dashed border-border" />
+					<span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+						{stops === 0 ? 'Non-Stop' : `${stops} stop${stops > 1 ? 's' : ''}`}
+					</span>
+				</div>
+				<div className="text-center">
+					<p className="text-lg font-bold leading-none">{flight.arrival}</p>
+					<p className="mt-1 text-xs text-muted-foreground">{flight.toCode}</p>
+				</div>
+			</div>
+
+			{/* Price + Select */}
+			<div className="flex items-center justify-between gap-4 border-t border-border pt-4 lg:w-auto lg:flex-row lg:items-center lg:justify-end lg:gap-6 lg:border-t-0 lg:pt-0">
 				<div className="text-right">
 					<p className="text-2xl font-bold text-primary">{formatFlightPrice(flight.price, flight.currency)}</p>
 					<p className="text-xs text-muted-foreground">per person</p>

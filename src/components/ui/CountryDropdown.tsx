@@ -61,7 +61,7 @@ export function CountryDropdown({ label, value, onChange, placeholder = 'Select 
 		<div className="flex flex-col gap-1.5">
 			<label
 				htmlFor={id}
-				className="text-xs font-medium text-foreground">
+				className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 				{label}
 				{required && <span className="ml-1 text-primary">*</span>}
 			</label>

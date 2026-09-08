@@ -88,7 +88,12 @@ function paramsMatchCache(
 		return legsMatch(cached.legs, legs);
 	}
 
-	return extractAirportCode(cached.from) === extractAirportCode(from) && extractAirportCode(cached.to) === extractAirportCode(to) && cached.departure === departure && (cached.returnDate ?? '') === returnDate;
+	return (
+		extractAirportCode(cached.from) === extractAirportCode(from) &&
+		extractAirportCode(cached.to) === extractAirportCode(to) &&
+		cached.departure === departure &&
+		(cached.returnDate ?? '') === returnDate
+	);
 }
 
 // Pagination constants - set to a large number to effectively show all in scroll
@@ -249,9 +254,9 @@ function ResultsContent() {
 	const hasActiveFilters = maxPrice !== undefined || stopsFilter !== 'any' || selectedAirlines.length > 0;
 
 	const filterPanel = (
-		<div className="glossy-card space-y-6 p-5 sticky top-24">
-			<div className="flex items-center justify-between">
-				<h3 className="font-semibold">Filters</h3>
+		<div className="sticky top-24 space-y-7 rounded-xl border border-border bg-background-card p-6 shadow-sm">
+			<div className="flex items-center justify-between border-b border-border pb-5">
+				<h3 className="text-lg font-bold">Filters</h3>
 				{hasActiveFilters && (
 					<button
 						onClick={clearFilters}
@@ -262,7 +267,10 @@ function ResultsContent() {
 			</div>
 
 			<div>
-				<label className="text-sm font-medium">Max Price: {formatFlightPrice(effectiveMaxPrice, displayCurrency)}</label>
+				<div className="flex items-baseline justify-between gap-4">
+					<label className="text-xs font-bold uppercase tracking-wider text-foreground">Max price</label>
+					<span className="text-lg font-bold text-primary">{formatFlightPrice(effectiveMaxPrice, displayCurrency)}</span>
+				</div>
 				<input
 					type="range"
 					min={priceRange.min}
@@ -274,13 +282,13 @@ function ResultsContent() {
 					}}
 					className="mt-2 w-full accent-primary"
 				/>
-				<div className="mt-1 flex justify-between text-xs text-muted-foreground">
+				<div className="mt-2 flex justify-between text-xs text-muted-foreground">
 					<span>{formatFlightPrice(priceRange.min, displayCurrency)}</span>
 					<span>{formatFlightPrice(priceRange.max, displayCurrency)}</span>
 				</div>
 			</div>
 
-			<div>
+			<div className="border-t border-border pt-5">
 				<p className="text-sm font-medium">Stops</p>
 				<div className="mt-2 flex flex-wrap gap-2">
 					{(
@@ -297,8 +305,8 @@ function ResultsContent() {
 								setStopsFilter(opt.value);
 								setCurrentPage(1);
 							}}
-							className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-								stopsFilter === opt.value ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-primary/10'
+							className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+								stopsFilter === opt.value ? 'bg-foreground text-background' : 'bg-secondary text-secondary-foreground hover:bg-primary/10'
 							}`}>
 							{opt.label}
 						</button>
@@ -306,9 +314,9 @@ function ResultsContent() {
 				</div>
 			</div>
 
-			<div>
+			<div className="border-t border-border pt-5">
 				<p className="text-sm font-medium">Airlines</p>
-				<div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+				<div className="mt-3 max-h-56 space-y-2 overflow-y-auto">
 					{airlines.map((airline) => (
 						<label
 							key={airline}
@@ -329,7 +337,7 @@ function ResultsContent() {
 
 	return (
 		<PublicLayout>
-			<div className="page-fade-in py-28">
+			<div className="page-fade-in bg-slate-50/70 py-28 dark:bg-background">
 				<Container>
 					<Link
 						href="/search"
@@ -342,9 +350,9 @@ function ResultsContent() {
 						initial={{ opacity: 0, y: 20 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.4 }}>
-						<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div className="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 							<div>
-								<h1 className="text-2xl font-extrabold sm:text-3xl">Flight Results</h1>
+								<h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Flight Results</h1>
 								<p className="mt-1 text-muted-foreground">
 									{tripType === 'multicity' && legs
 										? legs
@@ -374,7 +382,7 @@ function ResultsContent() {
 								<select
 									value={sortBy}
 									onChange={(e) => handleSortChange(e.target.value as SortOption)}
-									className="rounded-xl border border-input bg-white/60 px-3 py-2 text-sm outline-none focus:border-primary dark:bg-white/5">
+									className="h-10 rounded-lg border border-border bg-background-card px-3 text-sm font-medium outline-none focus:border-primary">
 									<option value="price">Price: Low to High</option>
 									<option value="duration">Duration</option>
 									<option value="departure">Departure Time</option>
@@ -394,7 +402,7 @@ function ResultsContent() {
 							</div>
 						)}
 
-						<div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+						<div className="grid gap-8 lg:grid-cols-[320px_1fr]">
 							<aside className="hidden lg:block">{filterPanel}</aside>
 
 							<AnimatePresence>
@@ -447,7 +455,7 @@ function ResultsContent() {
 										</div>
 
 										{/* Fixed height scrollable container - 500px */}
-										<div className="h-[500px] overflow-y-auto pr-2 space-y-4 custom-scroll">
+										<div className="space-y-4 pr-0">
 											{paginatedFlights.map((flight, i) => (
 												<motion.div
 													key={flight.id}

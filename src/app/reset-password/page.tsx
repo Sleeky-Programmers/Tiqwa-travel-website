@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Container";
 import { Link } from "@/components/ui/Link";
+import { Reveal } from "@/components/ui/Reveal";
 import { resetPassword } from "@/services/auth";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
@@ -47,14 +48,13 @@ function ResetPasswordContent() {
   if (success) {
     return (
       <PublicLayout>
-
       <Container className="flex min-h-[80vh] items-center justify-center py-20">
-        <div className="glossy-card w-full max-w-md p-8 text-center">
+        <Reveal y={16} className="glossy-card w-full max-w-md p-8 text-center">
           <h1 className="text-2xl font-bold text-green-600">Password Updated</h1>
           <p className="mt-2 text-muted-foreground">
             Redirecting you to login...
           </p>
-        </div>
+        </Reveal>
       </Container>
       </PublicLayout>
     );
@@ -63,7 +63,7 @@ function ResetPasswordContent() {
   return (
     <PublicLayout>
     <Container className="flex min-h-[80vh] items-center justify-center py-20">
-      <div className="glossy-card w-full max-w-md p-8">
+      <Reveal y={16} className="glossy-card w-full max-w-md p-8">
         <div className="text-center">
           <h1 className="text-2xl font-extrabold">Reset Password</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -90,7 +90,7 @@ function ResetPasswordContent() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[calc(50%+0.75rem)] text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-[calc(50%+0.75rem)] text-muted-foreground transition-colors duration-200 hover:text-primary"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -122,7 +122,7 @@ function ResetPasswordContent() {
             Back to Login
           </Link>
         </p>
-      </div>
+      </Reveal>
     </Container>
     </PublicLayout>
   );

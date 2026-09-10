@@ -25,7 +25,6 @@ export default function SignupPage() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [success, setSuccess] = useState(false);
 
 	const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) });
@@ -54,8 +53,7 @@ export default function SignupPage() {
 		const result = await signup(payload);
 
 		if (result.success) {
-			setSuccess(true);
-			setTimeout(() => router.push('/login'), 2000);
+			router.push(`/email-verification?email=${encodeURIComponent(formData.email)}`);
 		} else {
 			setError(result.error ?? 'Signup failed. Please try again.');
 		}
@@ -67,23 +65,18 @@ export default function SignupPage() {
 		image: imageFixes.createAccount,
 		headline: 'Unlock the best deals.',
 		subtext: 'Join a community of smart travelers saving on global routes. Create your free account in less than a minute.',
-		badges: ['Best price guarantee', '500+ airlines worldwide'],
+		badges: ['Best Price Guarantee', '500+ Airlines'],
 	};
 
-	if (success) {
-		return (
-			<AuthLayout {...authLayoutProps}>
-				<div className="text-center">
-					<h1 className="text-2xl font-bold text-green-600">Account Created!</h1>
-					<p className="mt-2 text-muted-foreground">Redirecting you to login...</p>
-				</div>
-			</AuthLayout>
-		);
-	}
-
 	return (
-		<AuthLayout {...authLayoutProps}>
-			<div className="page-fade-in">
+		<AuthLayout
+			{...authLayoutProps}
+			footer={
+				<p className="text-center text-sm text-muted-foreground">
+					Already have an account? <Link href="/login">Sign In</Link>
+				</p>
+			}>
+			<div>
 				<h1 className="text-3xl font-extrabold">Create Account</h1>
 				<p className="mt-2 text-sm text-muted-foreground">Sign up today and start tracking your travel goals.</p>
 
@@ -135,7 +128,7 @@ export default function SignupPage() {
 						<button
 							type="button"
 							onClick={() => setShowPassword(!showPassword)}
-							className="absolute right-3 top-[calc(50%+0.30rem)] text-muted-foreground hover:text-foreground"
+							className="absolute right-3 top-[calc(50%+0.30rem)] text-muted-foreground transition-colors duration-200 hover:text-primary"
 							aria-label={showPassword ? 'Hide password' : 'Show password'}>
 							{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 						</button>
@@ -156,10 +149,6 @@ export default function SignupPage() {
 						{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Account'}
 					</Button>
 				</form>
-
-				<p className="mt-6 text-center text-sm text-muted-foreground">
-					Already have an account? <Link href="/login">Sign In</Link>
-				</p>
 			</div>
 		</AuthLayout>
 	);

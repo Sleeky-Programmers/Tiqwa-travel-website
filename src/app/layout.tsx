@@ -22,7 +22,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Tiqwa Travel — Book Flights Worldwide",
+  title: "Tiqwa Travel: Book Flights Worldwide",
   description:
     "Search, compare, and book flights to destinations around the world with Tiqwa Travel.",
 };

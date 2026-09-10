@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
 					</Button>
 				</form>
 
-				<p className="mt-6 text-center text-xs text-muted-foreground">Mock login — any credentials will redirect to the dashboard</p>
+				<p className="mt-6 text-center text-xs text-muted-foreground">Mock login: any credentials will redirect to the dashboard</p>
 			</motion.div>
 		</div>
 	);

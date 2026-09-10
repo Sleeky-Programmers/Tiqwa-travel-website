@@ -55,11 +55,8 @@ function SectionHeader({ subtitle }: { subtitle?: string }) {
 			initial={{ opacity: 0, y: 20 }}
 			whileInView={{ opacity: 1, y: 0 }}
 			viewport={{ once: true }}
-			className="mb-10 text-center">
-			<span className="section-badge mb-3 inline-flex">
-				<Plane className="h-3 w-3" />
-				Top Routes
-			</span>
+			className="mb-10 text-left">
+			<span className="section-badge mb-3 inline-flex">Top Routes</span>
 			<h2 className="section-heading">Popular Flight Routes</h2>
 			<p className="mt-3 text-muted-foreground">{subtitle ?? 'Explore our most booked destinations at unbeatable prices'}</p>
 		</motion.div>
@@ -149,23 +146,25 @@ export function PopularRoutes() {
 							viewport={{ once: true }}
 							transition={{ delay: i * 0.08 }}
 							onClick={() => handleRouteClick(route)}
-							className={`hover-lift group relative overflow-hidden rounded-xl p-6 text-left text-white shadow-lg ${GRADIENT_CLASSES[i % GRADIENT_CLASSES.length]}`}>
-							{/* Trip type badge */}
-							{route.tripType && <span className="inline-flex rounded-full bg-black/25 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium">{route.tripType}</span>}
+							className={`hover-lift group relative flex aspect-[400/310] w-full flex-col justify-between overflow-hidden rounded-xl p-6 text-left text-white shadow-lg ${GRADIENT_CLASSES[i % GRADIENT_CLASSES.length]}`}>
+							<div>
+								{/* Trip type badge */}
+								{route.tripType && <span className="inline-flex rounded-full bg-black/25 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium">{route.tripType}</span>}
 
-							<div className="mt-8 flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-								<span>{route.fromCode}</span>
-								<ArrowRight className="h-5 w-5 flex-shrink-0 opacity-80" />
-								<span>{route.toCode}</span>
+								<div className="mt-8 flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+									<span>{route.fromCode}</span>
+									<ArrowRight className="h-5 w-5 flex-shrink-0 opacity-80" />
+									<span>{route.toCode}</span>
+								</div>
+								<p className="mt-1 text-sm text-white/80">
+									{route.from} → {route.to}
+								</p>
 							</div>
-							<p className="mt-1 text-sm text-white/80">
-								{route.from} → {route.to}
-							</p>
 
-							<div className="mt-6 flex items-end justify-between">
-								<div>
-									<p className="text-xs uppercase tracking-wider text-white/70">From</p>
-									<p className="text-xl font-bold leading-none">{formatFlightPrice(route.price, route.currency)}</p>
+							<div className="flex items-end justify-between">
+								<div className="flex items-baseline gap-1.5">
+									<span className="text-xs uppercase tracking-wider text-white/70">From</span>
+									<span className="text-xl font-bold leading-none">{formatFlightPrice(route.price, route.currency)}</span>
 								</div>
 
 								{/* Hover-reveal Book Now */}

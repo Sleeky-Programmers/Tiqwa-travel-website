@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Container } from "@/components/ui/Container";
 import { Link } from "@/components/ui/Link";
+import { Reveal } from "@/components/ui/Reveal";
 import { forgotPassword } from "@/services/auth";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
@@ -35,7 +36,7 @@ export default function ForgotPasswordPage() {
     return (
       <PublicLayout>
       <Container className="flex min-h-[80vh] items-center justify-center py-20">
-        <div className="glossy-card w-full max-w-md p-8 text-center">
+        <Reveal y={16} className="glossy-card w-full max-w-md p-8 text-center">
           <h1 className="text-2xl font-bold">Check Your Email</h1>
           <p className="mt-2 text-muted-foreground">
             We&apos;ve sent a password reset link to {email}
@@ -43,7 +44,7 @@ export default function ForgotPasswordPage() {
           <Link href="/login" className="mt-6 inline-block">
             Back to Login
           </Link>
-        </div>
+        </Reveal>
       </Container>
       </PublicLayout>
     );
@@ -51,9 +52,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <PublicLayout>
-    <div className="page-fade-in">
       <Container className="flex min-h-[80vh] items-center justify-center py-20">
-        <div className="glossy-card w-full max-w-md p-8">
+        <Reveal y={16} className="glossy-card w-full max-w-md p-8">
           <div className="text-center">
             <h1 className="text-2xl font-extrabold">Forgot Password</h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -91,9 +91,8 @@ export default function ForgotPasswordPage() {
               Back to Login
             </Link>
           </p>
-        </div>
+        </Reveal>
       </Container>
-    </div>
     </PublicLayout>
   );
 }

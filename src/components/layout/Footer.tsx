@@ -7,6 +7,7 @@ import { FaFacebook, FaInstagram, FaLinkedin, FaXTwitter } from 'react-icons/fa6
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Container } from '@/components/ui/Container';
 import { Link as FooterLink } from '@/components/ui/Link';
+import { Reveal } from '@/components/ui/Reveal';
 import { useSiteSettings } from '@/contexts/SiteSettingsContext';
 import { decodeHtmlEntities } from '@/lib/utils';
 
@@ -52,9 +53,9 @@ export function Footer() {
 	].filter((link): link is { href: string; label: string; Icon: typeof Mail } => Boolean(link.href));
 
 	return (
-		<footer className="mt-auto band-dark">
+		<footer className="mt-auto band-dark-footer">
 			<Container className="py-14">
-				<div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+				<Reveal y={16} className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
 					{/* Brand Column */}
 					<div className="lg:col-span-2 flex flex-col gap-5">
 						<Link
@@ -88,23 +89,6 @@ export function Footer() {
 								</p>
 							)}
 						</div>
-
-						{/* Social Icons */}
-						{socialLinks.length > 0 && (
-							<div className="flex items-center gap-2 mt-1">
-								{socialLinks.map(({ href, label, Icon }) => (
-									<a
-										key={label}
-										href={href}
-										aria-label={label}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink-border text-ink-muted transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 hover:text-primary hover:scale-110">
-										<Icon className="h-3.5 w-3.5" />
-									</a>
-								))}
-							</div>
-						)}
 					</div>
 
 					{/* Link Columns */}
@@ -127,14 +111,31 @@ export function Footer() {
 							</ul>
 						</div>
 					))}
-				</div>
+				</Reveal>
 			</Container>
 
 			{/* Bottom bar */}
 			<div className="border-t border-ink-border">
 				<Container className="py-4">
-					<div className="flex flex-col items-center justify-between gap-2 text-center sm:flex-row">
+					<div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row">
 						<p className="text-xs text-ink-muted">{copyright}</p>
+
+						{socialLinks.length > 0 && (
+							<div className="flex items-center gap-2">
+								{socialLinks.map(({ href, label, Icon }) => (
+									<a
+										key={label}
+										href={href}
+										aria-label={label}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="flex h-8 w-8 items-center justify-center rounded-full bg-ink-card text-ink-muted transition-all duration-200 hover:bg-primary/15 hover:text-primary hover:scale-110">
+										<Icon className="h-3.5 w-3.5" />
+									</a>
+								))}
+							</div>
+						)}
+
 						<p className="text-xs text-ink-muted">Made with ♥ for travelers everywhere</p>
 					</div>
 				</Container>

@@ -97,7 +97,7 @@ function SegmentRow({ segment, isLast }: { segment: OutboundSegment; isLast: boo
 
 				{!isLast && segment.layover && (
 					<div className="mt-3 rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
-						Layover in {segment.airport_to_details?.city ?? segment.airport_to} — {segment.layover}
+						Layover in {segment.airport_to_details?.city ?? segment.airport_to} ({segment.layover})
 					</div>
 				)}
 			</div>

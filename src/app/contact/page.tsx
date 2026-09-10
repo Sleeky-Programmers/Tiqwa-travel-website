@@ -5,6 +5,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "@/components/form/ContactForm";
 import { Container } from "@/components/ui/Container";
 import { Card } from "@/components/ui/Card";
+import { Reveal } from "@/components/ui/Reveal";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
@@ -33,16 +34,18 @@ export default function ContactPage() {
           <p className="mt-3 text-muted-foreground">Have a question or need help? We&apos;d love to hear from you.</p>
           <div className="mt-10 grid gap-8 lg:grid-cols-2">
             <div className="space-y-4">
-              {contactInfo.map((item) => (
-                <Card key={item.label} hover={false} className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <item.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{item.label}</p>
-                    <p className="font-medium">{item.value}</p>
-                  </div>
-                </Card>
+              {contactInfo.map((item, i) => (
+                <Reveal key={item.label} delay={i * 0.08} y={14}>
+                  <Card className="group flex items-center gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">{item.label}</p>
+                      <p className="font-medium">{item.value}</p>
+                    </div>
+                  </Card>
+                </Reveal>
               ))}
             </div>
             <ContactForm />

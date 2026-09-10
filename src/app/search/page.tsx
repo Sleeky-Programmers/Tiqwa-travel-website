@@ -7,6 +7,7 @@ import Image from "next/image";
 import { FlightSearchForm } from "@/components/features/FlightSearchForm";
 import { FlightTable } from "@/components/features/FlightTable";
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Loader2 } from "lucide-react";
 import { searchHeroBackgroundImage } from "@/utils/images";
@@ -73,10 +74,10 @@ function SearchContent() {
       </section>
 
       <Container>
-        <div className="pb-16">
+        <Reveal y={16} className="pb-16">
           <h2 className="mb-6 text-2xl font-bold">Browse All Flights</h2>
           <FlightTable />
-        </div>
+        </Reveal>
       </Container>
     </div>
     </PublicLayout>

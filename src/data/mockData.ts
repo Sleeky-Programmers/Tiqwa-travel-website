@@ -194,7 +194,7 @@ export const testimonials: Testimonial[] = [
     id: "t-001",
     name: "Sarah Mitchell",
     role: "Frequent Traveler",
-    content: "Tiqwa made booking my family vacation effortless. Best prices and zero hidden fees — exactly as promised.",
+    content: "Tiqwa made booking my family vacation effortless. Best prices and zero hidden fees, exactly as promised.",
     rating: 5,
   },
   {
@@ -236,7 +236,7 @@ export const whyUsFeatures: WhyUsFeature[] = [
   {
     id: "f-003",
     title: "Instant E-Tickets",
-    description: "Receive your boarding pass instantly after booking — no waiting, no paperwork.",
+    description: "Receive your boarding pass instantly after booking, no waiting, no paperwork.",
     icon: "Zap",
   },
   {
@@ -335,7 +335,7 @@ export const trustSafetyItems: TrustSafetyItem[] = [
   {
     id: "ts-002",
     title: "Best Price Guarantee",
-    description: "Find a lower fare within 24 hours — we'll match it",
+    description: "Find a lower fare within 24 hours, we'll match it",
     icon: "BadgeDollarSign",
   },
   {
@@ -369,7 +369,7 @@ export const aboutTestimonials: Testimonial[] = [
   },
   {
     id: "at-003",
-    name: "Partner — SkyBridge Airlines",
+    name: "Partner: SkyBridge Airlines",
     role: "Airline Partner",
     content: "Tiqwa delivers quality bookings with low cancellation rates. A trusted distribution partner.",
     rating: 5,

@@ -1,18 +1,89 @@
+import type { OutboundSegment, Pricing, PriceSummary, TravelerPrice } from '@/types/whitelabel';
+
 export interface Flight {
-  id: string;
-  airline: string;
-  from: string;
-  to: string;
-  departure: string;
-  arrival: string;
-  duration: string;
-  stops: number;
-  price: number;
+	id: string;
+	airline: string;
+	airlineCode?: string;
+	airlineLogo: string | null;
+	from: string;
+	fromCode?: string;
+	to: string;
+	toCode?: string;
+	departure: string;
+	arrival: string;
+	duration: number | string;
+	stops: number;
+	inboundStops?: number;
+	price: number;
+	currency: string;
+	amount?: number;
+	outbound_stops?: number;
+	inbound_stops?: number;
+	segmentCount?: number;
+	flightNumber?: string;
+	fromCountryCode?: string;
+	toCountryCode?: string;
+	fromCountry?: string;
+	toCountry?: string;
+	// Full breakdown data — used by the flight summary popup, not the list card.
+	fareBasis?: string | null;
+	cabinType?: string;
+	bookingClass?: string;
+	refundable?: boolean;
+	outboundSegments?: OutboundSegment[];
+	inboundSegments?: OutboundSegment[];
+	totalOutboundDuration?: number;
+	totalInboundDuration?: number | null;
+	pricing?: Pricing;
+	priceSummary?: PriceSummary[];
+	travelersPrice?: TravelerPrice[];
+	// Multi-city — one entry per requested leg (e.g. LOS→ABV, ABV→LHR). When present, this takes
+	// priority over outboundSegments/inboundSegments for rendering the full itinerary breakdown.
+	isMultiCity?: boolean;
+	multiCityRoutes?: OutboundSegment[][];
+}
+
+export type StopsFilter = 'any' | 'nonstop' | 'one-stop-max';
+
+function parseStopCount(value: unknown): number | undefined {
+	if (value == null || value === '') return undefined;
+	const parsed = Number(value);
+	return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 export interface SearchParams {
-  from: string;
-  to: string;
-  departure: string;
-  passengers: number;
+	from: string;
+	to: string;
+	departure: string;
+	passengers: number;
+}
+
+export function getFlightStops(flight: Flight): number {
+	const fromOutbound = parseStopCount(flight.outbound_stops);
+	if (fromOutbound !== undefined) return fromOutbound;
+
+	const fromStops = parseStopCount(flight.stops);
+	if (fromStops !== undefined) return fromStops;
+
+	if (flight.segmentCount != null && flight.segmentCount > 1) {
+		return flight.segmentCount - 1;
+	}
+
+	return 0;
+}
+
+export function matchesStopsFilter(flight: Flight, filter: StopsFilter): boolean {
+	const stops = getFlightStops(flight);
+	if (filter === 'nonstop') return stops === 0;
+	if (filter === 'one-stop-max') return stops <= 1;
+	return true;
+}
+
+export function normalizeFlight(flight: Flight): Flight {
+	const stops = getFlightStops(flight);
+	return {
+		...flight,
+		stops,
+		outbound_stops: stops,
+	};
 }

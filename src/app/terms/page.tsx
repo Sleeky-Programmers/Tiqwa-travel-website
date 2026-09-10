@@ -2,6 +2,8 @@
 
 import { motion } from "motion/react";
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const sections = [
   { title: "1. Acceptance of Terms", content: "By accessing and using Tiqwa Travel's website and services, you agree to be bound by these Terms of Service." },
@@ -13,21 +15,23 @@ const sections = [
 
 export default function TermsPage() {
   return (
-    <div className="page-fade-in py-16">
+    <PublicLayout>
+    <div className="page-fade-in py-28">
       <Container size="md">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-3xl font-bold sm:text-4xl">Terms of Service</h1>
+          <h1 className="text-3xl font-extrabold sm:text-4xl">Terms of Service</h1>
           <p className="mt-3 text-sm text-muted-foreground">Last updated: June 7, 2026</p>
           <div className="mt-10 space-y-8">
-            {sections.map((section) => (
-              <div key={section.title}>
+            {sections.map((section, i) => (
+              <Reveal key={section.title} delay={i * 0.06} y={16}>
                 <h2 className="text-lg font-semibold">{section.title}</h2>
                 <p className="mt-2 text-muted-foreground leading-relaxed">{section.content}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </motion.div>
       </Container>
     </div>
+    </PublicLayout>
   );
 }

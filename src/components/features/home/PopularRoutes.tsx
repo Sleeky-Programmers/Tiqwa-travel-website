@@ -1,107 +1,183 @@
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { format, addDays } from "date-fns";
-import Image from "next/image";
-import { motion } from "motion/react";
-import { ArrowRight, Plane } from "lucide-react";
-import { Container } from "@/components/ui/Container";
-import { popularRoutes } from "@/data/mockData";
+import { addDays, format } from 'date-fns';
+import { ArrowRight, Plane } from 'lucide-react';
+import { motion } from 'motion/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-const badgeColors: Record<string, string> = {
-  "Best Deal": "bg-primary/10 text-primary",
-  Trending: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  Luxury: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  Adventure: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  Business: "bg-slate-500/10 text-slate-600 dark:text-slate-300",
-  Popular: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-};
+import { Container } from '@/components/ui/Container';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { formatFlightPrice, getFlightDeals } from '@/services/whitelabel-api';
+
+import type { FlightDeal } from '@/types/whitelabel';
+const GRADIENT_CLASSES = ['gradient-card-0', 'gradient-card-1', 'gradient-card-2', 'gradient-card-3', 'gradient-card-4', 'gradient-card-5'];
+
+interface RouteCard {
+	id: string;
+	from: string;
+	to: string;
+	fromCode: string;
+	toCode: string;
+	price: number;
+	currency: string;
+	image?: string;
+	badge?: string;
+	tripType?: string;
+	cabinClass?: string;
+	departureDate?: string;
+	returnDate?: string | null;
+}
+
+function mapDealsToRoutes(deals: FlightDeal[]): RouteCard[] {
+	return deals
+		.map((deal) => ({
+			id: String(deal.id ?? `${deal.origin}-${deal.destination}`),
+			from: deal.origin_city || deal.origin || '',
+			to: deal.destination_city || deal.destination || '',
+			fromCode: deal.origin || '',
+			toCode: deal.destination || '',
+			price: Number(deal.amount ?? 0),
+			currency: deal.currency || 'NGN',
+			image: deal.airline_logo || deal.image,
+			badge: 'Deal',
+			tripType: deal.return_date ? 'Round trip' : 'One way',
+			cabinClass: deal.cabin || 'Economy',
+			departureDate: deal.departure_date,
+			returnDate: deal.return_date,
+		}))
+		.filter((route) => route.from && route.to && route.fromCode && route.toCode);
+}
+
+function SectionHeader({ subtitle }: { subtitle?: string }) {
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 20 }}
+			whileInView={{ opacity: 1, y: 0 }}
+			viewport={{ once: true }}
+			className="mb-10 text-left">
+			<span className="section-badge mb-3 inline-flex">Top Routes</span>
+			<h2 className="section-heading">Popular Flight Routes</h2>
+			<p className="mt-3 text-muted-foreground">{subtitle ?? 'Explore our most booked destinations at unbeatable prices'}</p>
+		</motion.div>
+	);
+}
 
 export function PopularRoutes() {
-  const router = useRouter();
-  const defaultDate = format(addDays(new Date(), 7), "yyyy-MM-dd");
+	const router = useRouter();
+	const [deals, setDeals] = useState<FlightDeal[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const defaultDate = format(addDays(new Date(), 7), 'yyyy-MM-dd');
 
-  const handleRouteClick = (from: string, to: string) => {
-    const params = new URLSearchParams({
-      from,
-      to,
-      departure: defaultDate,
-      passengers: "1",
-    });
-    router.push(`/results?${params.toString()}`);
-  };
+	useEffect(() => {
+		async function fetchDeals() {
+			try {
+				const data = await getFlightDeals();
+				setDeals(data ?? []);
+			} catch {
+				setDeals([]);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+		fetchDeals();
+	}, []);
 
-  return (
-    <section className="py-20">
-      <Container>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-10 text-center"
-        >
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Popular Flight Routes
-          </h2>
-          <p className="mt-3 text-muted-foreground">
-            Explore our most booked destinations at unbeatable prices
-          </p>
-        </motion.div>
+	const routes = mapDealsToRoutes(deals);
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {popularRoutes.map((route, i) => (
-            <motion.button
-              key={route.id}
-              type="button"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              onClick={() => handleRouteClick(route.from, route.to)}
-              className="glossy-card glossy-hover group overflow-hidden text-left"
-            >
-              <div className="relative h-36 w-full overflow-hidden">
-                <Image
-                  src={route.image ?? ""}
-                  alt={`${route.from} to ${route.to}`}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                {route.badge && (
-                  <span
-                    className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badgeColors[route.badge]}`}
-                  >
-                    {route.badge}
-                  </span>
-                )}
-              </div>
-              <div className="p-5">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <span>{route.fromCode}</span>
-                  <ArrowRight className="h-4 w-4 text-primary" />
-                  <span>{route.toCode}</span>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {route.from} → {route.to}
-                </p>
-                <div className="mt-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-primary">
-                      ${route.price}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {route.tripType} · {route.cabinClass}
-                    </p>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Plane className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </Container>
-    </section>
-  );
+	const handleRouteClick = (route: RouteCard) => {
+		const params = new URLSearchParams({
+			from: `${route.from} (${route.fromCode})`,
+			to: `${route.to} (${route.toCode})`,
+			departure: route.departureDate ?? defaultDate,
+			passengers: '1',
+			tripType: route.returnDate ? 'roundtrip' : 'oneway',
+		});
+		if (route.returnDate) {
+			params.set('returnDate', route.returnDate);
+		}
+		router.push(`/results?${params.toString()}`);
+	};
+
+	if (isLoading) {
+		return (
+			<section className="py-20">
+				<Container>
+					<SectionHeader subtitle="Loading deals..." />
+					<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+						{[1, 2, 3].map((i) => (
+							<Skeleton
+								key={i}
+								className="glossy-card rounded-xl h-64"
+							/>
+						))}
+					</div>
+				</Container>
+			</section>
+		);
+	}
+
+	if (!routes.length) {
+		return (
+			<section className="py-20">
+				<Container>
+					<SectionHeader subtitle="No promotional deals available right now" />
+					<div className="glossy-card rounded-xl mx-auto max-w-lg p-10 text-center">
+						<Plane className="mx-auto h-10 w-10 text-muted-foreground" />
+						<p className="mt-4 text-muted-foreground">Check back soon for exclusive flight deals, or search for flights using the form above.</p>
+					</div>
+				</Container>
+			</section>
+		);
+	}
+
+	return (
+		<section className="py-20">
+			<Container>
+				<SectionHeader />
+
+				<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+					{routes.map((route, i) => (
+						<motion.button
+							key={route.id}
+							type="button"
+							initial={{ opacity: 0, y: 20 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							transition={{ delay: i * 0.08 }}
+							onClick={() => handleRouteClick(route)}
+							className={`hover-lift group relative flex aspect-[400/310] w-full flex-col justify-between overflow-hidden rounded-xl p-6 text-left text-white shadow-lg ${GRADIENT_CLASSES[i % GRADIENT_CLASSES.length]}`}>
+							<div>
+								{/* Trip type badge */}
+								{route.tripType && <span className="inline-flex rounded-full bg-black/25 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium">{route.tripType}</span>}
+
+								<div className="mt-8 flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+									<span>{route.fromCode}</span>
+									<ArrowRight className="h-5 w-5 flex-shrink-0 opacity-80" />
+									<span>{route.toCode}</span>
+								</div>
+								<p className="mt-1 text-sm text-white/80">
+									{route.from} → {route.to}
+								</p>
+							</div>
+
+							<div className="flex items-end justify-between">
+								<div className="flex items-baseline gap-1.5">
+									<span className="text-xs uppercase tracking-wider text-white/70">From</span>
+									<span className="text-xl font-bold leading-none">{formatFlightPrice(route.price, route.currency)}</span>
+								</div>
+
+								{/* Hover-reveal Book Now */}
+								<div className="translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-200">
+									<span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-sm">
+										Book Now <ArrowRight className="h-3 w-3" />
+									</span>
+								</div>
+							</div>
+						</motion.button>
+					))}
+				</div>
+			</Container>
+		</section>
+	);
 }

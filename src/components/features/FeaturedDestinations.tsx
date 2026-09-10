@@ -9,7 +9,7 @@ const destinations = [
   { city: "Paris", country: "France", description: "The City of Light awaits with art, cuisine, and romance.", price: "From $589", gradient: "from-blue-400/20 to-indigo-500/20" },
   { city: "Tokyo", country: "Japan", description: "Experience the perfect blend of tradition and innovation.", price: "From $899", gradient: "from-pink-400/20 to-rose-500/20" },
   { city: "Dubai", country: "UAE", description: "Luxury shopping, ultramodern architecture, and desert adventures.", price: "From $479", gradient: "from-amber-400/20 to-orange-500/20" },
-  { city: "New York", country: "USA", description: "The city that never sleeps — culture, food, and skyline views.", price: "From $219", gradient: "from-emerald-400/20 to-teal-500/20" },
+  { city: "New York", country: "USA", description: "The city that never sleeps: culture, food, and skyline views.", price: "From $219", gradient: "from-emerald-400/20 to-teal-500/20" },
 ];
 
 export function FeaturedDestinations() {

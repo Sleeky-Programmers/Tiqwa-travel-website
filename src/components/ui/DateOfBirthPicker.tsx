@@ -2,7 +2,7 @@
 import { format, isValid, parse } from 'date-fns';
 import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
-import { DayPicker, Matcher, type, useDayPicker } from 'react-day-picker';
+import { DayPicker, Matcher, useDayPicker } from 'react-day-picker';
 
 import { buttonVariants } from '@/components/ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

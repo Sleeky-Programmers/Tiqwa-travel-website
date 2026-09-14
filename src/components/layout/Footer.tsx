@@ -31,7 +31,11 @@ const footerLinks = {
 
 const DEFAULT_TAGLINE = 'Your gateway to the world. Find and book flights to over 500 destinations with the best prices guaranteed.';
 
-export function Footer() {
+interface FooterProps {
+	variant?: 'default' | 'results';
+}
+
+export function Footer({ variant = 'default' }: FooterProps) {
 	const { settings } = useSiteSettings();
 
 	const brandName = settings?.long_name || settings?.name || 'Tiqwa Travel';
@@ -52,10 +56,97 @@ export function Footer() {
 		},
 	].filter((link): link is { href: string; label: string; Icon: typeof Mail } => Boolean(link.href));
 
+	if (variant === 'results') {
+		return (
+			<footer className="mt-auto band-dark-footer">
+				<Container className="py-14 sm:py-16">
+					<div className="grid gap-10 sm:grid-cols-[1fr_auto_auto] sm:gap-20">
+						<div className="max-w-sm">
+							<Link
+								href="/"
+								className="group flex w-fit items-center gap-2.5">
+								<BrandLogo
+									name={brandName}
+									className="text-lg text-ink-foreground transition-colors group-hover:text-primary"
+								/>
+							</Link>
+							<p className="mt-5 max-w-sm text-sm leading-relaxed text-ink-muted">{tagline}</p>
+						</div>
+
+						<div>
+							<h4 className="text-sm font-semibold text-ink-foreground">Company</h4>
+							<ul className="mt-4 space-y-3 text-sm">
+								{[
+									{ href: '/about', label: 'About Us' },
+									{ href: '/contact', label: 'Careers' },
+									{ href: '/faq', label: 'Blog' },
+								].map((link) => (
+									<li key={link.label}>
+										<FooterLink
+											href={link.href}
+											variant="footer"
+											className="text-ink-muted hover:text-primary">
+											{link.label}
+										</FooterLink>
+									</li>
+								))}
+							</ul>
+						</div>
+
+						<div>
+							<h4 className="text-sm font-semibold text-ink-foreground">Support</h4>
+							<ul className="mt-4 space-y-3 text-sm">
+								{[
+									{ href: '/faq', label: 'Help Center' },
+									{ href: '/faq', label: 'FAQ' },
+									{ href: '/contact', label: 'Contact Us' },
+								].map((link) => (
+									<li key={link.label}>
+										<FooterLink
+											href={link.href}
+											variant="footer"
+											className="text-ink-muted hover:text-primary">
+											{link.label}
+										</FooterLink>
+									</li>
+								))}
+							</ul>
+						</div>
+					</div>
+				</Container>
+
+				<div className="border-t border-ink-border">
+					<Container className="py-4">
+						<div className="flex flex-col items-start justify-between gap-3 text-xs text-ink-muted sm:flex-row sm:items-center">
+							<p>{copyright}</p>
+							<p>
+								<FooterLink
+									href="/privacy"
+									variant="footer"
+									className="text-ink-muted hover:text-primary">
+									Privacy Policy
+								</FooterLink>
+								<span className="mx-2">•</span>
+								<FooterLink
+									href="/terms"
+									variant="footer"
+									className="text-ink-muted hover:text-primary">
+									Terms of Service
+								</FooterLink>
+							</p>
+						</div>
+					</Container>
+				</div>
+			</footer>
+		);
+	}
+
 	return (
 		<footer className="mt-auto band-dark-footer">
 			<Container className="py-14">
-				<Reveal y={16} className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+				<Reveal
+					y={16}
+					className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
 					{/* Brand Column */}
 					<div className="lg:col-span-2 flex flex-col gap-5">
 						<Link

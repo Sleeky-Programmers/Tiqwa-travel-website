@@ -1,6 +1,10 @@
 'use client';
 
-import { AlertCircle, ArrowLeft, CheckCircle, Clock, Copy, CreditCard, Landmark, Loader2, Lock, Plane, Search, Shield, User } from 'lucide-react';
+import {
+    AlertCircle, ArrowLeft, Briefcase, CheckCircle, ChevronLeft, ChevronRight, Clock, Copy,
+    CreditCard, Globe2, Landmark, Loader2, Lock, PhoneCall, Plane, Search, Shield, ShieldCheck, Upload,
+    User, Wallet
+} from 'lucide-react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,22 +12,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PaymentOptions } from '@/components/features/booking/PaymentOptions';
 import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Link, linkVariants } from '@/components/ui/Link';
 import { useAuth } from '@/contexts/AuthContext';
 import { clearCheckoutDraft, readCheckoutDraft, writeCheckoutDraft } from '@/lib/checkoutDraft';
 import { cn } from '@/lib/utils';
 import {
-	confirmFlightPrice,
-	createBooking,
-	formatFlightPrice,
-	getBankAccounts,
-	getFlightFromCache,
-	initiatePayment,
-	isBookingReservationExpired,
-	readActiveBooking,
-	readCachedFlightSearch,
-	reserveBooking,
-	saveActiveBooking,
+    confirmFlightPrice, createBooking, formatFlightPrice, getBankAccounts, getBookingDetails,
+    getFlightFromCache, initiatePayment, isBookingReservationExpired, readActiveBooking,
+    readCachedFlightSearch, reserveBooking, saveActiveBooking, validateFlightCoupon
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
@@ -62,22 +59,62 @@ function formatPhoneNumber(value: string): string {
 	return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)} ${digits.slice(10, 14)}`;
 }
 
+function formatRouteLabel(flight: NonNullable<ReturnType<typeof getFlightFromCache>>): string {
+	const routes = flight.multiCityRoutes;
+	if (!routes?.length) return `${flight.from} → ${flight.to}`;
+
+	const stops = routes.flatMap((segments, routeIndex) => {
+		const first = segments[0];
+		const last = segments[segments.length - 1];
+		if (!first || !last) return [];
+		const from = `${first.airport_from_details?.city ?? first.airport_from} (${first.airport_from_details?.iata_code ?? first.airport_from})`;
+		const to = `${last.airport_to_details?.city ?? last.airport_to} (${last.airport_to_details?.iata_code ?? last.airport_to})`;
+		return [from, ...(routeIndex === routes.length - 1 ? [to] : [])];
+	});
+
+	return stops.join(' → ');
+}
+
+const PASSENGER_FARE_LABELS: Record<string, string> = {
+	adult: 'Adults',
+	child: 'Children',
+	infant: 'Infants',
+};
+
 function normalizePhone(value: string): string {
 	return value.replace(/[^\d+]/g, '');
 }
 
-function validatePassenger(data: PassengerData, documentRequired: boolean): string | null {
+function formatCountdown(ms: number): string {
+	if (ms <= 0) return 'Expired';
+	const totalMinutes = Math.floor(ms / 60000);
+	const hours = Math.floor(totalMinutes / 60);
+	const minutes = totalMinutes % 60;
+	return `${hours} hrs ${minutes} mins`;
+}
+
+function formatExpiryDate(dateString: string): string {
+	return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatExpiryTime(dateString: string): string {
+	return new Date(dateString).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function validatePassenger(data: PassengerData, documentRequired: boolean, requiresContact: boolean): string | null {
 	if (!data.firstName.trim()) return 'First name is required.';
 	if (!data.lastName.trim()) return 'Last name is required.';
 	if (!data.title) return 'Title is required.';
 	if (!data.gender) return 'Gender is required.';
-	if (!data.email.trim()) return 'Email is required.';
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
-		return 'Please enter a valid email address.';
-	}
-	if (!data.phone.trim()) return 'Phone number is required.';
-	if (normalizePhone(data.phone).length < 10) {
-		return 'Please enter a valid phone number.';
+	if (requiresContact) {
+		if (!data.email.trim()) return 'Email is required.';
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+			return 'Please enter a valid email address.';
+		}
+		if (!data.phone.trim()) return 'Phone number is required.';
+		if (normalizePhone(data.phone).length < 10) {
+			return 'Please enter a valid phone number.';
+		}
 	}
 	if (!data.dateOfBirth) return 'Date of birth is required.';
 	if (data.dateOfBirth >= new Date().toISOString().split('T')[0]) {
@@ -112,6 +149,12 @@ function buildPassengerTypes(adults: number, children: number, infants: number, 
 	while (types.length < total) types.push('adult');
 	return types.slice(0, total);
 }
+
+const PASSENGER_TYPE_LABELS: Record<PassengerType, string> = {
+	adult: 'Adult',
+	child: 'Child',
+	infant: 'Infant',
+};
 
 function getInitialPassenger(): PassengerData {
 	return {
@@ -149,6 +192,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		const length = Math.max(1, passengersCount);
 		return readCheckoutDraft(flightId, length) ?? Array.from({ length }, () => getInitialPassenger());
 	});
+	const [activePassengerIndex, setActivePassengerIndex] = useState(0);
 
 	// Auto-save passenger details as the user types, so an accidental refresh or back-nav
 	// doesn't wipe out a long passport-details form. Skipped while every field is still empty.
@@ -206,10 +250,51 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	const [, setSelectedInstalment] = useState<number | null>(null);
 	const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 	const [copied, setCopied] = useState(false);
+	const [bookingExpiresAt, setBookingExpiresAt] = useState<string | null>(null);
+	const [proofFile, setProofFile] = useState<File | null>(null);
+	const [paymentConfirmedLocally, setPaymentConfirmedLocally] = useState(false);
+	const [nowTick, setNowTick] = useState(() => Date.now());
+
+	useEffect(() => {
+		if (!bookingExpiresAt) return;
+		const interval = setInterval(() => setNowTick(Date.now()), 60000);
+		return () => clearInterval(interval);
+	}, [bookingExpiresAt]);
 
 	const unitPrice = confirmedPrice ?? flight?.price ?? 0;
 	const currency = flight?.currency ?? 'NGN';
-	const total = unitPrice * passengersCount;
+	const subtotal = unitPrice * passengersCount;
+	const [couponDiscount, setCouponDiscount] = useState(0);
+	const total = Math.max(0, subtotal - couponDiscount);
+	const passengerBreakdown = useMemo(() => {
+		const counts = passengerTypes.reduce<Record<string, number>>((result, type) => {
+			result[type] = (result[type] ?? 0) + 1;
+			return result;
+		}, {});
+		return (['adult', 'child', 'infant'] as PassengerType[])
+			.filter((type) => counts[type])
+			.map((type) => ({
+				type,
+				label: PASSENGER_FARE_LABELS[type],
+				singular: type === 'adult' ? 'Adult' : type === 'child' ? 'Child' : 'Infant',
+				plural: type === 'adult' ? 'Adults' : type === 'child' ? 'Children' : 'Infants',
+				count: counts[type],
+			}));
+	}, [passengerTypes]);
+	const fareBreakdown = useMemo(() => {
+		if (!flight?.priceSummary?.length) return [];
+		return flight.priceSummary
+			.filter((item) => item.quantity > 0 && item.total_price > 0)
+			.map((item) => ({
+				label: PASSENGER_FARE_LABELS[item.passenger_type.toLowerCase()] ?? item.passenger_type,
+				quantity: item.quantity,
+				unitPrice: item.total_price / item.quantity,
+			}));
+	}, [flight?.priceSummary]);
+	const [coupon, setCoupon] = useState('');
+	const [couponMessage, setCouponMessage] = useState<string | null>(null);
+	const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+	const [couponApplied, setCouponApplied] = useState(false);
 
 	const buildResultsHref = useCallback(
 		(currentFlight: NonNullable<ReturnType<typeof getFlightFromCache>>, departureDate: string, passengers: number): string => {
@@ -295,7 +380,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 	const validateAllPassengers = (): string | null => {
 		for (let i = 0; i < passengers.length; i++) {
-			const validationError = validatePassenger(passengers[i], documentRequired);
+			const validationError = validatePassenger(passengers[i], documentRequired, i === 0);
 			if (validationError) {
 				return `Passenger ${i + 1}: ${validationError}`;
 			}
@@ -321,6 +406,30 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		setShowPaymentOptions(true);
 	};
 
+	const handleCouponApply = async () => {
+		const couponCode = coupon.trim();
+		setCouponMessage(null);
+		setCouponDiscount(0);
+		setCouponApplied(false);
+		if (!couponCode) {
+			setCouponMessage('Enter a coupon code.');
+			return;
+		}
+
+		setIsApplyingCoupon(true);
+		const result = await validateFlightCoupon(subtotal, couponCode);
+		setIsApplyingCoupon(false);
+
+		if (!result.success || !result.data.is_valid) {
+			setCouponMessage(result.success ? 'Invalid or used Promo Code' : result.error);
+			return;
+		}
+
+		setCouponDiscount(Math.min(result.data.discount, subtotal));
+		setCouponApplied(true);
+		setCouponMessage('Promo code applied successfully.');
+	};
+
 	const handlePaymentSelect = async (method: string, gateway: string, instalment?: number) => {
 		if (!flight) return;
 
@@ -341,8 +450,8 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			dob: p.dateOfBirth,
 			gender: p.gender,
 			title: p.title,
-			email: p.email.trim(),
-			phone_number: normalizePhone(p.phone),
+			email: passengers[0].email.trim(),
+			phone_number: normalizePhone(passengers[0].phone),
 			...(documentRequired
 				? {
 						documents: {
@@ -393,6 +502,8 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			setBookingReference(reference);
 
 			if (method === 'WALK_IN_TRANSFER') {
+				const detailsResult = await getBookingDetails(reference);
+				setBookingExpiresAt(detailsResult.success ? detailsResult.data.expires_at || null : null);
 				setBookingSuccess(true);
 				setIsProcessing(false);
 				return;
@@ -411,89 +522,297 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		}
 	};
 
+	if (!flight) {
+		return (
+			<div className="flex flex-col items-center justify-center py-20">
+				<div className="rounded-2xl bg-white p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+						<Plane className="h-8 w-8 text-destructive/60" />
+					</div>
+					<p className="text-lg font-semibold">Flight not found</p>
+					<p className="mt-2 text-sm text-muted-foreground max-w-md">Please select a flight from the search results.</p>
+					<Button
+						href={searchPath}
+						shape="pill"
+						className="mt-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
+						<Search className="mr-2 h-4 w-4" />
+						Search for flights
+					</Button>
+				</div>
+			</div>
+		);
+	}
+
+	const paymentStepSummary = (
+		<div className="rounded-md border border-border/70 bg-white p-6 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+			<div className="flex items-center gap-3 border-b border-border/60 pb-4">
+				<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border/60 bg-white/50 p-1.5 dark:bg-white/5">
+					{flight.airlineLogo && !imageError ? (
+						<Image
+							src={flight.airlineLogo}
+							alt={`${flight.airline} logo`}
+							fill
+							className="object-contain"
+							onError={() => setImageError(true)}
+						/>
+					) : (
+						<div className="flex h-full w-full items-center justify-center rounded-md bg-primary/10 text-primary">
+							<Plane className="h-5 w-5" />
+						</div>
+					)}
+				</div>
+				<div className="min-w-0">
+					<p className="truncate font-semibold">{flight.airline}</p>
+					<p className="truncate text-sm text-muted-foreground">{formatRouteLabel(flight)}</p>
+				</div>
+			</div>
+			<div className="mt-4 space-y-3 text-sm">
+				<div className="flex justify-between gap-3">
+					<span className="text-muted-foreground">Departure</span>
+					<span className="font-medium">{flight.departure}</span>
+				</div>
+				<div className="flex justify-between gap-3">
+					<span className="text-muted-foreground">Arrival</span>
+					<span className="font-medium">{flight.arrival}</span>
+				</div>
+				<div className="flex justify-between gap-3">
+					<span className="text-muted-foreground">Duration</span>
+					<span className="font-medium">{flight.duration}</span>
+				</div>
+				<div className="flex justify-between gap-3">
+					<span className="text-muted-foreground">Stops</span>
+					<span className="font-medium">{getFlightStops(flight) === 0 ? 'Non-stop' : `${getFlightStops(flight)} stop${getFlightStops(flight) > 1 ? 's' : ''}`}</span>
+				</div>
+				{departure && (
+					<div className="flex justify-between gap-3">
+						<span className="text-muted-foreground">Date</span>
+						<span className="font-medium">{departure}</span>
+					</div>
+				)}
+				<div className="flex justify-between gap-3">
+					<span className="text-muted-foreground">Passengers</span>
+					<span className="text-right font-medium">
+						{passengerBreakdown.map(({ singular, plural, count }, index) => (
+							<span key={singular}>
+								{index > 0 && ', '}
+								{count} {count > 1 ? plural : singular}
+							</span>
+						))}
+					</span>
+				</div>
+			</div>
+			<div className="mt-4 space-y-2 border-t border-border/60 pt-4 text-sm">
+				{fareBreakdown.map(({ label, quantity, unitPrice: fareUnitPrice }) => (
+					<div
+						key={label}
+						className="flex justify-between gap-3">
+						<span className="text-muted-foreground">{label} Base Fare</span>
+						<span className="font-medium">
+							{formatFlightPrice(fareUnitPrice, 'NGN')} × {quantity}
+						</span>
+					</div>
+				))}
+				{couponDiscount > 0 && (
+					<div className="flex justify-between gap-3">
+						<span className="text-muted-foreground">Coupon discount</span>
+						<span className="font-medium text-emerald-600">-{formatFlightPrice(couponDiscount, 'NGN')}</span>
+					</div>
+				)}
+				<div className="flex justify-between border-t border-border/60 pt-3 text-lg font-bold">
+					<span>Total</span>
+					<span className="text-primary">{formatFlightPrice(total, 'NGN')}</span>
+				</div>
+			</div>
+			<Button
+				className="mt-6 w-full rounded-md bg-black text-white shadow-lg shadow-black/25"
+				size="lg"
+				disabled>
+				<Briefcase className="mr-2 h-4 w-4 text-white" />
+				Proceed to Payment
+			</Button>
+			<p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-black">
+				<ShieldCheck className="h-3.5 w-3.5 text-black" />
+				Your information is secure and encrypted
+			</p>
+		</div>
+	);
+
 	// ============================================
 	// SUCCESS STATE - Walk In Transfer
 	// ============================================
 	if (bookingSuccess && selectedPaymentMethod === 'WALK_IN_TRANSFER') {
+		const expiresInMs = bookingExpiresAt ? new Date(bookingExpiresAt).getTime() - nowTick : null;
+
 		return (
 			<div className="space-y-7 page-fade-in">
-				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-primary/5 to-transparent p-8 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:from-amber-500/20 dark:via-primary/10">
-					<div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />
-					<div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-
-					<div className="relative z-10 text-center">
-						<div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-amber-500/15">
-							<Clock className="h-10 w-10 text-amber-500" />
-						</div>
-						<h2 className="text-2xl font-bold">Booking is Pending Payment</h2>
-						<p className="mt-2 text-muted-foreground max-w-md mx-auto">Your booking has been created. Please complete the bank transfer to confirm your booking.</p>
-
-						<div className="mt-6 inline-block rounded-xl bg-primary/10 px-6 py-4">
-							<p className="text-sm font-medium text-muted-foreground">Booking Reference</p>
-							<p className="font-mono text-lg tracking-widest font-bold text-primary">{bookingReference}</p>
-						</div>
-					</div>
-
-					{/* Bank Details */}
-					<div className="relative z-10 mt-8">
-						<h3 className="flex items-center justify-center gap-2 text-sm font-semibold">
-							<Landmark className="h-4 w-4 text-primary" />
-							Bank Transfer Details
-						</h3>
-						<p className="text-center text-xs text-muted-foreground">Use your booking reference as payment description.</p>
-
-						<div className="mt-4 grid gap-3 sm:grid-cols-2">
-							{bankAccounts.length === 0 ? (
-								<p className="col-span-2 text-center text-sm text-amber-600 dark:text-amber-400">No bank accounts available. Please contact support.</p>
-							) : (
-								bankAccounts.map((account, index) => (
-									<div
-										key={index}
-										className="rounded-xl border border-primary/20 bg-white/50 p-4 backdrop-blur-sm dark:bg-white/5">
-										<p className="font-semibold text-primary">{account.bank_name || account.bank?.name}</p>
-										<p className="mt-1 text-sm">
-											<span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{account.account_name}</span>
-										</p>
-										<p className="text-sm">
-											<span className="text-muted-foreground">Account Number:</span> <span className="font-mono font-bold text-primary">{account.account_number}</span>
-										</p>
-									</div>
-								))
-							)}
-						</div>
-					</div>
-
-					{/* Important Note */}
-					<div className="relative z-10 mt-6 rounded-xl bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/20">
-						<p className="font-medium flex items-center gap-2">
-							<AlertCircle className="h-4 w-4" />
-							Important
-						</p>
-						<p className="mt-1">Your booking will remain on hold until payment is confirmed. You&apos;ll receive a confirmation email once verified.</p>
-					</div>
-
-					{/* Actions */}
-					<div className="relative z-10 mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-						<Button
-							href="/dashboard/bookings"
-							className="w-full sm:w-auto shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
-							<ArrowLeft className="mr-2 h-4 w-4" />
-							View My Bookings
-						</Button>
-						<Button
-							variant="outline"
-							className="w-full sm:w-auto rounded-xl hover:bg-primary/10 hover:text-primary"
+				<div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+					<div>
+						<button
 							onClick={() => {
-								const details = bankAccounts.map((a) => `${a.bank_name}: ${a.account_number} (${a.account_name})`).join('\n');
-								navigator.clipboard.writeText(details);
-								setCopied(true);
-								setTimeout(() => setCopied(false), 3000);
-							}}>
-							<Copy className="mr-2 h-4 w-4" />
-							{copied ? 'Copied!' : 'Copy Bank Details'}
-						</Button>
+								setBookingSuccess(false);
+								setShowPaymentOptions(true);
+							}}
+							className={cn(linkVariants({ variant: 'back' }), 'pt-2 hover:gap-3')}>
+							<ArrowLeft className="h-4 w-4" />
+							Back to Payment Methods
+						</button>
+						<h1 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight">Pending Payment</h1>
+						<p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+							<Wallet className="h-4 w-4" />
+							Please follow the instructions below to complete your booking reservation.
+						</p>
+					</div>
+					<div className="hidden shrink-0 items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary sm:flex">
+						<ShieldCheck className="h-3 w-3" />
+						Secure Booking
 					</div>
 				</div>
+
+				<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+					<div className="rounded-md border border-border/70 bg-white p-6 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none sm:p-8">
+						<div className="text-center">
+							<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+								<Clock className="h-8 w-8 text-primary" />
+							</div>
+							<h2 className="text-xl font-bold">Booking is On Hold</h2>
+							<p className="mt-2 text-sm text-muted-foreground">Your booking has been created. Please complete the bank transfer to confirm your flights.</p>
+
+							<div className="mt-6 inline-block rounded-xl border border-border bg-secondary/60 px-6 py-4">
+								<p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Booking Reference</p>
+								<p className="mt-1 font-mono text-lg font-bold tracking-widest">{bookingReference}</p>
+							</div>
+						</div>
+
+						{/* Bank Details */}
+						<div className="mt-8 border-t border-border/60 pt-6">
+							<h3 className="flex items-center gap-2 text-sm font-semibold">
+								<Landmark className="h-4 w-4" />
+								Bank Transfer Details
+							</h3>
+							<p className="mt-1 text-xs text-muted-foreground">Use your booking reference as payment description.</p>
+
+							<div className="mt-4 space-y-3">
+								{bankAccounts.length === 0 ? (
+									<p className="text-sm text-destructive">No bank accounts available. Please contact support.</p>
+								) : (
+									bankAccounts.map((account, index) => (
+										<div
+											key={index}
+											className="rounded-xl border border-border bg-secondary/30 p-4">
+											<p className="font-semibold">{account.bank_name || account.bank?.name}</p>
+											<div className="mt-2 space-y-1 text-sm">
+												<div className="flex justify-between gap-3">
+													<span className="text-muted-foreground">Account Name:</span>
+													<span className="font-medium">{account.account_name}</span>
+												</div>
+												<div className="flex justify-between gap-3">
+													<span className="text-muted-foreground">Account Number:</span>
+													<span className="font-mono font-bold">{account.account_number}</span>
+												</div>
+											</div>
+										</div>
+									))
+								)}
+							</div>
+						</div>
+
+						{/* Important Note */}
+						<div className="mt-6 flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/10 p-4 text-sm text-primary">
+							<AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+							<p>
+								<span className="font-semibold">Important:</span> Your booking will remain on hold until payment is confirmed. You&apos;ll receive a confirmation email once
+								verified.
+							</p>
+						</div>
+
+						{/* Confirm Payment */}
+						<div className="mt-6">
+							<h3 className="text-sm font-semibold">Confirm Your Payment</h3>
+							<p className="mt-1 text-xs text-muted-foreground">Upload your proof of payment so we can verify and confirm your booking.</p>
+
+							<label className="mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-8 text-center transition-colors hover:border-primary/60 hover:bg-primary/10">
+								<input
+									type="file"
+									accept=".png,.jpg,.jpeg,.pdf"
+									className="hidden"
+									onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+								/>
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+									<Upload className="h-5 w-5" />
+								</div>
+								<p className="text-sm font-semibold">{proofFile ? proofFile.name : 'Upload proof of payment'}</p>
+								<p className="text-xs text-muted-foreground">PNG, JPG, PDF (max 10MB)</p>
+							</label>
+
+							{paymentConfirmedLocally ? (
+								<div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
+									<CheckCircle className="h-4 w-4 shrink-0" />
+									Thanks! We&apos;ll verify your payment and confirm your booking shortly.
+								</div>
+							) : (
+								<div className="mt-4 flex flex-col gap-3 sm:flex-row">
+									<Button
+										className="w-full sm:w-auto"
+										disabled={!proofFile}
+										onClick={() => setPaymentConfirmedLocally(true)}>
+										I&apos;ve Made Payment
+									</Button>
+									<Button
+										variant="outline"
+										className="w-full sm:w-auto"
+										onClick={() => {
+											const details = bankAccounts.map((a) => `${a.bank_name}: ${a.account_number} (${a.account_name})`).join('\n');
+											navigator.clipboard.writeText(details);
+											setCopied(true);
+											setTimeout(() => setCopied(false), 3000);
+										}}>
+										<Copy className="mr-2 h-4 w-4" />
+										{copied ? 'Copied!' : 'Copy Bank Details'}
+									</Button>
+								</div>
+							)}
+						</div>
+
+						{bookingExpiresAt && expiresInMs !== null && (
+							<div className="mt-6 flex items-center gap-3 rounded-xl bg-secondary/60 px-4 py-3 text-sm">
+								<Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+								<div>
+									<p className="font-medium">Expires in: {formatCountdown(expiresInMs)}</p>
+									<p className="text-xs text-muted-foreground">
+										Complete your payment before {formatExpiryDate(bookingExpiresAt)} • {formatExpiryTime(bookingExpiresAt)}
+									</p>
+								</div>
+							</div>
+						)}
+					</div>
+
+					<div className="space-y-6 lg:sticky lg:top-24">
+						{paymentStepSummary}
+						<div className="rounded-md border border-border/70 bg-white p-5 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+							<div className="space-y-3 text-xs font-semibold text-muted-foreground">
+								<span className="flex items-center gap-2">
+									<Globe2 className="h-4 w-4 shrink-0 text-primary" />
+									Instant Confirmation &amp; E-ticket
+								</span>
+								<span className="flex items-center gap-2">
+									<ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+									Secure SSL-Encrypted Booking
+								</span>
+								<span className="flex items-center gap-2">
+									<PhoneCall className="h-4 w-4 shrink-0 text-primary" />
+									24/7 Priority Helpline Support
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{error && (
+					<div className="flex items-center gap-2.5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+						<AlertCircle className="h-5 w-5" />
+						{error}
+					</div>
+				)}
 			</div>
 		);
 	}
@@ -522,27 +841,6 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		);
 	}
 
-	if (!flight) {
-		return (
-			<div className="flex flex-col items-center justify-center py-20">
-				<div className="rounded-2xl bg-white p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
-					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-						<Plane className="h-8 w-8 text-destructive/60" />
-					</div>
-					<p className="text-lg font-semibold">Flight not found</p>
-					<p className="mt-2 text-sm text-muted-foreground max-w-md">Please select a flight from the search results.</p>
-					<Button
-						href={searchPath}
-						shape="pill"
-						className="mt-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
-						<Search className="mr-2 h-4 w-4" />
-						Search for flights
-					</Button>
-				</div>
-			</div>
-		);
-	}
-
 	// ============================================
 	// PAYMENT OPTIONS
 	// ============================================
@@ -559,16 +857,19 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 				<button
 					onClick={() => setShowPaymentOptions(false)}
-					className={cn(linkVariants({ variant: 'back' }), 'hover:gap-3')}>
+					className={cn(linkVariants({ variant: 'back' }), 'pt-2 hover:gap-3')}>
 					<ArrowLeft className="h-4 w-4" />
 					Back to passenger details
 				</button>
 
-				<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
-					<PaymentOptions
-						onSelect={handlePaymentSelect}
-						isLoading={isProcessing}
-					/>
+				<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+					<div className="rounded-md border border-border/70 bg-white p-6 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+						<PaymentOptions
+							onSelect={handlePaymentSelect}
+							isLoading={isProcessing}
+						/>
+					</div>
+					<div className="lg:sticky lg:top-24">{paymentStepSummary}</div>
 				</div>
 
 				{error && (
@@ -585,38 +886,75 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	// MAIN BOOKING FORM
 	// ============================================
 	return (
-		<div className="space-y-7 page-fade-in mt-20">
+		<div className="space-y-7 page-fade-in">
+			<Link
+				href={resultsHref}
+				variant="back"
+				className="pt-2">
+				Back to results
+			</Link>
+
 			{/* Header */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-20">
+			<div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 				<div>
 					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Complete Your Booking</h1>
 					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
 						<User className="h-4 w-4" />
-						Enter passenger details to proceed to secure payment.
+						Enter details for all passengers to secure your tickets on this flight.
 					</p>
 				</div>
 				<div className="hidden sm:flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-					<Shield className="h-3 w-3" />
+					<ShieldCheck className="h-3 w-3" />
 					Secure Booking
 				</div>
 			</div>
 
-			<Link
-				href={resultsHref}
-				variant="back">
-				Back to results
-			</Link>
+			{passengers.length > 1 && (
+				<div className="flex items-center justify-between gap-3 rounded-md border border-border bg-background-card p-2 shadow-sm">
+					<Button
+						variant="outline"
+						size="icon"
+						onClick={() => setActivePassengerIndex((index) => Math.max(0, index - 1))}
+						disabled={activePassengerIndex === 0}
+						aria-label="Previous passenger">
+						<ChevronLeft className="h-4 w-4" />
+					</Button>
+					<div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 overflow-x-auto">
+						{passengers.map((_, index) => (
+							<button
+								key={index}
+								type="button"
+								onClick={() => setActivePassengerIndex(index)}
+								className={cn(
+									'whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition-colors',
+									activePassengerIndex === index ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
+								)}>
+								{index === 0 && passengerTypes[index] === 'adult' ? 'Primary contact' : `Passenger ${index + 1}`}
+								<span className="ml-1 font-normal opacity-80">{PASSENGER_TYPE_LABELS[passengerTypes[index] ?? 'adult']}</span>
+							</button>
+						))}
+					</div>
+					<Button
+						variant="outline"
+						size="icon"
+						onClick={() => setActivePassengerIndex((index) => Math.min(passengers.length - 1, index + 1))}
+						disabled={activePassengerIndex === passengers.length - 1}
+						aria-label="Next passenger">
+						<ChevronRight className="h-4 w-4" />
+					</Button>
+				</div>
+			)}
 
 			{/* Error & Warning */}
 			{error && (
-				<div className="flex items-center gap-2.5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+				<div className="flex items-center gap-2.5 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
 					<AlertCircle className="h-5 w-5" />
 					{error}
 				</div>
 			)}
 
 			{reservationWarning && (
-				<div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/20">
+				<div className="flex items-start gap-2.5 rounded-md bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/20">
 					<Clock className="mt-0.5 h-5 w-5 shrink-0" />
 					{reservationWarning}
 				</div>
@@ -625,42 +963,59 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			<div className="grid gap-6 lg:grid-cols-3">
 				{/* Left: Passenger Forms — shown after the summary on mobile */}
 				<div className="order-2 space-y-6 lg:order-1 lg:col-span-2">
-					<div className="flex items-center gap-3 mb-2">
-						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold">{passengers.length}</div>
-						<h2 className="text-lg font-semibold">Passenger{passengers.length > 1 ? 's' : ''} Details</h2>
+					<div className="rounded-md border border-border bg-background-card p-5 shadow-sm sm:p-6">
+						<PassengerForm
+							data={passengers[activePassengerIndex]}
+							onChange={(data) => handlePassengerChange(activePassengerIndex, data)}
+							passengerNumber={activePassengerIndex + 1}
+							totalPassengers={passengers.length}
+							passengerType={passengerTypes[activePassengerIndex]}
+							showRemove={passengers.length > 1}
+							onRemove={() => {
+								setPassengers((prev) => prev.filter((_, index) => index !== activePassengerIndex));
+								setPassengerTypes((prev) => prev.filter((_, index) => index !== activePassengerIndex));
+								setActivePassengerIndex((index) => Math.max(0, Math.min(index, passengers.length - 2)));
+							}}
+							isDomestic={isDomestic}
+							showContactFields={false}
+							documentRequired={documentRequired}
+							disabled={showPaymentOptions || isProcessing}
+						/>
 					</div>
 
-					{passengers.map((passenger, index) => (
-						<div
-							key={index}
-							className="relative rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
-							<PassengerForm
-								data={passenger}
-								onChange={(data) => handlePassengerChange(index, data)}
-								onPhoneChange={handlePhoneChange(index)}
-								passengerNumber={index + 1}
-								totalPassengers={passengers.length}
-								passengerType={passengerTypes[index]}
-								showRemove={passengers.length > 1}
-								onRemove={() => {
-									setPassengers((prev) => prev.filter((_, i) => i !== index));
-									setPassengerTypes((prev) => prev.filter((_, i) => i !== index));
-								}}
-								isDomestic={isDomestic}
-								documentRequired={documentRequired}
+					<div className="rounded-md border border-border bg-background-card p-5 shadow-sm sm:p-6">
+						<h2 className="text-lg font-semibold">Contact Information</h2>
+						<p className="mt-1 text-sm text-muted-foreground">We&apos;ll send your booking confirmation and updates here.</p>
+						<div className="mt-5 grid gap-4 sm:grid-cols-2">
+							<Input
+								required
 								disabled={showPaymentOptions || isProcessing}
+								type="tel"
+								label="Phone Number"
+								value={passengers[0].phone}
+								placeholder="+234 801 234 5678"
+								onChange={handlePhoneChange(0)}
+							/>
+							<Input
+								required
+								disabled={showPaymentOptions || isProcessing}
+								type="email"
+								label="Email Address"
+								value={passengers[0].email}
+								placeholder="john@example.com"
+								onChange={(event) => handlePassengerChange(0, { ...passengers[0], email: event.target.value })}
 							/>
 						</div>
-					))}
+					</div>
 				</div>
 
 				{/* Right: Flight Summary — shown first on mobile */}
 				<div className="order-1 lg:order-2">
 					<div className="lg:sticky lg:top-24 space-y-6">
 						{/* Flight Summary Card */}
-						<div className="rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+						<div className="rounded-md border border-border/70 bg-white p-6 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 							<div className="flex items-center gap-3 pb-4 border-b border-border/60">
-								<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-white/50 p-1.5 dark:bg-white/5">
+								<div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border border-border/60 bg-white/50 p-1.5 dark:bg-white/5">
 									{flight.airlineLogo && !imageError ? (
 										<Image
 											src={flight.airlineLogo}
@@ -670,16 +1025,14 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 											onError={() => setImageError(true)}
 										/>
 									) : (
-										<div className="flex h-full w-full items-center justify-center rounded-xl bg-primary/10 text-primary">
+										<div className="flex h-full w-full items-center justify-center rounded-md bg-primary/10 text-primary">
 											<Plane className="h-5 w-5" />
 										</div>
 									)}
 								</div>
 								<div className="flex-1 min-w-0">
 									<p className="font-semibold truncate">{flight.airline}</p>
-									<p className="text-sm text-muted-foreground truncate">
-										{flight.from} → {flight.to}
-									</p>
+									<p className="text-sm text-muted-foreground truncate">{formatRouteLabel(flight)}</p>
 								</div>
 							</div>
 
@@ -710,7 +1063,14 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 								)}
 								<div className="flex justify-between text-sm py-1.5">
 									<span className="text-muted-foreground">Passengers</span>
-									<span className="font-medium">{passengers.length}</span>
+									<span className="text-right font-medium">
+										{passengerBreakdown.map(({ singular, plural, count }, index) => (
+											<span key={singular}>
+												{index > 0 && ', '}
+												{count} {count > 1 ? plural : singular}
+											</span>
+										))}
+									</span>
 								</div>
 							</div>
 
@@ -723,22 +1083,70 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 									</div>
 								) : (
 									<>
-										<div className="flex justify-between text-sm">
-											<span className="text-muted-foreground">
-												{formatFlightPrice(unitPrice, currency)} × {passengers.length}
-											</span>
-											<span>{formatFlightPrice(total, currency)}</span>
+										<div className="space-y-2 text-sm">
+											{fareBreakdown.length > 0 ? (
+												fareBreakdown.map(({ label, quantity, unitPrice: fareUnitPrice }) => (
+													<div
+														key={label}
+														className="flex justify-between gap-3">
+														<span className="text-muted-foreground">{label} Base Fare</span>
+														<span className="shrink-0 font-medium">
+															{formatFlightPrice(fareUnitPrice, 'NGN')} × {quantity}
+														</span>
+													</div>
+												))
+											) : (
+												<div className="flex justify-between text-sm">
+													<span className="text-muted-foreground">Base Fare</span>
+													<span className="font-medium">
+														{formatFlightPrice(unitPrice, 'NGN')} × {passengers.length}
+													</span>
+												</div>
+											)}
 										</div>
-										<div className="mt-2 flex justify-between text-xl font-bold">
+
+										<div className="mt-4 flex items-center gap-2">
+											<input
+												value={coupon}
+												onChange={(event) => {
+													setCoupon(event.target.value);
+													setCouponApplied(false);
+													setCouponDiscount(0);
+													setCouponMessage(null);
+												}}
+												placeholder="Coupon code"
+												className={`h-10 min-w-0 flex-1 rounded-sm border-2 px-3 text-sm text-black outline-none placeholder:text-gray-500 ${
+													couponApplied ? 'border-emerald-500/60 bg-emerald-50 focus:border-emerald-600' : 'border-black bg-white focus:border-black'
+												}`}
+											/>
+											<button
+												type="button"
+												onClick={handleCouponApply}
+												disabled={isApplyingCoupon}
+												className={`h-10 shrink-0 rounded-sm px-4 text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+													couponApplied ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-black hover:bg-black/80'
+												}`}>
+												{isApplyingCoupon ? 'Checking...' : couponApplied ? 'Applied' : 'Apply'}
+											</button>
+										</div>
+										{couponDiscount > 0 && (
+											<div className="mt-3 flex justify-between gap-3 text-sm">
+												<span className="text-muted-foreground">Discount ({Math.round((couponDiscount / subtotal) * 100)}%)</span>
+												<span className="font-medium text-emerald-600">-{formatFlightPrice(couponDiscount, 'NGN')}</span>
+											</div>
+										)}
+										{couponMessage && <p className={`mt-2 text-xs ${couponDiscount > 0 ? 'text-emerald-600' : 'text-destructive'}`}>{couponMessage}</p>}
+
+										<div className="mt-4 flex justify-between text-xl font-bold">
 											<span>Total</span>
-											<span className="text-primary">{formatFlightPrice(total, currency)}</span>
+											<span className="text-primary">{formatFlightPrice(total, 'NGN')}</span>
 										</div>
 									</>
 								)}
 							</div>
 
 							<Button
-								className="mt-6 w-full rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all hover:scale-[1.02]"
+								className="mt-6 w-full rounded-md bg-black text-white shadow-lg shadow-black/25 transition-all hover:scale-[1.02] hover:bg-black hover:shadow-xl hover:shadow-black/35"
 								size="lg"
 								disabled={isProcessing || isConfirmingPrice}
 								onClick={handleProceedToPayment}>
@@ -749,28 +1157,31 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 									</>
 								) : (
 									<>
-										<CreditCard className="mr-2 h-4 w-4" />
+										<Briefcase className="mr-2 h-4 w-4 text-white" />
 										Proceed to Payment
 									</>
 								)}
 							</Button>
 
-							<p className="mt-3 text-center text-xs text-muted-foreground">🔒 Your information is secure and encrypted</p>
+							<p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-black">
+								<ShieldCheck className="h-3.5 w-3.5 text-black" />
+								Your information is secure and encrypted
+							</p>
 						</div>
 
 						{/* Trust Badges */}
-						<div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-							<span className="flex items-center gap-1.5">
-								<Shield className="h-4 w-4 text-emerald-500" />
-								Secure Payment
+						<div className="space-y-3 text-xs font-semibold text-muted-foreground">
+							<span className="flex items-center gap-2">
+								<Globe2 className="h-4 w-4 shrink-0 text-[#E8503A]" />
+								Instant Confirmation &amp; E-ticket
 							</span>
-							<span className="flex items-center gap-1.5">
-								<Lock className="h-4 w-4 text-emerald-500" />
-								Encrypted Data
+							<span className="flex items-center gap-2">
+								<ShieldCheck className="h-4 w-4 shrink-0 text-[#E8503A]" />
+								Secure SSL-Encrypted Payment
 							</span>
-							<span className="flex items-center gap-1.5">
-								<CheckCircle className="h-4 w-4 text-emerald-500" />
-								Instant Confirmation
+							<span className="flex items-center gap-2">
+								<PhoneCall className="h-4 w-4 shrink-0 text-[#E8503A]" />
+								24/7 Priority Helpline Support
 							</span>
 						</div>
 					</div>

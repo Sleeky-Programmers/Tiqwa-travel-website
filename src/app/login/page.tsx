@@ -56,7 +56,7 @@ function LoginContent() {
 				<h1 className="text-3xl font-extrabold">Welcome Back</h1>
 				<p className="mt-2 text-sm text-muted-foreground">Please enter your credentials to access your account.</p>
 
-				{error && <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+				{error && <p className="mt-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 
 				<form
 					onSubmit={handleSubmit}

@@ -80,7 +80,7 @@ export default function SignupPage() {
 				<h1 className="text-3xl font-extrabold">Create Account</h1>
 				<p className="mt-2 text-sm text-muted-foreground">Sign up today and start tracking your travel goals.</p>
 
-				{error && <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+				{error && <p className="mt-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 
 				<form
 					onSubmit={handleSubmit}

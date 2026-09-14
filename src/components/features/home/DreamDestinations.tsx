@@ -4,7 +4,6 @@ import { Plane, Search } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
@@ -25,15 +24,6 @@ interface DreamDestinationsProps {
 	popularAirports?: PopularAirport[];
 }
 
-// Preview-only fixture, matches docs/DreamDestinations.png. Append ?mockDestinations=1 to the
-// homepage URL to render this instead of the live popular-airports data.
-const MOCK_DESTINATIONS: DestinationCard[] = [
-	{ id: 'mock-lagos', name: 'Lagos', country: 'Nigeria', image: getDestinationImage('Lagos'), priceFrom: 25000 },
-	{ id: 'mock-dubai', name: 'Dubai', country: 'UAE', image: getDestinationImage('Dubai'), priceFrom: 350000 },
-	{ id: 'mock-london', name: 'London', country: 'UK', image: getDestinationImage('London'), priceFrom: 480000 },
-	{ id: 'mock-accra', name: 'Accra', country: 'Ghana', image: getDestinationImage('Accra'), priceFrom: 85000 },
-];
-
 function mapAirportsToDestinations(airports: PopularAirport[]): DestinationCard[] {
 	return airports.map((airport, i) => ({
 		id: airport.iata_code ?? `airport-${i}`,
@@ -45,13 +35,7 @@ function mapAirportsToDestinations(airports: PopularAirport[]): DestinationCard[
 
 export function DreamDestinations({ popularAirports = [] }: DreamDestinationsProps) {
 	const router = useRouter();
-	const [useMockData, setUseMockData] = useState(false);
-
-	useEffect(() => {
-		setUseMockData(new URLSearchParams(window.location.search).get('mockDestinations') === '1');
-	}, []);
-
-	const destinations: DestinationCard[] = useMockData ? MOCK_DESTINATIONS : popularAirports.length > 0 ? mapAirportsToDestinations(popularAirports) : [];
+	const destinations: DestinationCard[] = popularAirports.length > 0 ? mapAirportsToDestinations(popularAirports) : [];
 
 	const handleClick = (name: string, code?: string) => {
 		const query = code ? `${name} (${code})` : name;
@@ -123,7 +107,7 @@ export function DreamDestinations({ popularAirports = [] }: DreamDestinationsPro
 								whileInView={{ opacity: 1, y: 0 }}
 								viewport={{ once: true }}
 								transition={{ delay: i * 0.08 }}
-								onClick={() => handleClick(dest.name, !useMockData && popularAirports.length > 0 ? popularAirports[i]?.iata_code : undefined)}
+								onClick={() => handleClick(dest.name, popularAirports[i]?.iata_code)}
 								className="hover-lift group relative aspect-[4/5] overflow-hidden rounded-xl text-left shadow-lg">
 								<Image
 									src={dest.image}

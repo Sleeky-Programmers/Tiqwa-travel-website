@@ -6,25 +6,25 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { FlightCard } from '@/components/features/FlightCard';
+import { MultiCityFlightRow } from '@/components/features/MultiCityFlightRow';
 import { InlineFlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { Link, linkVariants } from '@/components/ui/Link';
-import { applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption } from '@/services/flightSearch';
 import {
-	CabinClass,
-	extractAirportCode,
-	FlightSearchParams,
-	formatFlightPrice,
-	getTotalPassengers,
-	readCachedFlightSearch,
-	searchFlightsForForm,
-	searchMultiCityFlightsForForm,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import {
+    applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption
+} from '@/services/flightSearch';
+import {
+    CabinClass, extractAirportCode, FlightSearchParams, formatFlightPrice, getTotalPassengers,
+    parseAirportValue, readCachedFlightSearch, searchFlightsForForm, searchMultiCityFlightsForForm
 } from '@/services/whitelabel-api';
 
 import type { Flight, StopsFilter } from '@/types/flight';
-import type { MultiCityLeg } from '@/types/whitelabel';
+import type { MultiCityLeg, OutboundSegment } from '@/types/whitelabel';
 
 const CABIN_LABELS: Record<CabinClass, string> = {
 	economy: 'Economy',
@@ -96,8 +96,40 @@ function paramsMatchCache(
 	);
 }
 
-// Pagination constants - set to a large number to effectively show all in scroll
+function formatMultiCityDate(value: string): string {
+	const date = new Date(`${value}T00:00:00Z`);
+	if (Number.isNaN(date.getTime())) return value;
+	return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'UTC' }).format(date);
+}
+
+const MULTI_CITY_FLIGHTS_PER_PAGE = 3;
 const FLIGHTS_PER_PAGE = 100;
+
+function formatAirportWithCode(value: string): string {
+	const airport = parseAirportValue(value);
+	return airport.code && airport.display !== airport.code ? `${airport.display} (${airport.code})` : airport.code || airport.display;
+}
+
+function formatSegmentAirport(segment: OutboundSegment, direction: 'from' | 'to'): string {
+	const details = direction === 'from' ? segment.airport_from_details : segment.airport_to_details;
+	const code = details?.iata_code ?? (direction === 'from' ? segment.airport_from : segment.airport_to);
+	const city = details?.city;
+	return city && code ? `${city} (${code})` : formatAirportWithCode(code);
+}
+
+function formatMultiCityRoute(routes: OutboundSegment[][]): string {
+	const routeStops = routes.flatMap((segments, routeIndex) => {
+		const firstSegment = segments[0];
+		const lastSegment = segments[segments.length - 1];
+		if (!firstSegment || !lastSegment) return [];
+		return [formatSegmentAirport(firstSegment, 'from'), ...(routeIndex === routes.length - 1 ? [formatSegmentAirport(lastSegment, 'to')] : [])];
+	});
+	return routeStops.join(' → ');
+}
+
+function formatPassengerLabel(totalPassengers: number): string {
+	return `${totalPassengers} Passenger${totalPassengers === 1 ? '' : 's'}`;
+}
 
 function ResultsContent() {
 	const searchParams = useSearchParams();
@@ -139,10 +171,12 @@ function ResultsContent() {
 
 	// Pagination state
 	const [currentPage, setCurrentPage] = useState(1);
+	const [multiCityPages, setMultiCityPages] = useState<Record<number, number>>({});
 
 	const loadFlights = useCallback(async () => {
 		setError(null);
 		setCurrentPage(1);
+		setMultiCityPages({});
 
 		const cached = readCachedFlightSearch();
 		if (cached && paramsMatchCache(cached.params, from, to, departure, returnDate, tripType, adults, children, infants, cabin, legs)) {
@@ -222,13 +256,42 @@ function ResultsContent() {
 		return sortFlights(filtered, sortBy);
 	}, [baseFlights, maxPrice, stopsFilter, selectedAirlines, sortBy]);
 
-	// Pagination calculations
 	const totalPages = Math.ceil(filteredFlights.length / FLIGHTS_PER_PAGE);
 	const paginatedFlights = useMemo(() => {
+		if (tripType === 'multicity') return filteredFlights;
 		const start = (currentPage - 1) * FLIGHTS_PER_PAGE;
 		const end = start + FLIGHTS_PER_PAGE;
 		return filteredFlights.slice(start, end);
-	}, [filteredFlights, currentPage]);
+	}, [filteredFlights, currentPage, tripType]);
+
+	const multiCityGroups = useMemo(
+		() =>
+			tripType === 'multicity' && legs
+				? legs.map((leg, legIndex) => ({
+						leg,
+						legIndex,
+						flights: paginatedFlights.filter((flight) => flight.multiCityRoutes?.[legIndex]?.length),
+				  }))
+				: [],
+		[legs, paginatedFlights, tripType]
+	);
+
+	const getMultiCityPageCount = (flightCount: number) => Math.ceil(flightCount / MULTI_CITY_FLIGHTS_PER_PAGE);
+	const getMultiCityPage = (legIndex: number) => multiCityPages[legIndex] ?? 1;
+	const setMultiCityPage = (legIndex: number, page: number) => {
+		setMultiCityPages((pages) => ({ ...pages, [legIndex]: page }));
+	};
+
+	const routeDescription =
+		tripType === 'multicity' && legs
+			? formatMultiCityRoute(baseFlights.find((flight) => flight.multiCityRoutes?.length)?.multiCityRoutes ?? []) ||
+			  legs
+					.map((leg) => formatAirportWithCode(leg.origin))
+					.concat(formatAirportWithCode(legs[legs.length - 1]?.destination ?? ''))
+					.join(' → ')
+			: from && to
+			? `${formatAirportWithCode(from)} → ${formatAirportWithCode(to)}`
+			: 'Search for flights';
 
 	const toggleAirline = (airline: string) => {
 		setSelectedAirlines((prev) => (prev.includes(airline) ? prev.filter((a) => a !== airline) : [...prev, airline]));
@@ -240,11 +303,13 @@ function ResultsContent() {
 		setStopsFilter('any');
 		setSelectedAirlines([]);
 		setCurrentPage(1);
+		setMultiCityPages({});
 	};
 
 	const handleSortChange = (value: SortOption) => {
 		setSortBy(value);
 		setCurrentPage(1);
+		setMultiCityPages({});
 	};
 
 	const goToPage = (page: number) => {
@@ -254,7 +319,7 @@ function ResultsContent() {
 	const hasActiveFilters = maxPrice !== undefined || stopsFilter !== 'any' || selectedAirlines.length > 0;
 
 	const filterPanel = (
-		<div className="sticky top-24 space-y-7 rounded-xl border border-border bg-background-card p-6 shadow-sm">
+		<div className="sticky top-24 space-y-7 rounded-md border border-border bg-background-card p-6 shadow-sm">
 			<div className="flex items-center justify-between border-b border-border pb-5">
 				<h3 className="text-lg font-bold">Filters</h3>
 				{hasActiveFilters && (
@@ -336,7 +401,7 @@ function ResultsContent() {
 	);
 
 	return (
-		<PublicLayout>
+		<PublicLayout footerVariant="results">
 			<div className="page-fade-in bg-slate-50/70 py-28 dark:bg-background">
 				<Container>
 					<Link
@@ -354,19 +419,7 @@ function ResultsContent() {
 							<div>
 								<h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Flight Results</h1>
 								<p className="mt-1 text-muted-foreground">
-									{tripType === 'multicity' && legs
-										? legs
-												.map((leg) => leg.origin)
-												.concat(legs[legs.length - 1]?.destination ?? '')
-												.join(' → ')
-										: from && to
-										? `${from} → ${to}`
-										: 'Search for flights'}
-									{tripType !== 'multicity' && departure && ` · ${departure}`}
-									{returnDate && ` · return ${returnDate}`}
-									{tripType && ` · ${tripType}`}
-									{` · ${totalPassengers} passenger${totalPassengers > 1 ? 's' : ''}`}
-									{` · ${CABIN_LABELS[cabin]}`}
+									{routeDescription} • {formatPassengerLabel(totalPassengers)} • {CABIN_LABELS[cabin]}
 								</p>
 							</div>
 							<div className="flex items-center gap-2">
@@ -379,19 +432,23 @@ function ResultsContent() {
 									Filters
 								</Button>
 								<SlidersHorizontal className="hidden h-4 w-4 text-muted-foreground lg:block" />
-								<select
+								<Select
 									value={sortBy}
-									onChange={(e) => handleSortChange(e.target.value as SortOption)}
-									className="h-10 rounded-lg border border-border bg-background-card px-3 text-sm font-medium outline-none focus:border-primary">
-									<option value="price">Price: Low to High</option>
-									<option value="duration">Duration</option>
-									<option value="departure">Departure Time</option>
-								</select>
+									onValueChange={(value) => handleSortChange(value as SortOption)}>
+									<SelectTrigger className="h-10 border-primary bg-transparent font-medium shadow-none outline-none hover:bg-transparent focus-visible:border-primary focus-visible:ring-0 dark:bg-transparent">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="price">Price: Low to High</SelectItem>
+										<SelectItem value="duration">Duration</SelectItem>
+										<SelectItem value="departure">Departure Time</SelectItem>
+									</SelectContent>
+								</Select>
 							</div>
 						</div>
 
 						{error && (
-							<div className="mb-6 flex flex-col gap-3 rounded-xl bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+							<div className="mb-6 flex flex-col gap-3 rounded-md bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
 								<p className="text-sm text-destructive">{error}</p>
 								<Button
 									variant="outline"
@@ -415,7 +472,7 @@ function ResultsContent() {
 										<div className="relative mb-4">
 											<button
 												onClick={() => setShowFilters(false)}
-												className="absolute right-3 top-3 rounded-lg p-1 hover:bg-muted">
+												className="absolute right-3 top-3 rounded-md p-1 hover:bg-muted">
 												<X className="h-4 w-4" />
 											</button>
 											{filterPanel}
@@ -454,28 +511,92 @@ function ResultsContent() {
 											</p>
 										</div>
 
-										{/* Fixed height scrollable container - 500px */}
-										<div className="space-y-4 pr-0">
-											{paginatedFlights.map((flight, i) => (
-												<motion.div
-													key={flight.id}
-													initial={{ opacity: 0, y: 15 }}
-													animate={{ opacity: 1, y: 0 }}
-													transition={{ duration: 0.3, delay: i * 0.05 }}>
-													<FlightCard
-														isPublic
-														flight={flight}
-														departure={departure}
-														passengers={totalPassengers}
-														adults={adults}
-														children={children}
-														infants={infants}
-													/>
-												</motion.div>
-											))}
+										<div className="space-y-5 pr-0">
+											{tripType === 'multicity'
+												? multiCityGroups.map(({ leg, flights, legIndex }) => {
+														const groupPage = getMultiCityPage(legIndex);
+														const groupPageCount = getMultiCityPageCount(flights.length);
+														const visibleFlights = flights.slice((groupPage - 1) * MULTI_CITY_FLIGHTS_PER_PAGE, groupPage * MULTI_CITY_FLIGHTS_PER_PAGE);
+
+														return (
+															<section
+																key={`${leg.origin}-${leg.destination}-${leg.departure_date}`}
+																className="space-y-3">
+																<div className="flex items-center justify-between gap-3 rounded-md bg-secondary/70 px-4 py-3">
+																	<div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+																		<span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+																		<span className="truncate">
+																			{leg.origin} → {leg.destination}
+																		</span>
+																		<span className="shrink-0 text-muted-foreground">·</span>
+																		<span className="shrink-0 text-sm font-normal text-muted-foreground">{formatMultiCityDate(leg.departure_date)}</span>
+																	</div>
+																	<span className="shrink-0 rounded-full bg-background-card px-3 py-1 text-xs font-semibold text-primary">
+																		{flights.length} result{flights.length === 1 ? '' : 's'}
+																	</span>
+																</div>
+																<div className="space-y-3">
+																	{visibleFlights.map((flight, flightIndex) => (
+																		<motion.div
+																			key={`${flight.id}-${legIndex}`}
+																			initial={{ opacity: 0, y: 15 }}
+																			animate={{ opacity: 1, y: 0 }}
+																			transition={{ duration: 0.3, delay: flightIndex * 0.05 }}>
+																			<MultiCityFlightRow
+																				flight={flight}
+																				segments={flight.multiCityRoutes?.[legIndex] ?? []}
+																				departure={leg.departure_date}
+																				passengers={totalPassengers}
+																			/>
+																		</motion.div>
+																	))}
+																</div>
+																{groupPageCount > 1 && (
+																	<div className="flex items-center justify-center gap-2 border-t border-border pt-3">
+																		<Button
+																			variant="outline"
+																			size="sm"
+																			onClick={() => setMultiCityPage(legIndex, Math.max(1, groupPage - 1))}
+																			disabled={groupPage === 1}
+																			className="h-8 w-8 p-0">
+																			<ChevronLeft className="h-4 w-4" />
+																		</Button>
+																		<span className="text-xs text-muted-foreground">
+																			Page {groupPage} of {groupPageCount}
+																		</span>
+																		<Button
+																			variant="outline"
+																			size="sm"
+																			onClick={() => setMultiCityPage(legIndex, Math.min(groupPageCount, groupPage + 1))}
+																			disabled={groupPage === groupPageCount}
+																			className="h-8 w-8 p-0">
+																			<ChevronRight className="h-4 w-4" />
+																		</Button>
+																	</div>
+																)}
+															</section>
+														);
+												  })
+												: paginatedFlights.map((flight, i) => (
+														<motion.div
+															key={flight.id}
+															initial={{ opacity: 0, y: 15 }}
+															animate={{ opacity: 1, y: 0 }}
+															transition={{ duration: 0.3, delay: i * 0.05 }}>
+															<FlightCard
+																isPublic
+																flight={flight}
+																departure={departure}
+																passengers={totalPassengers}
+																adults={adults}
+																children={children}
+																infants={infants}
+															/>
+														</motion.div>
+												  ))}
 										</div>
 
-										{/* Pagination Controls - only show if more than FLIGHTS_PER_PAGE */}
+										{/* Multi-city pages contain three route groups; regular results use the existing flight pagination. */}
 										{totalPages > 1 && (
 											<div className="mt-6 flex items-center justify-center gap-2 pt-4 border-t border-border">
 												<Button

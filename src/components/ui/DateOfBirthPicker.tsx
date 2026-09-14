@@ -2,7 +2,7 @@
 import { format, isValid, parse } from 'date-fns';
 import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
-import { DayPicker, useDayPicker, type Matcher } from 'react-day-picker';
+import { DayPicker, Matcher, type, useDayPicker } from 'react-day-picker';
 
 import { buttonVariants } from '@/components/ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -279,7 +279,7 @@ export function DateOfBirthPicker({
 					id={id}
 					disabled={fieldDisabled}
 					className={cn(
-						'inline-flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-border bg-white/60 px-3 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10',
+						'inline-flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-white/60 px-3 text-xs font-normal transition-all outline-none hover:bg-white/80 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10',
 						!selected && 'text-muted-foreground'
 					)}>
 					<span className="flex items-center gap-2">

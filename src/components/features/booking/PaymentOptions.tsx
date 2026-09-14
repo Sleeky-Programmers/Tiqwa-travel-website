@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, Calendar, ChevronRight, CreditCard, Landmark } from 'lucide-react';
+import { Building2, Calendar, ChevronRight, Clock, CreditCard } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
@@ -102,10 +102,40 @@ export function PaymentOptions({ onSelect, isLoading = false }: PaymentOptionsPr
 			CARD: CreditCard,
 			ONLINE_TRANSFER: Building2,
 			FLEXI_PAY: Calendar,
-			WALK_IN_TRANSFER: Landmark,
+			WALK_IN_TRANSFER: Clock,
 		};
 		const Icon = icons[identifier] || CreditCard;
 		return <Icon className="h-5 w-5" />;
+	};
+
+	const getMethodPresentation = (method: PaymentMethod) => {
+		const presentations: Record<string, { title: string; description: string; badge?: { label: string; className: string } }> = {
+			ONLINE_TRANSFER: {
+				title: 'Online Transfer',
+				description: 'Make a direct bank transfer. Your booking is confirmed once payment is received.',
+			},
+			CARD: {
+				title: 'Credit / Debit Card',
+				description: 'Pay with MasterCard, Visa, or Verve. Fast and secure online payment.',
+			},
+			FLEXI_PAY: {
+				title: 'Flexi Pay (Installments)',
+				description: 'Split your payment into 2, 3, or 4 installments. Pay a percentage upfront to secure your booking.',
+				badge: { label: 'Pay in 2, 3, 4 instalments', className: 'bg-blue-500/20 text-blue-700' },
+			},
+			WALK_IN_TRANSFER: {
+				title: 'Book on Hold',
+				description: 'Reserve your booking for 24-48 hours without paying. Lock in the current price and pay later before the hold expires.',
+				badge: { label: 'Hold for 24-48hrs', className: 'bg-yellow-500/20 text-yellow-700' },
+			},
+		};
+
+		return (
+			presentations[method.identifier] ?? {
+				title: method.title,
+				description: method.description.replace(/<[^>]*>/g, ''),
+			}
+		);
 	};
 
 	if (isLoadingData) {
@@ -193,6 +223,7 @@ export function PaymentOptions({ onSelect, isLoading = false }: PaymentOptionsPr
 						Choose payment gateway for {methodData?.title}
 						{selectedInstalment && ` (${selectedInstalment} instalments)`}
 					</p>
+					{gateways.length === 0 && <p className="text-sm text-muted-foreground">No payment gateways are available right now. Please try again shortly.</p>}
 					{gateways.map((gateway) => (
 						<Card
 							key={gateway.service}
@@ -238,9 +269,22 @@ export function PaymentOptions({ onSelect, isLoading = false }: PaymentOptionsPr
 						<div className="flex items-center gap-4">
 							<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">{getMethodIcon(method.identifier)}</div>
 							<div className="flex-1">
-								<p className="font-medium">{method.title}</p>
-								<p className="line-clamp-2 text-sm text-muted-foreground">{method.description.replace(/<[^>]*>/g, '')}</p>
-								{method.identifier === 'FLEXI_PAY' && <p className="mt-1 text-xs text-primary">Pay in {parseInstalments(method.instalments).join(', ')} instalments</p>}
+								{(() => {
+									const presentation = getMethodPresentation(method);
+									return (
+										<>
+											<div className="flex flex-wrap items-center gap-2">
+												<p className="font-medium">{presentation.title}</p>
+												{presentation.badge && (
+													<span className={`rounded-full px-2 py-1 text-[8px] font-semibold leading-none ${presentation.badge.className}`}>
+														{presentation.badge.label}
+													</span>
+												)}
+											</div>
+											<p className="line-clamp-2 text-sm text-muted-foreground">{presentation.description}</p>
+										</>
+									);
+								})()}
 							</div>
 							<ChevronRight className="h-4 w-4 text-muted-foreground" />
 						</div>

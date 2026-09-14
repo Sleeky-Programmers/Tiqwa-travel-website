@@ -159,7 +159,7 @@ export default function EmailVerificationPage() {
 								))}
 							</div>
 						</fieldset>
-						{error && <p className="rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+						{error && <p className="rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 						<Button
 							type="submit"
 							className="h-[3.25rem] w-full"

@@ -1,11 +1,11 @@
 'use client';
 
-import { Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { ChevronsUpDown, Loader2, Plane, Search } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { formatAirportLabel, getAirports } from '@/services/whitelabel-api';
+import { getAirports } from '@/services/whitelabel-api';
 
 import type { Airport } from '@/types/whitelabel';
 
@@ -126,12 +126,23 @@ export function AirportCombobox({ label, value, selectedCode, onSelect, placehol
 					<ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 shrink-0 opacity-50" />
 				</div>
 				<PopoverContent
-					className="glossy w-[var(--anchor-width)] min-w-0 max-w-[calc(100vw-2rem)] p-0"
+					className="glossy w-[var(--anchor-width)] min-w-0 max-w-[calc(100vw-2rem)] rounded-2xl p-3"
 					align="start"
 					sideOffset={4}
 					initialFocus={inputRef}
 					finalFocus={inputRef}>
-					<div className="max-h-60 overflow-y-auto p-1">
+					<div className="relative mb-2">
+						<Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+						<input
+							type="text"
+							autoComplete="off"
+							value={query}
+							placeholder="Search airports..."
+							onChange={(e) => setQuery(e.target.value)}
+							className="h-11 w-full rounded-xl border-0 bg-secondary/70 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/20 dark:bg-white/5"
+						/>
+					</div>
+					<div className="max-h-60 overflow-y-auto">
 						{isLoading && (
 							<div className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">
 								<Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -148,11 +159,23 @@ export function AirportCombobox({ label, value, selectedCode, onSelect, placehol
 										key={`${airport.iata_code}-${airport.id ?? airport.name}`}
 										type="button"
 										onClick={() => handleSelect(airport)}
-										className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition-colors hover:bg-primary/10">
-										<Check className={cn('h-3.5 w-3.5 shrink-0 text-primary', isSelected ? 'opacity-100' : 'opacity-0')} />
+										className={cn(
+											'flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors',
+											isSelected ? 'bg-primary/10' : 'hover:bg-secondary/60'
+										)}>
+										<span
+											className={cn(
+												'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
+												isSelected ? 'bg-primary/15 text-primary' : 'bg-secondary text-muted-foreground'
+											)}>
+											<Plane className="h-4 w-4 -rotate-45" />
+										</span>
 										<span className="min-w-0 flex-1">
-											<span className="font-medium">{formatAirportLabel(airport)}</span>
-											<span className="ml-1 text-[11px] text-muted-foreground">— {airport.country}</span>
+											<span className="block text-sm">
+												<span className="font-semibold text-foreground">{airport.city}</span>{' '}
+												<span className={cn('font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>({airport.iata_code})</span>
+											</span>
+											<span className="block truncate text-xs text-muted-foreground">{airport.name}</span>
 										</span>
 									</button>
 								);

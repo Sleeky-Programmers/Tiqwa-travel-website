@@ -7,6 +7,7 @@ import { CountryDropdown } from '@/components/ui/CountryDropdown';
 import { DateOfBirthPicker } from '@/components/ui/DateOfBirthPicker';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
+
 import type { PassengerType } from '@/types/whitelabel';
 
 export interface PassengerData {
@@ -39,6 +40,7 @@ interface PassengerFormProps {
 	totalPassengers?: number;
 	passengerType?: PassengerType;
 	isDomestic?: boolean;
+	showContactFields?: boolean;
 	/** Only show/require document fields when the flight's confirm-price response says so. */
 	documentRequired?: boolean;
 	/** Locks every field once the user has moved into the payment step. */
@@ -84,6 +86,7 @@ export function PassengerForm({
 	totalPassengers,
 	passengerType,
 	isDomestic = false,
+	showContactFields = true,
 	documentRequired = false,
 	disabled = false,
 }: PassengerFormProps) {
@@ -95,16 +98,19 @@ export function PassengerForm({
 	};
 
 	const documentOptions = isDomestic ? DOMESTIC_DOCUMENT_TYPES : INTERNATIONAL_DOCUMENT_TYPES;
+	const isPrimaryContact = passengerNumber === 1 && passengerType === 'adult';
 
 	return (
 		<div className="space-y-4">
 			{/* Header with passenger number and remove button */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
-					<h3 className="text-lg font-semibold">Passenger Details {passengerNumber && totalPassengers && `(${passengerNumber} of ${totalPassengers})`}</h3>
 					{passengerType && (
-						<span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{PASSENGER_TYPE_LABELS[passengerType]}</span>
+						<span className="order-first rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{PASSENGER_TYPE_LABELS[passengerType]}</span>
 					)}
+					<h3 className="text-lg font-semibold">
+						{isPrimaryContact ? 'Primary contact' : 'Passenger details'} {passengerNumber && totalPassengers && `(${passengerNumber} of ${totalPassengers})`}
+					</h3>
 				</div>
 				{showRemove && onRemove && (
 					<button
@@ -130,12 +136,12 @@ export function PassengerForm({
 							type="button"
 							onClick={() => setIsTitleOpen(!isTitleOpen)}
 							disabled={disabled}
-							className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50">
+							className="flex h-11 w-full items-center justify-between rounded-sm border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50">
 							<span className={cn(!data.title && 'text-muted-foreground')}>{data.title ? TITLE_OPTIONS.find((opt) => opt.value === data.title)?.label : 'Select'}</span>
 							<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isTitleOpen && 'rotate-180')} />
 						</button>
 						{isTitleOpen && (
-							<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+							<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-border bg-background shadow-lg">
 								{TITLE_OPTIONS.map((opt) => (
 									<button
 										key={opt.value}
@@ -194,44 +200,52 @@ export function PassengerForm({
 				<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 					Gender <span className="ml-1 text-primary">*</span>
 				</label>
-				<div className="mt-1 flex gap-2">
+				<div className="mt-1 grid grid-cols-3 gap-2">
 					{GENDER_OPTIONS.map((opt) => (
 						<button
 							key={opt.value}
 							type="button"
 							onClick={() => update('gender', opt.value)}
 							disabled={disabled}
-							className={`
-                h-9 flex-1 rounded-xl border px-3 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-50
-                ${data.gender === opt.value ? 'border-primary bg-primary text-white' : 'border-border bg-background hover:bg-primary/10'}
-              `}>
+							className={cn(
+								'h-11 w-full rounded-sm border-2 px-3 text-left text-xs font-medium text-primary/75 transition-all disabled:pointer-events-none disabled:opacity-50',
+								data.gender === opt.value ? 'border-primary/60 bg-primary/10 text-primary' : 'border-border bg-background hover:border-primary/35 hover:bg-primary/5'
+							)}>
+							<span
+								className={cn(
+									'mr-2 inline-flex h-3.5 w-3.5 translate-y-[2px] items-center justify-center rounded-full border border-primary/45',
+									data.gender === opt.value && 'border-primary'
+								)}>
+								<span className={cn('h-2 w-2 rounded-full bg-primary transition-opacity', data.gender === opt.value ? 'opacity-70' : 'opacity-0')} />
+							</span>
 							{opt.label}
 						</button>
 					))}
 				</div>
 			</div>
 
-			{/* Contact Info */}
-			<div className="grid gap-4 sm:grid-cols-2">
-				<Input
-					required
-					disabled={disabled}
-					type="email"
-					label="Email"
-					value={data.email}
-					placeholder="john@example.com"
-					onChange={(e) => update('email', e.target.value)}
-				/>
-				<Input
-					required
-					disabled={disabled}
-					type="tel"
-					label="Phone"
-					value={data.phone}
-					placeholder="+234 801 234 5678"
-					onChange={onPhoneChange || ((e) => update('phone', e.target.value))}
-				/>
-			</div>
+			{showContactFields && (
+				<div className="grid gap-4 sm:grid-cols-2">
+					<Input
+						required
+						disabled={disabled}
+						type="email"
+						label="Email"
+						value={data.email}
+						placeholder="john@example.com"
+						onChange={(e) => update('email', e.target.value)}
+					/>
+					<Input
+						required
+						disabled={disabled}
+						type="tel"
+						label="Phone"
+						value={data.phone}
+						placeholder="+234 801 234 5678"
+						onChange={onPhoneChange || ((e) => update('phone', e.target.value))}
+					/>
+				</div>
+			)}
 
 			{/* Date of Birth */}
 			<DateOfBirthPicker
@@ -263,14 +277,14 @@ export function PassengerForm({
 									type="button"
 									onClick={() => setIsDocumentTypeOpen(!isDocumentTypeOpen)}
 									disabled={disabled}
-									className="flex h-10 w-full items-center justify-between rounded-xl border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50">
+									className="flex h-11 w-full items-center justify-between rounded-sm border border-border bg-background px-3 text-xs font-normal transition-all hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50">
 									<span className={cn(!data.documentType && 'text-muted-foreground')}>
 										{data.documentType ? documentOptions.find((opt) => opt.value === data.documentType)?.label : `Select document type${isDomestic ? '' : ''}`}
 									</span>
 									<ChevronDown className={cn('h-3.5 w-3.5 transition-transform', isDocumentTypeOpen && 'rotate-180')} />
 								</button>
 								{isDocumentTypeOpen && (
-									<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+									<div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-border bg-background shadow-lg">
 										{documentOptions.map((opt) => (
 											<button
 												key={opt.value}

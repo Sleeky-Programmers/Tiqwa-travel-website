@@ -3,64 +3,11 @@ const USER_KEY = 'tiqwa_user';
 const USER_ROLE_KEY = 'tiqwa_user_role';
 // Refresh-ready: add REFRESH_TOKEN_KEY when API supports it
 
-const AUTH_API_BASE = process.env.TIQWA_API_URL ?? 'https://sandbox.premiumwhitelabel.com/api/v2';
+import type { AuthApiResponse, AuthApiUser, AuthUser, LoginCredentials, ProfileApiUser, SignupData, VerifyEmailData } from '@/types/auth';
 
-export interface AuthUser {
-	id: number;
-	name: string;
-	firstName: string;
-	lastName: string;
-	email: string;
-	phone?: string;
-	avatar?: string;
-	role?: string | null; // ✅ Added role field
-}
+export type { AuthUser } from '@/types/auth';
 
-export interface LoginCredentials {
-	email: string;
-	password: string;
-}
-
-export interface SignupData {
-	first_name: string;
-	last_name: string;
-	email: string;
-	password: string;
-	phone?: string;
-}
-
-interface AuthApiResponse<T> {
-	success: boolean;
-	data?: T;
-	message?: string;
-}
-
-interface LoginResponseData {
-	uniqueid?: string;
-	name?: string;
-	first_name?: string;
-	last_name?: string;
-	email?: string;
-	phone?: string | null;
-	avatar?: string | null;
-	token: string;
-	role?: string | null;
-	last_login_at?: string;
-	last_login_ip?: string;
-	created_at?: string;
-	updated_at?: string;
-}
-
-interface ProfileResponseData {
-	id: number;
-	name?: string;
-	first_name?: string;
-	last_name?: string;
-	email: string;
-	phone?: string;
-	avatar?: string;
-	role?: string | null;
-}
+const AUTH_API_BASE = typeof window === 'undefined' ? process.env.TIQWA_API_URL ?? 'https://sandbox.premiumwhitelabel.com/api/v2' : '/api/proxy';
 
 /**
  * Check if a user has admin privileges based on role
@@ -74,7 +21,7 @@ export function isAdminUser(role?: string | null): boolean {
 	return normalizedRole !== 'user' && normalizedRole !== 'customer';
 }
 
-function mapProfile(data: ProfileResponseData): AuthUser {
+function mapProfile(data: ProfileApiUser): AuthUser {
 	const firstName = data.first_name ?? '';
 	const lastName = data.last_name ?? '';
 	return {
@@ -83,8 +30,8 @@ function mapProfile(data: ProfileResponseData): AuthUser {
 		firstName,
 		lastName,
 		email: data.email,
-		phone: data.phone,
-		avatar: data.avatar,
+		phone: data.phone ?? undefined,
+		avatar: data.avatar ?? undefined,
 		role: data.role ?? null,
 	};
 }
@@ -158,14 +105,14 @@ export async function login(credentials: LoginCredentials): Promise<{
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(credentials),
 		});
-		const data = (await response.json()) as AuthApiResponse<LoginResponseData>;
+		const data = (await response.json()) as AuthApiResponse<AuthApiUser>;
 
 		if (data.success && data.data?.token) {
 			setAccessToken(data.data.token);
 
 			const userData = data.data;
 			const user: AuthUser = {
-				id: userData.uniqueid ? parseInt(userData.uniqueid) : 0,
+				id: userData.uniqueid ? Number(userData.uniqueid) : 0,
 				name: userData.name || '',
 				firstName: userData.first_name || '',
 				lastName: userData.last_name || '',
@@ -203,12 +150,36 @@ export async function signup(data: SignupData): Promise<{ success: boolean; erro
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(payload),
 		});
-		const result = await response.json();
+		const result = (await response.json()) as AuthApiResponse<unknown>;
 		if (result.success) return { success: true };
 		return { success: false, error: result.message ?? 'Signup failed' };
 	} catch (error) {
 		console.error(error);
 		return { success: false, error: (error as Error).message ?? 'Network error. Please try again.' };
+	}
+}
+
+export async function verifyEmail({ email, token }: { email: string; token: number | string }): Promise<{
+	success: boolean;
+	data?: VerifyEmailData;
+	error?: string;
+	errors?: Record<string, string[]>;
+}> {
+	try {
+		const response = await fetch(`${AUTH_API_BASE}/auth/verify-email`, {
+			method: 'POST',
+			headers: {
+				'Accept': 'application/json',
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ email, token }),
+		});
+		const result = (await response.json()) as AuthApiResponse<VerifyEmailData>;
+
+		if (result.success) return { success: true, data: result.data };
+		return { success: false, error: result.message, errors: result.errors };
+	} catch {
+		return { success: false, error: 'Network error. Please try again.' };
 	}
 }
 
@@ -257,7 +228,7 @@ export async function fetchUserProfile(token?: string): Promise<AuthUser | null>
 		const response = await fetch(`${AUTH_API_BASE}/user/profile`, {
 			headers: { Authorization: `Bearer ${authToken}` },
 		});
-		const result = (await response.json()) as AuthApiResponse<ProfileResponseData>;
+		const result = (await response.json()) as AuthApiResponse<ProfileApiUser>;
 
 		if (result.success && result.data) {
 			const user = mapProfile(result.data);

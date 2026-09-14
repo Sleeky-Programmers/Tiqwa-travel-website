@@ -1,8 +1,10 @@
 'use client';
 
-import Image from 'next/image';
+import { Globe2, ShieldCheck } from 'lucide-react';
+import { motion } from 'motion/react';
 import Link from 'next/link';
 
+import { AuthVisualPanel } from '@/components/layout/AuthVisualPanel';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 
 import type { ReactNode } from 'react';
@@ -14,47 +16,56 @@ interface AuthLayoutProps {
 	subtext: string;
 	badges: string[];
 	children: ReactNode;
+	footer?: ReactNode;
 }
 
-export function AuthLayout({ image, headline, subtext, badges, children }: AuthLayoutProps) {
+export function AuthLayout({ image, headline, subtext, badges, children, footer }: AuthLayoutProps) {
 	return (
 		<div className="grid min-h-screen lg:grid-cols-2">
-			{/* Left panel — image + headline, hidden below lg */}
-			<div className="relative hidden overflow-hidden bg-ink lg:flex lg:flex-col lg:justify-between lg:p-10">
-				<Image
-					src={image}
-					alt=""
-					fill
-					priority
-					className="object-cover"
-				/>
-				<div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/35 to-black/70" />
+			<AuthVisualPanel
+				image={image}
+				headline={headline}
+				description={subtext}
+				badges={badges.map((badge, index) => {
+					const Icon = index === 0 ? ShieldCheck : Globe2;
 
-				<Link
-					href="/"
-					className="relative z-10 flex items-center gap-2">
-					<BrandLogo className="text-lg text-white" />
-				</Link>
-
-				<div className="relative z-10">
-					<h1 className="max-w-md text-4xl font-extrabold leading-tight text-white sm:text-5xl">{headline}</h1>
-					<p className="mt-5 max-w-sm text-white/80">{subtext}</p>
-
-					<div className="mt-10 flex items-center gap-6 border-t border-white/15 pt-6">
-						{badges.map((badge) => (
-							<span
-								key={badge}
-								className="text-xs font-medium text-white/75">
-								{badge}
-							</span>
-						))}
-					</div>
-				</div>
-			</div>
+					return (
+						<>
+							<Icon
+								className="h-4 w-4 text-primary"
+								aria-hidden="true"
+							/>
+							{badge}
+						</>
+					);
+				})}
+				logo={
+					<Link
+						href="/"
+						className="absolute left-10 top-10 z-10 flex items-center gap-2">
+						<BrandLogo className="text-2xl text-white" />
+					</Link>
+				}
+			/>
 
 			{/* Right panel — form */}
-			<div className="flex items-center justify-center p-6 sm:p-12">
-				<div className="w-full max-w-md">{children}</div>
+			<div className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-12">
+				<motion.div
+					initial={{ opacity: 0, y: 16 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+					className="flex w-full max-w-lg flex-1 flex-col justify-center">
+					{children}
+				</motion.div>
+				{footer && (
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						transition={{ duration: 0.5, delay: 0.4 }}
+						className="w-full max-w-lg shrink-0 pt-6">
+						{footer}
+					</motion.div>
+				)}
 			</div>
 		</div>
 	);

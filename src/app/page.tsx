@@ -8,6 +8,7 @@ import { PopularRoutes } from '@/components/features/home/PopularRoutes';
 // import { WhyChooseUs } from '@/components/features/home/WhyChooseUs';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { getHomepageData, getPopularAirports } from '@/services/whitelabel-api';
+import { heroBackgroundImage } from '@/utils/images';
 
 export default async function HomePage() {
 	const [homepage, popularAirports] = await Promise.all([
@@ -18,7 +19,7 @@ export default async function HomePage() {
 		getPopularAirports().catch(() => []),
 	]);
 
-	const heroImage = homepage.hero_banners?.[0]?.image;
+	const heroImage = heroBackgroundImage;
 
 	return (
 		<PublicLayout>

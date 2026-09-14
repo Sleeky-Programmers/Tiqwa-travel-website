@@ -37,6 +37,8 @@
 	--ink-foreground: #f7f5f4;
 	--ink-muted: rgba(247, 245, 244, 0.62);
 	--ink-border: rgba(247, 245, 244, 0.12);
+	--ink-cta: #1a1d2e;
+	--ink-footer: #111322;
 
 	/* ── Glassmorphism ── */
 	--glass-bg: rgba(255, 255, 255, 0.92);
@@ -348,6 +350,16 @@ h6 {
 /* ── Always-dark high-contrast bands (stat strips, CTA, footer) ── */
 .band-dark {
 	background: var(--ink);
+	color: var(--ink-foreground);
+}
+
+.band-dark-cta {
+	background: var(--ink-cta);
+	color: var(--ink-foreground);
+}
+
+.band-dark-footer {
+	background: var(--ink-footer);
 	color: var(--ink-foreground);
 }
 

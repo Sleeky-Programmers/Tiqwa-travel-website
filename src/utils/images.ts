@@ -1,4 +1,5 @@
 export const imageFixes = {
+	landingHero: '/images/landing-page-hero.webp',
 	createAccount: '/images/create-account.webp',
 	dubai: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop',
 	paris: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=600&fit=crop',
@@ -32,7 +33,7 @@ export const getDestinationImage = (city: string): string => {
 	return destinationImages[city.toLowerCase()] ?? defaultImage;
 };
 
-export const heroBackgroundImage = '/images/hero-image.webp';
+export const heroBackgroundImage = imageFixes.landingHero;
 
 export const emailVerificationImage = '/images/verify-security.webp';
 

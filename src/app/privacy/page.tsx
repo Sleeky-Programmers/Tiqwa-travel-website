@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const sections = [
@@ -26,11 +27,11 @@ export default function PrivacyPage() {
             At Tiqwa Travel, we take your privacy seriously. This policy describes how we collect, use, and protect your personal information.
           </p>
           <div className="mt-10 space-y-8">
-            {sections.map((section) => (
-              <div key={section.title}>
+            {sections.map((section, i) => (
+              <Reveal key={section.title} delay={i * 0.06} y={16}>
                 <h2 className="text-lg font-semibold">{section.title}</h2>
                 <p className="mt-2 text-muted-foreground leading-relaxed">{section.content}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </motion.div>

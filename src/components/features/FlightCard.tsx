@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
 import { FlightSummaryModal } from '@/components/features/FlightSummaryModal';
-import { BOOKING_TRANSITION_MESSAGES, FlightSearchLoader } from '@/components/features/search/FlightSearchLoader';
+import {
+    BOOKING_TRANSITION_MESSAGES, FlightSearchLoader
+} from '@/components/features/search/FlightSearchLoader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { formatFlightPrice } from '@/services/whitelabel-api';
@@ -56,16 +58,16 @@ export function FlightCard({ flight, passengers = 1, adults, children, infants, 
 	};
 
 	return (
-		<Card className="flex flex-col gap-5 p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-6">
+		<Card className="flex flex-col gap-5 rounded-md p-4 sm:p-5 lg:flex-row lg:items-center lg:gap-6">
 			{/* Airline block */}
 			<div className="flex items-center gap-3 lg:w-52 lg:shrink-0">
-				<div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border bg-white/50">
+				<div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md border border-border bg-white">
 					{flight.airlineLogo && !imageError ? (
 						<Image
 							src={flight.airlineLogo}
 							alt={`${flight.airline} logo`}
 							fill
-							className="object-contain p-1.5"
+							className="object-contain p-0"
 							onError={() => setImageError(true)}
 						/>
 					) : (

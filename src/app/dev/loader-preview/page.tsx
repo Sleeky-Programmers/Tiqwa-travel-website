@@ -22,7 +22,7 @@ export default function LoaderPreviewPage() {
 		<div className="min-h-screen space-y-4 bg-secondary p-8">
 			<div className="mx-auto max-w-md space-y-2 rounded-2xl border border-border bg-background-card p-5">
 				<h1 className="text-lg font-bold">Loader Preview (dev only)</h1>
-				<p className="text-sm text-muted-foreground">Force the transition UI open for visual QA — no search or checkout flow needed.</p>
+				<p className="text-sm text-muted-foreground">Force the transition UI open for visual QA, no search or checkout flow needed.</p>
 				<div className="flex flex-wrap gap-2 pt-2">
 					<button
 						className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"

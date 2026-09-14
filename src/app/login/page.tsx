@@ -46,12 +46,17 @@ function LoginContent() {
 			image={imageFixes.login}
 			headline="Discover your next adventure."
 			subtext="Sign in to access exclusive flight deals, custom travel alerts, and member-only pricing tailored just for you."
-			badges={['Best price guarantee', '500+ airlines worldwide']}>
-			<div className="page-fade-in">
+			badges={['Best Price Guarantee', '500+ Airlines']}
+			footer={
+				<p className="text-center text-sm text-muted-foreground">
+					Don&apos;t have an account? <Link href="/signup">Sign Up</Link>
+				</p>
+			}>
+			<div>
 				<h1 className="text-3xl font-extrabold">Welcome Back</h1>
 				<p className="mt-2 text-sm text-muted-foreground">Please enter your credentials to access your account.</p>
 
-				{error && <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
+				{error && <p className="mt-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 
 				<form
 					onSubmit={handleSubmit}
@@ -76,7 +81,7 @@ function LoginContent() {
 						<button
 							type="button"
 							onClick={() => setShowPassword(!showPassword)}
-							className="absolute right-3 top-[calc(50%+0.30rem)] text-muted-foreground hover:text-foreground"
+							className="absolute right-3 top-[calc(50%+0.30rem)] text-muted-foreground transition-colors duration-200 hover:text-primary"
 							aria-label={showPassword ? 'Hide password' : 'Show password'}>
 							{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
 						</button>
@@ -96,10 +101,6 @@ function LoginContent() {
 						{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
 					</Button>
 				</form>
-
-				<p className="mt-6 text-center text-sm text-muted-foreground">
-					Don&apos;t have an account? <Link href="/signup">Sign Up</Link>
-				</p>
 			</div>
 		</AuthLayout>
 	);

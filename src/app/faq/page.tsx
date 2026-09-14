@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { Reveal } from "@/components/ui/Reveal";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 
 const faqs = [
@@ -28,7 +29,7 @@ export default function FAQPage() {
           <p className="mt-3 text-muted-foreground">Find answers to common questions about booking with Tiqwa Travel</p>
           <div className="mt-10 space-y-3">
             {faqs.map((faq, i) => (
-              <div key={i} className="glossy overflow-hidden rounded-2xl">
+              <Reveal key={i} delay={i * 0.06} y={14} className="glossy overflow-hidden rounded-2xl transition-shadow duration-200 hover:shadow-md">
                 <button onClick={() => setOpenIndex(openIndex === i ? null : i)} className="flex w-full items-center justify-between px-6 py-4 text-left font-medium transition-colors hover:text-primary">
                   {faq.question}
                   <ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${openIndex === i ? "rotate-180" : ""}`} />
@@ -40,7 +41,7 @@ export default function FAQPage() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+              </Reveal>
             ))}
           </div>
         </motion.div>

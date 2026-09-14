@@ -612,6 +612,21 @@ export async function confirmFlightPrice(flightId: string) {
 	});
 }
 
+export interface CouponValidationData {
+	is_valid: boolean;
+	discount: number;
+	coupon_id: number;
+	coupon_code: string;
+}
+
+export async function validateFlightCoupon(paymentAmount: number, couponCode: string) {
+	return postJSON<CouponValidationData>('/rewards/coupon/validate', {
+		payment_amount: paymentAmount,
+		coupon_code: couponCode,
+		service: 'FLIGHT',
+	});
+}
+
 export async function createBooking(flightId: string, passengers: BookingPassengerPayload[], documentRequired: boolean) {
 	return postJSON<CreateBookingData>(`/flight/book/create/${flightId}`, {
 		document_required: documentRequired,
@@ -1099,31 +1114,20 @@ export async function getPaymentGateways(): Promise<{
 	success: boolean;
 	data: PaymentGateway[];
 }> {
-	const token = getAccessToken();
-	if (!token) return { success: false, data: [] };
+	const result = await fetchAPIResult<PaymentGateway[]>('/get/payment-gateways');
 
-	try {
-		const result = await fetchAPIResult<PaymentGateway[]>('/get/payment-gateways', {
-			headers: { Authorization: `Bearer ${token}` },
-		});
-
-		// If the API call failed
-		if (!result.success) {
-			return { success: false, data: [] };
-		}
-
-		// If successful, map the data
-		const gateways = (result.data || []).map((g) => ({
-			...g,
-			public_key: (g as any).public_key || '',
-			secret_key: (g as any).secret_key || '',
-			is_active: (g as any).is_active || false,
-		}));
-
-		return { success: true, data: gateways };
-	} catch {
+	if (!result.success) {
 		return { success: false, data: [] };
 	}
+
+	const gateways = (result.data || []).map((g) => ({
+		...g,
+		public_key: (g as any).public_key || '',
+		secret_key: (g as any).secret_key || '',
+		is_active: (g as any).is_active || false,
+	}));
+
+	return { success: true, data: gateways };
 }
 
 export async function getBankAccounts() {

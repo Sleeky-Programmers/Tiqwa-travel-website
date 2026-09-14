@@ -10,7 +10,7 @@ import { imageFixes } from '@/utils/images';
 
 export function CtaBand() {
 	return (
-		<section className="band-dark py-20">
+		<section className="band-dark-cta py-20">
 			<Container>
 				<div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
 					<motion.div

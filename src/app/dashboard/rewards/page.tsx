@@ -1,10 +1,30 @@
 'use client';
 
-import { ArrowRight, Award, Check, Clock, Copy, Gift, History, Share2, Sparkles, Star, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, Check, Copy, Gift, History, Share2, Sparkles, Star, TrendingUp, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
-import { getRewardsData, RewardsData } from '@/services/whitelabel-api';
+import { RewardsData, getRewardsData } from '@/services/whitelabel-api';
+
+function StatusBadge({ label, type }: { label: string; type: 'success' | 'warning' | 'destructive' | 'info' }) {
+	switch (type) {
+		case 'success':
+			return <span className="dc-badge dc-badge-success">{label}</span>;
+		case 'warning':
+			return <span className="dc-badge dc-badge-warning">{label}</span>;
+		case 'destructive':
+			return <span className="dc-badge dc-badge-destructive">{label}</span>;
+		default:
+			return <span className="dc-badge dc-badge-info">{label}</span>;
+	}
+}
+
+function formatTxnDate(dateStr?: string): string {
+	if (!dateStr) return '—';
+	const parsed = new Date(dateStr);
+	if (Number.isNaN(parsed.getTime())) return dateStr;
+	return parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export default function RewardsPage() {
 	const [rewards, setRewards] = useState<RewardsData | null>(null);
@@ -32,11 +52,10 @@ export default function RewardsPage() {
 
 	const shareReferral = async () => {
 		if (rewards?.referral_code) {
-			const text = `Use my referral code ${rewards.referral_code} to get rewards on Tiqwa Travel! ✈️`;
+			const text = `Use my referral code ${rewards.referral_code} to get rewards on your next flight! ✈️`;
 			try {
 				await navigator.share({ text });
 			} catch {
-				// Fallback - copy to clipboard
 				await navigator.clipboard.writeText(text);
 				setCopied(true);
 				setTimeout(() => setCopied(false), 2000);
@@ -44,228 +63,183 @@ export default function RewardsPage() {
 		}
 	};
 
-	if (isLoading) {
-		return (
-			<div className="flex flex-col items-center justify-center py-20">
-				<div className="relative">
-					<div className="h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-					<Gift className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
-				</div>
-				<p className="mt-4 text-sm text-muted-foreground">Loading your rewards...</p>
-			</div>
-		);
-	}
-
 	const totalPoints = rewards?.total_referral_reward ?? 0;
 	const referralCode = rewards?.referral_code || '—';
 	const transactions = rewards?.referral_payment_history ?? [];
+	const GOLD_TIER = 2500;
+
+	const statCards = [
+		{
+			title: 'Total Points',
+			value: totalPoints.toLocaleString(),
+			sub: `${totalPoints > 0 ? '+' : ''}${totalPoints} this month`,
+			icon: Gift,
+			chip: 'bg-primary-light text-primary dark:bg-primary/15',
+		},
+		{
+			title: 'Referrals',
+			value: String(rewards?.referral_history?.length ?? 0),
+			sub: 'Friends joined',
+			icon: User,
+			chip: 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/15',
+		},
+		{
+			title: 'Next Tier',
+			value: 'Gold',
+			sub: `${Math.max(GOLD_TIER - totalPoints, 0).toLocaleString()} points to go`,
+			icon: Star,
+			chip: 'bg-amber-50 text-amber-500 dark:bg-amber-500/15',
+		},
+	];
 
 	return (
-		<div className="space-y-7 page-transition">
+		<div className="space-y-6 animate-fade-in">
 			{/* Page Header */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Rewards & Loyalty</h1>
-					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-						<Award className="h-4 w-4" />
-						Earn points, refer friends, and save on flights
-					</p>
+					<h1 className="text-2xl font-bold tracking-tight sm:text-[1.75rem]">Rewards & Loyalty</h1>
+					<p className="mt-1 text-xs text-muted-foreground">Earn points, refer friends, and save on flights</p>
 				</div>
-				<div className="hidden sm:flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-					<Sparkles className="h-3 w-3" />
-					{totalPoints > 0 ? `${totalPoints} points earned` : 'Start earning'}
-				</div>
+				<button
+					type="button"
+					onClick={shareReferral}
+					disabled={!rewards?.referral_code}
+					className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-primary/25 transition-all hover:bg-primary-hover disabled:pointer-events-none disabled:opacity-50">
+					<TrendingUp className="h-3.5 w-3.5" />
+					Start Earning
+				</button>
 			</div>
 
-			{/* Stats Grid */}
+			{/* Stats */}
 			<div className="grid gap-4 sm:grid-cols-3">
-				{/* Total Points Card */}
-				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/10 via-primary/5 to-transparent p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:from-amber-500/20 dark:via-primary/10 dark:shadow-none">
-					<div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-amber-500/10 blur-2xl" />
-					<div className="relative z-10">
-						<div className="flex items-start justify-between">
-							<div>
-								<p className="text-sm font-medium text-muted-foreground">Total Points</p>
-								<p className="mt-1 text-3xl font-bold tracking-tight">{totalPoints}</p>
-								<div className="mt-2 flex items-center gap-1.5">
-									<TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-									<span className="text-xs font-medium text-emerald-500">+12% this month</span>
-								</div>
-							</div>
-							<div className="rounded-2xl bg-amber-500/15 p-3">
-								<Gift className="h-6 w-6 text-amber-500" />
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{/* Referrals Card */}
-				<div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
-					<div className="flex items-start justify-between">
+				{statCards.map((stat) => (
+					<div
+						key={stat.title}
+						className="dc-card flex items-start justify-between gap-3 p-5 transition-shadow hover:shadow-md">
 						<div>
-							<p className="text-sm font-medium text-muted-foreground">Referrals</p>
-							<p className="mt-1 text-3xl font-bold tracking-tight">{transactions.length}</p>
-							<div className="mt-2 flex items-center gap-1.5">
-								<Users className="h-3.5 w-3.5 text-primary" />
-								<span className="text-xs font-medium text-muted-foreground">Friends joined</span>
-							</div>
+							<p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{stat.title}</p>
+							<p className="mt-1.5 text-2xl font-bold tracking-tight">{stat.value}</p>
+							<p className="mt-1.5 text-[11px] text-muted-foreground">{stat.sub}</p>
 						</div>
-						<div className="rounded-2xl bg-primary/15 p-3">
-							<Users className="h-6 w-6 text-primary" />
+						<div className={`dc-icon-chip h-10 w-10 ${stat.chip}`}>
+							<stat.icon className="h-4.5 w-4.5" />
 						</div>
 					</div>
-				</div>
-
-				{/* Next Tier Card */}
-				<div className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all hover:scale-[1.02] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none dark:hover:shadow-2xl">
-					<div className="flex items-start justify-between">
-						<div>
-							<p className="text-sm font-medium text-muted-foreground">Next Tier</p>
-							<p className="mt-1 text-2xl font-bold tracking-tight">Gold</p>
-							<div className="mt-2 flex items-center gap-1.5">
-								<Star className="h-3.5 w-3.5 text-amber-500" />
-								<span className="text-xs font-medium text-muted-foreground">2,550 points to go</span>
-							</div>
-						</div>
-						<div className="rounded-2xl bg-amber-500/15 p-3">
-							<Star className="h-6 w-6 text-amber-500" />
-						</div>
-					</div>
-					<div className="absolute inset-0 -z-10 bg-gradient-to-br from-transparent via-transparent to-amber-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
-				</div>
+				))}
 			</div>
 
-			{/* Referral Section */}
+			{/* Refer & Earn banner */}
 			<div>
-				<div className="mb-4 flex items-center justify-between">
-					<div>
-						<h2 className="text-base font-semibold">Refer & Earn</h2>
-						<p className="text-xs text-muted-foreground mt-0.5">Share your code and earn rewards</p>
-					</div>
+				<div className="mb-4">
+					<h2 className="text-base font-bold">Refer & Earn</h2>
+					<p className="mt-0.5 text-xs text-muted-foreground">Share your unique referral code with friends</p>
 				</div>
-
-				<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:from-primary/20 dark:shadow-none">
-					<div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-					<div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-
-					<div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-						<div className="flex-1">
-							<div className="flex items-center gap-2">
-								<TrendingUp className="h-5 w-5 text-primary" />
-								<p className="font-semibold">Invite Friends, Get Rewards</p>
-							</div>
-							<p className="text-sm text-muted-foreground mt-1">Share your unique code. When they book, you both earn rewards!</p>
+				<div className="dc-card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex items-start gap-3">
+						<div className="dc-icon-chip h-10 w-10 bg-primary-light text-primary dark:bg-primary/15">
+							<Sparkles className="h-4.5 w-4.5" />
 						</div>
-
-						<div className="flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2">
-							<div className="flex-1 sm:flex-none">
-								<code className="block rounded-xl bg-white/60 px-4 py-2.5 text-sm font-mono text-center dark:bg-white/10">{referralCode}</code>
-							</div>
-							<div className="flex gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={copyReferralCode}
-									disabled={!rewards?.referral_code}
-									className="rounded-xl hover:bg-primary/10 hover:text-primary">
-									{copied ? (
-										<>
-											<Check className="h-4 w-4" />
-											Copied!
-										</>
-									) : (
-										<>
-											<Copy className="h-4 w-4" />
-											Copy
-										</>
-									)}
-								</Button>
-								<Button
-									size="sm"
-									onClick={shareReferral}
-									disabled={!rewards?.referral_code}
-									className="rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35">
-									<Share2 className="h-4 w-4 mr-1.5" />
-									Share
-								</Button>
-							</div>
+						<div>
+							<p className="text-sm font-semibold">Invite Friends, Get Rewards</p>
+							<p className="mt-0.5 text-xs text-muted-foreground">Share your unique code. When they book, you both earn rewards!</p>
+						</div>
+					</div>
+					<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+						<code className="rounded-lg border border-[var(--dc-border)] bg-secondary/60 px-4 py-2 text-center font-mono text-sm dark:bg-white/5">{referralCode}</code>
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={copyReferralCode}
+								disabled={!rewards?.referral_code}
+								className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--dc-border)] px-3.5 py-2 text-xs font-semibold transition-colors hover:border-primary/40 hover:text-primary disabled:pointer-events-none disabled:opacity-50">
+								{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+								{copied ? 'Copied!' : 'Copy Link'}
+							</button>
+							<button
+								type="button"
+								onClick={shareReferral}
+								disabled={!rewards?.referral_code}
+								className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary-hover disabled:pointer-events-none disabled:opacity-50">
+								<Share2 className="h-3.5 w-3.5" />
+								Share Code
+							</button>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			{/* Transaction History */}
+			{/* Transaction History table */}
 			<div>
-				<div className="mb-4 flex items-center justify-between">
-					<div>
-						<h2 className="text-base font-semibold">Transaction History</h2>
-						<p className="text-xs text-muted-foreground mt-0.5">Your reward earnings</p>
-					</div>
-					{transactions.length > 0 && <span className="text-xs text-muted-foreground">{transactions.length} transactions</span>}
+				<div className="mb-4">
+					<h2 className="text-base font-bold">Transaction History</h2>
+					<p className="mt-0.5 text-xs text-muted-foreground">Your reward earnings and transactions</p>
 				</div>
-
-				<div className="rounded-2xl bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
-					{transactions.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-12">
-							<div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/8">
-								<History className="h-8 w-8 text-primary/40" />
+				<div className="dc-card overflow-hidden">
+					{isLoading ? (
+						<div className="flex justify-center py-14">
+							<div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+						</div>
+					) : transactions.length === 0 ? (
+						<div className="p-10 text-center">
+							<div className="dc-icon-chip mx-auto mb-4 h-14 w-14 bg-primary-light dark:bg-primary/15">
+								<History className="h-6 w-6 text-primary" />
 							</div>
-							<p className="font-medium">No transactions yet</p>
+							<p className="font-semibold">No transactions yet</p>
 							<p className="mt-1 text-sm text-muted-foreground">Start referring friends to earn rewards</p>
 						</div>
 					) : (
-						<div className="divide-y divide-border/60">
-							{transactions.map((txn, i) => (
-								<div
-									key={i}
-									className="flex items-center justify-between p-4 transition-colors hover:bg-primary/5 first:rounded-t-2xl last:rounded-b-2xl">
-									<div className="flex items-center gap-4">
-										<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-											<Gift className="h-4 w-4 text-emerald-500" />
-										</div>
-										<div>
-											<p className="font-medium text-sm">{txn.date || 'Referral reward'}</p>
-											<p className="text-xs text-muted-foreground flex items-center gap-1">
-												<Clock className="h-3 w-3" />
-												{txn.date ? 'Completed' : 'Pending'}
-											</p>
-										</div>
-									</div>
-									<div className="text-right">
-										<p className="font-bold text-emerald-600 dark:text-emerald-400">+{txn.amount}</p>
-										<p className="text-[10px] text-muted-foreground uppercase tracking-wide">Points</p>
-									</div>
-								</div>
-							))}
+						<div className="overflow-x-auto">
+							<table className="dc-table">
+							<thead>
+								<tr>
+									<th>#</th>
+									<th>Date</th>
+									<th>Amount (₦)</th>
+									<th>Payment Method</th>
+									<th>Status</th>
+								</tr>
+							</thead>
+							<tbody>
+								{transactions.map((txn, i) => (
+									<tr key={i}>
+										<td className="font-mono text-xs font-medium">RW-{String(i + 1).padStart(4, '0')}</td>
+										<td className="text-muted-foreground">{formatTxnDate(txn.date)}</td>
+										<td className="font-semibold">{txn.amount?.toLocaleString?.() ?? txn.amount}</td>
+										<td className="text-muted-foreground">
+											<span className="inline-flex items-center gap-1.5">
+												<span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+												Referral Bonus
+											</span>
+										</td>
+										<td>
+											<StatusBadge
+												label={txn.date ? 'Confirmed' : 'Pending'}
+												type={txn.date ? 'success' : 'warning'}
+											/>
+										</td>
+									</tr>
+								))}
+							</tbody>
+							</table>
 						</div>
 					)}
 				</div>
 			</div>
 
-			{/* CTA Card */}
-			<div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/10 via-primary/5 to-transparent p-7 backdrop-blur-xl dark:from-amber-500/20 dark:via-primary/10">
-				<div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />
-				<div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
-
-				<div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-					<div className="flex items-start gap-4">
-						<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-500/15">
-							<Sparkles className="h-6 w-6 text-amber-500" />
-						</div>
-						<div>
-							<h3 className="text-lg font-bold">Earn More Rewards</h3>
-							<p className="text-sm text-muted-foreground">Share your referral code with friends and family</p>
-						</div>
+			{/* Navy CTA band */}
+			<div className="dc-cta relative overflow-hidden p-6 sm:p-7">
+				<div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+					<div>
+						<h3 className="text-lg font-bold">Earn More Rewards</h3>
+						<p className="mt-1 text-sm text-[var(--ink-muted)]">Share your referral code with friends and family</p>
 					</div>
 					<Button
-						size="lg"
-						shape="pill"
+						variant="white"
 						onClick={shareReferral}
 						disabled={!rewards?.referral_code}
-						className="shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all hover:scale-105">
-						<Share2 className="mr-2 h-4 w-4" />
+						className="shrink-0">
+						<Share2 className="h-4 w-4" />
 						Share Now
-						<ArrowRight className="ml-2 h-4 w-4" />
 					</Button>
 				</div>
 			</div>

@@ -86,21 +86,16 @@ export function Sidebar({
 			)}
 			onMouseEnter={() => isCollapsed && onHoverChange(true)}
 			onMouseLeave={() => isCollapsed && onHoverChange(false)}>
-			<div className="dashboard-sidebar flex h-full flex-col overflow-hidden">
+			<div className="dc-sidebar flex h-full flex-col overflow-hidden">
 				{/* Brand header */}
 				<div
 					className={cn(
-						'border-b border-white/40 dark:border-white/10 px-4 py-4 flex-shrink-0',
+						'border-b border-[var(--dc-border)] px-4 py-5 flex-shrink-0',
 						isExpanded ? 'flex items-center justify-between' : 'flex justify-center'
 					)}>
 					{isExpanded ? (
 						<>
-							<div className="flex items-center gap-2.5">
-								<div>
-									<BrandLogo className="text-sm leading-none text-foreground" />
-									<p className="text-[10px] text-muted-foreground uppercase tracking-wider">Premium</p>
-								</div>
-							</div>
+							<BrandLogo className="text-base leading-none text-foreground" href="/dashboard" />
 							<button
 								onClick={onToggleCollapse}
 								className="rounded-lg p-1.5 text-muted-foreground/60 transition-colors hover:bg-primary/10 hover:text-primary"
@@ -118,44 +113,18 @@ export function Sidebar({
 					)}
 				</div>
 
-				{/* User Profile (when expanded) */}
-				{isExpanded && (userName || userEmail) && (
-					<div className="border-b border-white/40 dark:border-white/10 px-4 py-4 flex-shrink-0">
-						<div className="flex items-center gap-3">
-							<div className="relative flex-shrink-0">
-								<div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary-hover text-sm font-bold leading-none text-white shadow-lg ring-2 ring-primary/20">
-									{userAvatar ? (
-										<img
-											src={userAvatar}
-											alt={displayName}
-											className="h-full w-full object-cover"
-										/>
-									) : (
-										<span className="select-none">{getInitials(displayName)}</span>
-									)}
-								</div>
-								<div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400 dark:border-gray-800" />
-							</div>
-							<div className="min-w-0 flex-1">
-								<p className="truncate text-sm font-semibold leading-none">{displayName}</p>
-								{userEmail && <p className="mt-1 truncate text-xs text-muted-foreground">{userEmail}</p>}
-							</div>
-						</div>
-					</div>
-				)}
-
 				{/* Navigation */}
-				<nav className="flex-1 overflow-y-auto px-3 py-4 thin-scroll">
+				<nav className="flex-1 overflow-y-auto px-3 py-5 thin-scroll">
 					{navItems.map((section) => (
 						<div
 							key={section.section}
-							className="mb-4 last:mb-0">
+							className="mb-5 last:mb-0">
 							{isExpanded && (
 								<div className="px-3 pb-2">
 									<p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">{section.section}</p>
 								</div>
 							)}
-							<div className="space-y-0.5">
+							<div className="space-y-1">
 								{section.items.map((item) => {
 									const active = isNavActive(pathname, item.href, item.exact);
 									return (
@@ -164,13 +133,16 @@ export function Sidebar({
 											href={item.href}
 											variant="sidebar"
 											active={active}
-											className={!isExpanded ? 'justify-center px-2' : undefined}
+											className={cn(
+												'rounded-lg transition-colors hover:translate-x-0 hover:bg-primary/5',
+												active && 'dc-nav-active',
+												!isExpanded && 'justify-center px-2'
+											)}
 											title={!isExpanded ? item.label : undefined}>
 											<item.icon
-												className={cn('h-4 w-4 shrink-0 transition-all duration-200', active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')}
+												className={cn('h-4 w-4 shrink-0 transition-colors duration-200', active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground')}
 											/>
 											{isExpanded && <span>{item.label}</span>}
-											{isExpanded && active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
 										</Link>
 									);
 								})}
@@ -179,28 +151,27 @@ export function Sidebar({
 					))}
 				</nav>
 
-				{/* Footer: Sign Out + Back to Home */}
-				<div className={cn('border-t border-white/40 dark:border-white/10 p-3 space-y-0.5 flex-shrink-0', !isExpanded && 'flex flex-col items-center px-2')}>
-					<button
-						type="button"
-						onClick={onLogout}
-						className={cn(
-							'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive/80 transition-all duration-200 hover:bg-destructive/10 hover:text-destructive',
-							!isExpanded && 'justify-center px-2'
-						)}
-						title={!isExpanded ? 'Sign Out' : undefined}>
-						<LogOut className="h-4 w-4" />
-						{isExpanded && <span className="transition-transform duration-150 group-hover:translate-x-0.5">Sign Out</span>}
-					</button>
-
+				{/* Footer: Back to Home + Sign Out */}
+				<div className={cn('border-t border-[var(--dc-border)] p-3 space-y-1 flex-shrink-0', !isExpanded && 'flex flex-col items-center px-2')}>
 					<Link
 						href="/"
 						variant="sidebar"
-						className={cn('text-muted-foreground/70', !isExpanded && 'justify-center px-2')}
+						className={cn('text-muted-foreground hover:text-foreground hover:bg-primary/5', !isExpanded && 'justify-center px-2')}
 						title={!isExpanded ? 'Back to Home' : undefined}>
 						<Home className="h-4 w-4" />
 						{isExpanded && <span>Back to Home</span>}
 					</Link>
+					<button
+						type="button"
+						onClick={onLogout}
+						className={cn(
+							'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-primary/90 transition-colors duration-200 hover:bg-primary/5 hover:text-primary',
+							!isExpanded && 'justify-center px-2'
+						)}
+						title={!isExpanded ? 'Sign Out' : undefined}>
+						<LogOut className="h-4 w-4" />
+						{isExpanded && <span>Sign Out</span>}
+					</button>
 				</div>
 			</div>
 		</aside>

@@ -67,16 +67,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 	const sidebarMargin = isExpanded ? 'lg:ml-[280px]' : 'lg:ml-[72px]';
 
 	return (
-		<div className="flex min-h-screen">
-			{/* Background orbs */}
-			<div
-				className="dashboard-bg-orbs fixed inset-0"
-				aria-hidden="true">
-				<div className="dashboard-orb dashboard-orb-primary" />
-				<div className="dashboard-orb dashboard-orb-accent" />
-				<div className="dashboard-orb dashboard-orb-tertiary" />
-			</div>
-
+		<div className="flex min-h-screen bg-[#f8fafc] dark:bg-[#0f172a]">
 			{/* Mobile overlay */}
 			<div
 				className={cn('fixed inset-0 z-40 transition-all duration-300 lg:hidden', isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none')}
@@ -102,7 +93,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 			<div className={cn('flex-1 min-h-screen flex flex-col transition-all duration-300 ease-in-out', sidebarMargin)}>
 				<DashboardNavbar />
 
-				<main className="flex-1 pt-4 pb-8">
+				<main className="flex-1 pt-6 pb-8">
 					<Container
 						size="full"
 						className="relative">

@@ -5,11 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Container } from "@/components/ui/Container";
 import { Link } from "@/components/ui/Link";
-import { Reveal } from "@/components/ui/Reveal";
+import { AuthLayout } from "@/components/layout/AuthLayout";
 import { resetPassword } from "@/services/auth";
-import { PublicLayout } from "@/components/layout/PublicLayout";
+import { imageFixes } from "@/utils/images";
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -47,29 +46,37 @@ function ResetPasswordContent() {
 
   if (success) {
     return (
-      <PublicLayout>
-      <Container className="flex min-h-[80vh] items-center justify-center py-20">
-        <Reveal y={16} className="glossy-card w-full max-w-md p-8 text-center">
-          <h1 className="text-2xl font-bold text-green-600">Password Updated</h1>
-          <p className="mt-2 text-muted-foreground">
+      <AuthLayout
+        image={imageFixes.login}
+        headline="Choose a strong password."
+        subtext="Sign in to access exclusive flight deals, custom travel alerts, and member-only pricing tailored just for you."
+        badges={["Best Price Guarantee", "500+ Airlines"]}>
+        <div className="glossy-card w-full p-8 text-center">
+          <h1 className="text-2xl font-bold text-emerald-600">Password Updated</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Redirecting you to login...
           </p>
-        </Reveal>
-      </Container>
-      </PublicLayout>
+        </div>
+      </AuthLayout>
     );
   }
 
   return (
-    <PublicLayout>
-    <Container className="flex min-h-[80vh] items-center justify-center py-20">
-      <Reveal y={16} className="glossy-card w-full max-w-md p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-extrabold">Reset Password</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Enter your new password below
-          </p>
-        </div>
+    <AuthLayout
+      image={imageFixes.login}
+      headline="Choose a strong password."
+      subtext="Sign in to access exclusive flight deals, custom travel alerts, and member-only pricing tailored just for you."
+      badges={["Best Price Guarantee", "500+ Airlines"]}
+      footer={
+        <p className="text-center text-sm text-muted-foreground">
+          Cancel and return to <Link href="/login">Sign In</Link>
+        </p>
+      }>
+      <div>
+        <h1 className="text-3xl font-extrabold">Create New Password</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Your new password must be different from previously used passwords.
+        </p>
 
         {error && (
           <p className="mt-4 rounded-lg bg-destructive/10 px-4 py-2 text-sm text-destructive">
@@ -91,24 +98,19 @@ function ResetPasswordContent() {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-[calc(50%+0.75rem)] text-muted-foreground transition-colors duration-200 hover:text-primary"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              aria-label={showPassword ? "Hide password" : "Show password"}>
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           <Input
-            label="Confirm Password"
+            label="Confirm New Password"
             type={showPassword ? "text" : "password"}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="••••••••"
             required
           />
-          <Button type="submit" className="w-full" disabled={isLoading || !token}>
+          <Button type="submit" className="w-full" size="lg" disabled={isLoading || !token}>
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -116,15 +118,8 @@ function ResetPasswordContent() {
             )}
           </Button>
         </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link href="/login">
-            Back to Login
-          </Link>
-        </p>
-      </Reveal>
-    </Container>
-    </PublicLayout>
+      </div>
+    </AuthLayout>
   );
 }
 
@@ -132,11 +127,9 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <PublicLayout>
-        <Container className="flex min-h-[80vh] items-center justify-center py-20">
+        <div className="flex min-h-screen items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </Container>
-        </PublicLayout>
+        </div>
       }
     >
       <ResetPasswordContent />

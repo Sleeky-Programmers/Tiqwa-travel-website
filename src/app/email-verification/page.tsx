@@ -3,10 +3,11 @@
 import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AuthVisualPanel } from '@/components/layout/AuthVisualPanel';
 import { BrandLogo } from '@/components/layout/BrandLogo';
+import { OtpInput } from '@/components/form/OtpInput';
 import { Button } from '@/components/ui/Button';
 import { Link } from '@/components/ui/Link';
 import { verifyEmail } from '@/services/auth';
@@ -19,42 +20,10 @@ export default function EmailVerificationPage() {
 	const [otp, setOtp] = useState(['', '', '', '', '', '']);
 	const [isVerifying, setIsVerifying] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
 	useEffect(() => {
 		setEmail(new URLSearchParams(window.location.search).get('email') ?? '');
 	}, []);
-
-	const updateOtp = (index: number, value: string) => {
-		const digits = value.replace(/\D/g, '');
-		if (!digits) {
-			setOtp((current) => current.map((digit, digitIndex) => (digitIndex === index ? '' : digit)));
-			return;
-		}
-
-		setOtp((current) => {
-			const next = [...current];
-			digits
-				.slice(0, 6 - index)
-				.split('')
-				.forEach((digit, offset) => {
-					next[index + offset] = digit;
-				});
-			return next;
-		});
-		inputRefs.current[Math.min(index + digits.length, 5)]?.focus();
-	};
-
-	const handleOtpKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
-		if (event.key === 'Backspace' && !otp[index] && index > 0) {
-			inputRefs.current[index - 1]?.focus();
-		}
-	};
-
-	const handleOtpPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
-		event.preventDefault();
-		updateOtp(0, event.clipboardData.getData('text'));
-	};
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
@@ -134,30 +103,11 @@ export default function EmailVerificationPage() {
 						className="space-y-5">
 						<fieldset>
 							<legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground">Secure Verification Code</legend>
-							<div className="flex justify-between gap-2 sm:gap-3">
-								{otp.map((digit, index) => (
-									<motion.input
-										key={index}
-										initial={{ opacity: 0, y: 10 }}
-										animate={{ opacity: 1, y: 0 }}
-										transition={{ duration: 0.35, delay: 0.3 + index * 0.05 }}
-										ref={(element) => {
-											inputRefs.current[index] = element;
-										}}
-										id={`otp-${index}`}
-										aria-label={`Verification digit ${index + 1}`}
-										className="h-12 w-12 shrink-0 rounded-sm border border-border/80 bg-background-card text-center text-xl font-bold text-foreground shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-all duration-200 outline-none placeholder:text-muted-foreground/50 hover:border-foreground/25 hover:shadow-[0_3px_12px_rgba(15,23,42,0.08)] focus:border-primary focus:ring-4 focus:ring-primary/15 focus:shadow-[0_0_0_1px_var(--primary),0_4px_14px_rgba(255,90,54,0.12)] sm:h-16 sm:w-16 sm:text-2xl"
-										inputMode="numeric"
-										maxLength={1}
-										placeholder="-"
-										value={digit}
-										onChange={(event) => updateOtp(index, event.target.value)}
-										onKeyDown={(event) => handleOtpKeyDown(index, event)}
-										onPaste={handleOtpPaste}
-										required
-									/>
-								))}
-							</div>
+							<OtpInput
+								value={otp}
+								onChange={setOtp}
+								disabled={isVerifying}
+							/>
 						</fieldset>
 						{error && <p className="rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</p>}
 						<Button

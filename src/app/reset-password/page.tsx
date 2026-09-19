@@ -6,42 +6,79 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Link } from "@/components/ui/Link";
+import { OtpInput } from "@/components/form/OtpInput";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { resetPassword } from "@/services/auth";
 import { imageFixes } from "@/utils/images";
 
+const MIN_PASSWORD_LENGTH = 8;
+const OTP_LENGTH = 6;
+
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
 
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mismatch, setMismatch] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const passwordTooShort = newPassword.length > 0 && newPassword.length < MIN_PASSWORD_LENGTH;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setMismatch(false);
 
-    if (!token) {
-      setError("Invalid or missing reset token.");
+    if (!email.trim()) {
+      setError("Enter the email address you requested the reset for.");
+      return;
+    }
+
+    const token = otp.join("");
+    if (token.length !== OTP_LENGTH) {
+      setError(`Enter the ${OTP_LENGTH}-digit code sent to your email.`);
+      return;
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMismatch(true);
+      setError("Passwords do not match.");
       return;
     }
 
     setIsLoading(true);
-    const result = await resetPassword(token, newPassword, confirmPassword);
+    const result = await resetPassword({ email: email.trim(), token, newPassword, confirmPassword });
+    setIsLoading(false);
 
     if (result.success) {
       setSuccess(true);
       setTimeout(() => router.push("/login"), 2000);
-    } else {
-      setError(result.error ?? "Password reset failed");
+      return;
     }
 
-    setIsLoading(false);
+    if (result.invalidToken) {
+      // Code is invalid/used/expired — send the user back to request a fresh one
+      // instead of leaving them stuck on a form that can no longer succeed.
+      router.push("/forgot-password?expired=1");
+      return;
+    }
+
+    if (result.status === 400 && /match/i.test(result.error ?? "")) {
+      setMismatch(true);
+    }
+
+    setError(result.error ?? "Password reset failed");
   };
 
   if (success) {
@@ -73,9 +110,9 @@ function ResetPasswordContent() {
         </p>
       }>
       <div>
-        <h1 className="text-3xl font-extrabold">Create New Password</h1>
+        <h1 className="text-3xl font-extrabold">Reset Your Password</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Your new password must be different from previously used passwords.
+          Enter the {OTP_LENGTH}-digit code we emailed you along with your new password.
         </p>
 
         {error && (
@@ -84,7 +121,23 @@ function ResetPasswordContent() {
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          <Input
+            label="Email Address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@fly4cheaper.com"
+            required
+          />
+
+          <fieldset>
+            <legend className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Verification Code<span className="ml-1 text-primary">*</span>
+            </legend>
+            <OtpInput value={otp} onChange={setOtp} disabled={isLoading} />
+          </fieldset>
+
           <div className="relative">
             <Input
               label="New Password"
@@ -92,6 +145,8 @@ function ResetPasswordContent() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="••••••••"
+              helperText={!passwordTooShort ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+              error={passwordTooShort ? `Must be at least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
               required
             />
             <button
@@ -106,11 +161,15 @@ function ResetPasswordContent() {
             label="Confirm New Password"
             type={showPassword ? "text" : "password"}
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              setMismatch(false);
+            }}
             placeholder="••••••••"
+            error={mismatch ? "Passwords do not match." : undefined}
             required
           />
-          <Button type="submit" className="w-full" size="lg" disabled={isLoading || !token}>
+          <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

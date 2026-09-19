@@ -183,7 +183,14 @@ export async function verifyEmail({ email, token }: { email: string; token: numb
 	}
 }
 
-export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
+export interface ForgotPasswordResult {
+	success: boolean;
+	/** HTTP status of the response, when one was received (absent on network failure). */
+	status?: number;
+	error?: string;
+}
+
+export async function forgotPassword(email: string): Promise<ForgotPasswordResult> {
 	try {
 		const response = await fetch(`${AUTH_API_BASE}/auth/forgot-password`, {
 			method: 'POST',
@@ -191,9 +198,10 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
 			body: JSON.stringify({ email }),
 		});
 		const result = await response.json();
-		if (result.success) return { success: true };
+		if (result.success) return { success: true, status: response.status };
 		return {
 			success: false,
+			status: response.status,
 			error: result.message ?? 'Password reset request failed',
 		};
 	} catch {
@@ -201,20 +209,51 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
 	}
 }
 
-export async function resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<{ success: boolean; error?: string }> {
+export interface ResetPasswordResult {
+	success: boolean;
+	/** HTTP status of the response, when one was received (absent on client-side validation failure or network error). */
+	status?: number;
+	error?: string;
+	/** True when the failure is specifically because the reset code is wrong, used, or expired. */
+	invalidToken?: boolean;
+}
+
+export interface ResetPasswordParams {
+	email: string;
+	token: string;
+	newPassword: string;
+	confirmPassword: string;
+}
+
+export async function resetPassword({ email, token, newPassword, confirmPassword }: ResetPasswordParams): Promise<ResetPasswordResult> {
 	if (newPassword !== confirmPassword) {
-		return { success: false, error: 'Passwords do not match' };
+		return { success: false, status: 400, error: 'Passwords do not match' };
 	}
 
 	try {
 		const response = await fetch(`${AUTH_API_BASE}/auth/reset-password`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ token, newPassword, confirmPassword }),
+			body: JSON.stringify({
+				email,
+				token,
+				password: newPassword,
+			}),
 		});
 		const result = await response.json();
-		if (result.success) return { success: true };
-		return { success: false, error: result.message ?? 'Password reset failed' };
+		if (result.success) return { success: true, status: response.status };
+
+		// The API reports an invalid/used/expired code as a 422 validation error on
+		// the `token` field (rather than the 401 one might expect), so surface that
+		// specific message and flag it distinctly from other failures.
+		const tokenError = result.errors?.token?.[0];
+
+		return {
+			success: false,
+			status: response.status,
+			error: tokenError ?? result.errors?.password?.[0] ?? result.message ?? 'Password reset failed',
+			invalidToken: Boolean(tokenError) || response.status === 401,
+		};
 	} catch {
 		return { success: false, error: 'Network error. Please try again.' };
 	}

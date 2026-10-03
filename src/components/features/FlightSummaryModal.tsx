@@ -219,6 +219,9 @@ export function FlightSummaryModal({ flight, open, onOpenChange, onContinue, onC
 					<div className="rounded-xl border border-border p-3">
 						<p className="mb-2 text-xs font-semibold text-foreground">Price breakdown</p>
 						<div className="space-y-1.5 text-sm">
+							{/* Each row's total_price is already tax-inclusive (it equals pricing.payable for a
+							    single-passenger-type itinerary), so tax is a note here, not a separate addend —
+							    adding it again on top would double-count it and make the total look wrong. */}
 							{(flight.priceSummary ?? []).map((row, i) => (
 								<div
 									key={i}
@@ -229,17 +232,14 @@ export function FlightSummaryModal({ flight, open, onOpenChange, onContinue, onC
 									<span className="font-medium">{formatFlightPrice(row.total_price, flight.currency)}</span>
 								</div>
 							))}
-							{flight.pricing?.tax != null && (
-								<div className="flex items-center justify-between">
-									<span className="text-muted-foreground">Tax</span>
-									<span className="font-medium">{formatFlightPrice(flight.pricing.tax, flight.currency)}</span>
-								</div>
-							)}
 						</div>
 						<div className="mt-2 flex items-center justify-between border-t border-border pt-2">
 							<span className="text-sm font-semibold">Total</span>
 							<span className="text-lg font-bold text-primary">{formatFlightPrice(flight.price, flight.currency)}</span>
 						</div>
+						{flight.pricing?.tax != null && (
+							<p className="mt-1 text-right text-xs text-muted-foreground">Includes {formatFlightPrice(flight.pricing.tax, flight.currency)} in taxes &amp; fees</p>
+						)}
 						{showPayable && payable !== undefined && (
 							<p className="mt-1 text-right text-xs text-muted-foreground">Payable now: {formatFlightPrice(payable, flight.currency)}</p>
 						)}

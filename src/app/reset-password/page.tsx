@@ -22,21 +22,31 @@ function ResetPasswordContent() {
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mismatch, setMismatch] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const passwordTooShort = newPassword.length > 0 && newPassword.length < MIN_PASSWORD_LENGTH;
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setEmailError(null);
     setMismatch(false);
 
     if (!email.trim()) {
+      setEmailError("Email address is required.");
       setError("Enter the email address you requested the reset for.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setEmailError("Enter a valid email address.");
+      setError("Enter a valid email address.");
       return;
     }
 
@@ -121,13 +131,17 @@ function ResetPasswordContent() {
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-5">
           <Input
             label="Email Address"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setEmailError(null);
+            }}
             placeholder="you@fly4cheaper.com"
+            error={emailError ?? undefined}
             required
           />
 
@@ -138,28 +152,28 @@ function ResetPasswordContent() {
             <OtpInput value={otp} onChange={setOtp} disabled={isLoading} />
           </fieldset>
 
-          <div className="relative">
-            <Input
-              label="New Password"
-              type={showPassword ? "text" : "password"}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
-              helperText={!passwordTooShort ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
-              error={passwordTooShort ? `Must be at least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[calc(50%+0.75rem)] text-muted-foreground transition-colors duration-200 hover:text-primary"
-              aria-label={showPassword ? "Hide password" : "Show password"}>
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
+          <Input
+            label="New Password"
+            type={showNewPassword ? "text" : "password"}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="••••••••"
+            helperText={!passwordTooShort ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+            error={passwordTooShort ? `Must be at least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+            required
+            endAdornment={
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="inline-flex items-center justify-center text-muted-foreground transition-colors duration-200 hover:text-primary"
+                aria-label={showNewPassword ? "Hide password" : "Show password"}>
+                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            }
+          />
           <Input
             label="Confirm New Password"
-            type={showPassword ? "text" : "password"}
+            type={showConfirmPassword ? "text" : "password"}
             value={confirmPassword}
             onChange={(e) => {
               setConfirmPassword(e.target.value);
@@ -168,6 +182,15 @@ function ResetPasswordContent() {
             placeholder="••••••••"
             error={mismatch ? "Passwords do not match." : undefined}
             required
+            endAdornment={
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="inline-flex items-center justify-center text-muted-foreground transition-colors duration-200 hover:text-primary"
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}>
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            }
           />
           <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
             {isLoading ? (

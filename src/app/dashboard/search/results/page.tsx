@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { Link, linkVariants } from '@/components/ui/Link';
+import { resolveErrorMessage } from '@/lib/errorMessages';
 import { cn } from '@/lib/utils';
 import { applyFlightFilters, getAvailableAirlines, getPriceRange, sortFlights, SortOption } from '@/services/flightSearch';
 import {
@@ -154,7 +155,7 @@ function ResultsContent() {
 			if (multiResult.success && multiResult.flights) {
 				setBaseFlights(multiResult.flights);
 			} else {
-				setError(multiResult.error ?? 'Flight search failed');
+				setError(resolveErrorMessage(multiResult.error, "We couldn't find flights for this search. Please check your routes and dates, then try again."));
 				setBaseFlights([]);
 			}
 			setIsLoading(false);
@@ -184,7 +185,7 @@ function ResultsContent() {
 		if (result.success && result.flights) {
 			setBaseFlights(result.flights);
 		} else {
-			setError(result.error ?? 'Flight search failed');
+			setError(resolveErrorMessage(result.error, "We couldn't find flights for this search. Please check your route and dates, then try again."));
 			setBaseFlights([]);
 		}
 

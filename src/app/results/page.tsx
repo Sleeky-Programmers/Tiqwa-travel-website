@@ -12,6 +12,7 @@ import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { Link, linkVariants } from '@/components/ui/Link';
+import { resolveErrorMessage } from '@/lib/errorMessages';
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
@@ -199,7 +200,7 @@ function ResultsContent() {
 			if (multiResult.success && multiResult.flights) {
 				setBaseFlights(multiResult.flights);
 			} else {
-				setError(multiResult.error ?? 'Flight search failed');
+				setError(resolveErrorMessage(multiResult.error, "We couldn't find flights for this search. Please check your routes and dates, then try again."));
 				setBaseFlights([]);
 			}
 
@@ -230,7 +231,7 @@ function ResultsContent() {
 		if (result.success && result.flights) {
 			setBaseFlights(result.flights);
 		} else {
-			setError(result.error ?? 'Flight search failed');
+			setError(resolveErrorMessage(result.error, "We couldn't find flights for this search. Please check your route and dates, then try again."));
 			setBaseFlights([]);
 		}
 

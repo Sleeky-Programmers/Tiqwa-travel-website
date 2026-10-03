@@ -7,12 +7,15 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { Button } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
+import { useAuth } from '@/contexts/AuthContext';
+import { resolveCaughtError, resolveErrorMessage } from '@/lib/errorMessages';
 import { finalizeBooking, getBookingDetails, readActiveBooking, verifyPayment } from '@/services/whitelabel-api';
 
 type VerificationStatus = 'loading' | 'success' | 'failed' | 'not-found' | 'pending';
 
 function VerifyPaymentContent() {
 	const searchParams = useSearchParams();
+	const { isAuthenticated } = useAuth();
 
 	// Paystack params
 	const reference = searchParams.get('reference');
@@ -92,7 +95,7 @@ function VerifyPaymentContent() {
 							}
 						}
 					}
-					setError(verifyResult.error || 'Payment verification failed');
+					setError(resolveErrorMessage(verifyResult.error, "We couldn't verify your payment. If you were charged, please contact support with your reference number."));
 					setVerificationStatus('failed');
 					if (pollingIntervalRef.current) {
 						clearInterval(pollingIntervalRef.current);
@@ -108,7 +111,7 @@ function VerifyPaymentContent() {
 					const finalizeResult = await finalizeBooking(booking_id, flight_id);
 
 					if (!finalizeResult.success) {
-						setError(finalizeResult.error || 'Failed to finalize booking');
+						setError(resolveErrorMessage(finalizeResult.error, "Your payment went through, but we couldn't finalize your booking. Please contact support with your reference number."));
 						setVerificationStatus('failed');
 						if (pollingIntervalRef.current) {
 							clearInterval(pollingIntervalRef.current);
@@ -131,7 +134,7 @@ function VerifyPaymentContent() {
 				} else {
 					// Payment not successful
 					setVerificationStatus('failed');
-					setError('Payment was not successful');
+					setError("Your payment wasn't successful. No charge should have been made — please try again.");
 					if (pollingIntervalRef.current) {
 						clearInterval(pollingIntervalRef.current);
 						pollingIntervalRef.current = null;
@@ -139,7 +142,7 @@ function VerifyPaymentContent() {
 				}
 			} catch (err) {
 				console.error('Verification error:', err);
-				setError(err instanceof Error ? err.message : 'Failed to verify payment');
+				setError(resolveCaughtError(err, "We couldn't verify your payment right now. Please check your connection and try again."));
 				setVerificationStatus('failed');
 				if (pollingIntervalRef.current) {
 					clearInterval(pollingIntervalRef.current);
@@ -276,7 +279,9 @@ function VerifyPaymentContent() {
 						</div>
 					)}
 					<div className="mt-6 flex flex-col gap-3 sm:flex-row">
-						<Button href="/dashboard/bookings" className="w-full sm:w-auto">View My Bookings</Button>
+						{isAuthenticated && (
+							<Button href="/dashboard/bookings" className="w-full sm:w-auto">View My Bookings</Button>
+						)}
 						<Button href="/" variant="outline" className="w-full sm:w-auto">Return Home</Button>
 					</div>
 				</div>

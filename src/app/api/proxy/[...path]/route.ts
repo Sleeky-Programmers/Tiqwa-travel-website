@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { resolveCaughtError } from '@/lib/errorMessages';
+
 const TIQWA_API_BASE_URL = 'https://sandbox.premiumwhitelabel.com/api/v2';
+
+// Without this, an upstream that never responds leaves the caller's await hanging forever —
+// there's no error, no results, just an infinite loader on the client.
+const UPSTREAM_TIMEOUT_MS = 15000;
+
+function isTimeoutError(error: unknown): boolean {
+	return error instanceof Error && error.name === 'TimeoutError';
+}
+
+function proxyErrorResponse(error: unknown) {
+	if (isTimeoutError(error)) {
+		return NextResponse.json({ success: false, error: 'The upstream service took too long to respond. Please try again.' }, { status: 504 });
+	}
+	return NextResponse.json(
+		{ success: false, error: resolveCaughtError(error, 'We ran into a problem reaching the service. Please try again in a moment.') },
+		{ status: 500 }
+	);
+}
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
 	try {
@@ -28,6 +48,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 		const response = await fetch(url, {
 			method: 'GET',
 			headers,
+			signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
 			...(process.env.NODE_ENV === 'development' && {
 				// @ts-ignore - Allow self-signed certs in development only
 				agent: undefined,
@@ -45,14 +66,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 			},
 		});
 	} catch (error) {
-		return NextResponse.json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : 'Proxy request failed',
-				...(error instanceof Error && { stack: error.stack }),
-			},
-			{ status: 500 }
-		);
+		return proxyErrorResponse(error);
 	}
 }
 
@@ -85,6 +99,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			method: 'POST',
 			headers,
 			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
 		});
 
 		const data = await response.json();
@@ -98,13 +113,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 			},
 		});
 	} catch (error) {
-		return NextResponse.json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : 'Proxy request failed',
-			},
-			{ status: 500 }
-		);
+		return proxyErrorResponse(error);
 	}
 }
 
@@ -143,6 +152,7 @@ async function handleMutation(
 			method,
 			headers,
 			...(rawBody ? { body: rawBody } : {}),
+			signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
 		});
 
 		const data = await response.json();
@@ -156,13 +166,7 @@ async function handleMutation(
 			},
 		});
 	} catch (error) {
-		return NextResponse.json(
-			{
-				success: false,
-				error: error instanceof Error ? error.message : 'Proxy request failed',
-			},
-			{ status: 500 }
-		);
+		return proxyErrorResponse(error);
 	}
 }
 

@@ -16,15 +16,17 @@ import { Input } from '@/components/ui/Input';
 import { Link, linkVariants } from '@/components/ui/Link';
 import { useAuth } from '@/contexts/AuthContext';
 import { clearCheckoutDraft, readCheckoutDraft, writeCheckoutDraft } from '@/lib/checkoutDraft';
+import { resolveCaughtError, resolveErrorMessage } from '@/lib/errorMessages';
 import { cn } from '@/lib/utils';
 import {
-    confirmFlightPrice, createBooking, formatFlightPrice, getBankAccounts, getBookingDetails,
+    confirmFlightPrice, createBooking, formatDuration, formatFlightPrice, getBankAccounts, getBookingDetails,
     getFlightFromCache, initiatePayment, isBookingReservationExpired, readActiveBooking,
     readCachedFlightSearch, reserveBooking, saveActiveBooking, validateFlightCoupon
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 
-import type { BankAccount, BookingPassengerPayload, PassengerType } from '@/types/whitelabel';
+import type { Flight } from '@/types/flight';
+import type { BankAccount, BookingPassengerPayload, PassengerType, Pricing, PriceSummary } from '@/types/whitelabel';
 
 export type BookingFlowVariant = 'guest' | 'account';
 
@@ -73,6 +75,49 @@ function formatRouteLabel(flight: NonNullable<ReturnType<typeof getFlightFromCac
 	});
 
 	return stops.join(' → ');
+}
+
+function formatSegmentDate(iso: string): string {
+	try {
+		return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+	} catch {
+		return iso;
+	}
+}
+
+function formatSegmentTime(iso: string): string {
+	try {
+		return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+	} catch {
+		return iso;
+	}
+}
+
+interface LegSummary {
+	departureTime: string;
+	arrivalTime: string;
+	date: string;
+	duration: string;
+	stopsLabel: string;
+}
+
+// A round trip's return leg lives in `inboundSegments`/`totalInboundDuration`/`inboundStops` — fields
+// the top-level `departure`/`arrival`/`duration`/`stops` on Flight never reflect (those are outbound-only).
+function getInboundLegSummary(flight: Flight): LegSummary | null {
+	const segments = flight.inboundSegments;
+	if (!segments || segments.length === 0) return null;
+
+	const first = segments[0];
+	const last = segments[segments.length - 1];
+	const stops = flight.inboundStops ?? flight.inbound_stops ?? Math.max(0, segments.length - 1);
+
+	return {
+		departureTime: formatSegmentTime(first.departure_time),
+		arrivalTime: formatSegmentTime(last.arrival_time),
+		date: formatSegmentDate(first.departure_time),
+		duration: flight.totalInboundDuration != null ? formatDuration(flight.totalInboundDuration) : '',
+		stopsLabel: stops === 0 ? 'Non-stop' : `${stops} stop${stops > 1 ? 's' : ''}`,
+	};
 }
 
 const PASSENGER_FARE_LABELS: Record<string, string> = {
@@ -235,6 +280,11 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		});
 	}, [variant, user]);
 	const [confirmedPrice, setConfirmedPrice] = useState<number | null>(null);
+	// confirm-price is the authoritative, final-before-payment check — prefer its breakdown over the
+	// potentially stale one from the original search when it's available.
+	const [confirmedPriceSummary, setConfirmedPriceSummary] = useState<PriceSummary[] | null>(null);
+	const [confirmedPricing, setConfirmedPricing] = useState<Pricing | null>(null);
+	const [priceChanged, setPriceChanged] = useState(false);
 	// Not required unless the confirm-price response explicitly says so.
 	const [documentRequired, setDocumentRequired] = useState(false);
 	const [isConfirmingPrice, setIsConfirmingPrice] = useState(true);
@@ -281,20 +331,26 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				count: counts[type],
 			}));
 	}, [passengerTypes]);
+	const priceSummary = confirmedPriceSummary ?? flight?.priceSummary;
+	const pricing = confirmedPricing ?? flight?.pricing;
 	const fareBreakdown = useMemo(() => {
-		if (!flight?.priceSummary?.length) return [];
-		return flight.priceSummary
+		if (!priceSummary?.length) return [];
+		return priceSummary
 			.filter((item) => item.quantity > 0 && item.total_price > 0)
 			.map((item) => ({
 				label: PASSENGER_FARE_LABELS[item.passenger_type.toLowerCase()] ?? item.passenger_type,
 				quantity: item.quantity,
 				unitPrice: item.total_price / item.quantity,
 			}));
-	}, [flight?.priceSummary]);
+	}, [priceSummary]);
 	const [coupon, setCoupon] = useState('');
 	const [couponMessage, setCouponMessage] = useState<string | null>(null);
 	const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 	const [couponApplied, setCouponApplied] = useState(false);
+	// Guards against an out-of-order response: if the user edits the coupon text or fires another
+	// apply while a validation request is still in flight, a stale response landing afterward must
+	// not be allowed to silently (re)apply a discount for a code that's no longer what's shown.
+	const couponRequestIdRef = useRef(0);
 
 	const buildResultsHref = useCallback(
 		(currentFlight: NonNullable<ReturnType<typeof getFlightFromCache>>, departureDate: string, passengers: number): string => {
@@ -340,6 +396,13 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			if (result.data.amount != null) {
 				setConfirmedPrice(result.data.amount);
 			}
+			if (result.data.price_summary?.length) {
+				setConfirmedPriceSummary(result.data.price_summary);
+			}
+			if (result.data.pricing) {
+				setConfirmedPricing(result.data.pricing);
+			}
+			setPriceChanged(Boolean(result.data.price_change));
 			setDocumentRequired(Boolean(result.data.document_required));
 		}
 		setIsConfirmingPrice(false);
@@ -408,6 +471,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 	const handleCouponApply = async () => {
 		const couponCode = coupon.trim();
+		const requestId = ++couponRequestIdRef.current;
 		setCouponMessage(null);
 		setCouponDiscount(0);
 		setCouponApplied(false);
@@ -418,10 +482,14 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 		setIsApplyingCoupon(true);
 		const result = await validateFlightCoupon(subtotal, couponCode);
+
+		// A newer request (or an edit to the coupon text) superseded this one — don't let this
+		// stale response overwrite state for a code that's no longer what the user has typed.
+		if (couponRequestIdRef.current !== requestId) return;
 		setIsApplyingCoupon(false);
 
 		if (!result.success || !result.data.is_valid) {
-			setCouponMessage(result.success ? 'Invalid or used Promo Code' : result.error);
+			setCouponMessage(result.success ? 'Invalid or used Promo Code' : resolveErrorMessage(result.error, "We couldn't check that code right now. Please try again."));
 			return;
 		}
 
@@ -470,7 +538,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		try {
 			const createResult = await createBooking(flightId, passengerPayloads, documentRequired);
 			if (!createResult.success) {
-				setError(createResult.error);
+				setError(resolveErrorMessage(createResult.error, "We couldn't create your booking. Please check your passenger details and try again."));
 				setIsProcessing(false);
 				return;
 			}
@@ -481,7 +549,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 
 			const reserveResult = await reserveBooking(booking_id, flightId);
 			if (!reserveResult.success) {
-				setError(reserveResult.error || 'Failed to reserve booking');
+				setError(resolveErrorMessage(reserveResult.error, "We couldn't reserve this flight. The fare may have changed — please go back and search again."));
 				setIsProcessing(false);
 				return;
 			}
@@ -494,7 +562,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			});
 
 			if (!paymentResult.success) {
-				setError(paymentResult.error);
+				setError(resolveErrorMessage(paymentResult.error, "We couldn't start your payment. Please try again, or choose a different payment method."));
 				setIsProcessing(false);
 				return;
 			}
@@ -510,14 +578,14 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 			}
 
 			if (!paymentResult.data.authorization_url) {
-				setError('Payment URL not returned by gateway');
+				setError("We couldn't connect to the payment provider. Please try again or choose a different payment method.");
 				setIsProcessing(false);
 				return;
 			}
 
 			window.location.href = paymentResult.data.authorization_url;
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'An error occurred');
+			setError(resolveCaughtError(err, 'Something went wrong while processing your booking. Please try again.'));
 			setIsProcessing(false);
 		}
 	};
@@ -543,6 +611,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		);
 	}
 
+	const inboundLeg = getInboundLegSummary(flight);
+	const isRoundTrip = inboundLeg !== null;
+
 	const paymentStepSummary = (
 		<div className="rounded-md border border-border/70 bg-white p-6 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
 			<div className="flex items-center gap-3 border-b border-border/60 pb-4">
@@ -563,10 +634,14 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				</div>
 				<div className="min-w-0">
 					<p className="truncate font-semibold">{flight.airline}</p>
-					<p className="truncate text-sm text-muted-foreground">{formatRouteLabel(flight)}</p>
+					<p className="truncate text-sm text-muted-foreground">
+						{formatRouteLabel(flight)}
+						{isRoundTrip && <span className="ml-1.5 text-xs font-medium text-primary">Round trip</span>}
+					</p>
 				</div>
 			</div>
 			<div className="mt-4 space-y-3 text-sm">
+				{isRoundTrip && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Outbound</p>}
 				<div className="flex justify-between gap-3">
 					<span className="text-muted-foreground">Departure</span>
 					<span className="font-medium">{flight.departure}</span>
@@ -589,6 +664,33 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 						<span className="font-medium">{departure}</span>
 					</div>
 				)}
+				{inboundLeg && (
+					<>
+						<p className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Return</p>
+						<div className="flex justify-between gap-3">
+							<span className="text-muted-foreground">Departure</span>
+							<span className="font-medium">{inboundLeg.departureTime}</span>
+						</div>
+						<div className="flex justify-between gap-3">
+							<span className="text-muted-foreground">Arrival</span>
+							<span className="font-medium">{inboundLeg.arrivalTime}</span>
+						</div>
+						{inboundLeg.duration && (
+							<div className="flex justify-between gap-3">
+								<span className="text-muted-foreground">Duration</span>
+								<span className="font-medium">{inboundLeg.duration}</span>
+							</div>
+						)}
+						<div className="flex justify-between gap-3">
+							<span className="text-muted-foreground">Stops</span>
+							<span className="font-medium">{inboundLeg.stopsLabel}</span>
+						</div>
+						<div className="flex justify-between gap-3">
+							<span className="text-muted-foreground">Date</span>
+							<span className="font-medium">{inboundLeg.date}</span>
+						</div>
+					</>
+				)}
 				<div className="flex justify-between gap-3">
 					<span className="text-muted-foreground">Passengers</span>
 					<span className="text-right font-medium">
@@ -606,7 +708,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 					<div
 						key={label}
 						className="flex justify-between gap-3">
-						<span className="text-muted-foreground">{label} Base Fare</span>
+						{/* fareUnitPrice is already tax-inclusive (equals pricing.payable per unit) —
+						    labeling it "Base Fare" would wrongly imply tax is added on top of this. */}
+						<span className="text-muted-foreground">{label} Fare</span>
 						<span className="font-medium">
 							{formatFlightPrice(fareUnitPrice, 'NGN')} × {quantity}
 						</span>
@@ -622,6 +726,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 					<span>Total</span>
 					<span className="text-primary">{formatFlightPrice(total, 'NGN')}</span>
 				</div>
+				{pricing?.tax != null && (
+					<p className="text-right text-xs text-muted-foreground">Includes {formatFlightPrice(pricing.tax, 'NGN')} in taxes &amp; fees</p>
+				)}
 			</div>
 			<Button
 				className="mt-6 w-full rounded-md bg-black text-white shadow-lg shadow-black/25"
@@ -960,6 +1067,13 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				</div>
 			)}
 
+			{priceChanged && (
+				<div className="flex items-start gap-2.5 rounded-md bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 border border-amber-500/20">
+					<AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+					The fare for this flight has changed since you searched. The price below reflects the latest amount.
+				</div>
+			)}
+
 			<div className="grid gap-6 lg:grid-cols-3">
 				{/* Left: Passenger Forms — shown after the summary on mobile */}
 				<div className="order-2 space-y-6 lg:order-1 lg:col-span-2">
@@ -1032,11 +1146,15 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 								</div>
 								<div className="flex-1 min-w-0">
 									<p className="font-semibold truncate">{flight.airline}</p>
-									<p className="text-sm text-muted-foreground truncate">{formatRouteLabel(flight)}</p>
+									<p className="text-sm text-muted-foreground truncate">
+										{formatRouteLabel(flight)}
+										{isRoundTrip && <span className="ml-1.5 text-xs font-medium text-primary">Round trip</span>}
+									</p>
 								</div>
 							</div>
 
 							<div className="mt-4 space-y-3">
+								{isRoundTrip && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Outbound</p>}
 								<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
 									<span className="text-muted-foreground">Departure</span>
 									<span className="font-medium">{flight.departure}</span>
@@ -1060,6 +1178,33 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 										<span className="text-muted-foreground">Date</span>
 										<span className="font-medium">{departure}</span>
 									</div>
+								)}
+								{inboundLeg && (
+									<>
+										<p className="pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Return</p>
+										<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+											<span className="text-muted-foreground">Departure</span>
+											<span className="font-medium">{inboundLeg.departureTime}</span>
+										</div>
+										<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+											<span className="text-muted-foreground">Arrival</span>
+											<span className="font-medium">{inboundLeg.arrivalTime}</span>
+										</div>
+										{inboundLeg.duration && (
+											<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+												<span className="text-muted-foreground">Duration</span>
+												<span className="font-medium">{inboundLeg.duration}</span>
+											</div>
+										)}
+										<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+											<span className="text-muted-foreground">Stops</span>
+											<span className="font-medium">{inboundLeg.stopsLabel}</span>
+										</div>
+										<div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+											<span className="text-muted-foreground">Date</span>
+											<span className="font-medium">{inboundLeg.date}</span>
+										</div>
+									</>
 								)}
 								<div className="flex justify-between text-sm py-1.5">
 									<span className="text-muted-foreground">Passengers</span>
@@ -1089,7 +1234,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 													<div
 														key={label}
 														className="flex justify-between gap-3">
-														<span className="text-muted-foreground">{label} Base Fare</span>
+														<span className="text-muted-foreground">{label} Fare</span>
 														<span className="shrink-0 font-medium">
 															{formatFlightPrice(fareUnitPrice, 'NGN')} × {quantity}
 														</span>
@@ -1097,7 +1242,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 												))
 											) : (
 												<div className="flex justify-between text-sm">
-													<span className="text-muted-foreground">Base Fare</span>
+													<span className="text-muted-foreground">Fare</span>
 													<span className="font-medium">
 														{formatFlightPrice(unitPrice, 'NGN')} × {passengers.length}
 													</span>
@@ -1109,6 +1254,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 											<input
 												value={coupon}
 												onChange={(event) => {
+													couponRequestIdRef.current++;
 													setCoupon(event.target.value);
 													setCouponApplied(false);
 													setCouponDiscount(0);
@@ -1141,6 +1287,9 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 											<span>Total</span>
 											<span className="text-primary">{formatFlightPrice(total, 'NGN')}</span>
 										</div>
+										{pricing?.tax != null && (
+											<p className="text-right text-xs text-muted-foreground">Includes {formatFlightPrice(pricing.tax, 'NGN')} in taxes &amp; fees</p>
+										)}
 									</>
 								)}
 							</div>

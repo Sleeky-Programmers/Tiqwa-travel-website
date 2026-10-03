@@ -345,8 +345,22 @@ export interface ConfirmPriceData {
 	bookable_seats?: number;
 	expires_at?: string;
 	fare_basis?: string | null;
-	inbound?: unknown[];
+	office_id?: string;
+	outbound?: OutboundSegment[];
+	outbound_stops?: number;
+	inbound?: OutboundSegment[];
 	inbound_stops?: number;
+	is_multicity?: boolean;
+	/** True when the fare changed since the original search — worth surfacing to the user. */
+	price_change?: boolean;
+	// `price_summary` rows are already tax-inclusive (they sum to `pricing.payable`) — `pricing.tax`
+	// is informational, not a separate addend, so don't add both when rendering a total.
+	price_summary?: PriceSummary[];
+	pricing?: Pricing;
+	travelers_price?: TravelerPrice[];
+	total_duration?: number;
+	total_outbound_duration?: number;
+	total_inbound_duration?: number;
 }
 
 // ============================================

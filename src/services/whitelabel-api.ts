@@ -1,6 +1,7 @@
 import type { Flight } from '@/types/flight';
 import { getAccessToken } from '@/services/auth';
 import { normalizeFlight } from '@/types/flight';
+import { resolveCaughtError, resolveErrorMessage } from '@/lib/errorMessages';
 
 import type {
 	BookingDetails,
@@ -68,6 +69,10 @@ export function getTotalPassengers(params: Pick<FlightSearchParams, 'adults' | '
 
 type FetchOptions = RequestInit & { next?: { revalidate?: number } };
 
+// Server-side calls hit the upstream API directly (API_BASE bypasses our proxy route there), so they
+// need their own timeout — otherwise a hung upstream leaves the caller awaiting forever with no error.
+const API_TIMEOUT_MS = 15000;
+
 async function fetchAPI<T>(endpoint: string, options?: FetchOptions): Promise<T> {
 	const result = await fetchAPIResult<T>(endpoint, options);
 	if (!result.success) {
@@ -101,20 +106,21 @@ async function fetchAPIResult<T>(endpoint: string, options?: FetchOptions): Prom
 		const response = await fetch(`${API_BASE}${endpoint}`, {
 			headers,
 			...fetchOptions,
+			signal: fetchOptions.signal ?? AbortSignal.timeout(API_TIMEOUT_MS),
 			...(typeof window === 'undefined' ? { next: next ?? { revalidate: 300 } } : {}),
 		});
 
 		const data = (await response.json()) as WhitelabelResponse<T>;
 
 		if (!data.success) {
-			return { success: false, error: data.message ?? 'API request failed' };
+			return { success: false, error: resolveErrorMessage(data.message, 'We couldn\'t complete that request. Please try again in a moment.') };
 		}
 
 		return { success: true, data: data.data };
 	} catch (err) {
 		return {
 			success: false,
-			error: err instanceof Error ? err.message : 'API request failed',
+			error: resolveCaughtError(err, 'We couldn\'t reach the server. Please check your connection and try again.'),
 		};
 	}
 }

@@ -16,7 +16,7 @@ export interface PassengerData {
 	firstName: string;
 	middleName: string;
 	lastName: string;
-	gender: 'male' | 'female' | 'other' | '';
+	gender: 'male' | 'female' | '';
 	dateOfBirth: string;
 	email: string;
 	phone: string;
@@ -66,7 +66,6 @@ const TITLE_OPTIONS = [
 const GENDER_OPTIONS = [
 	{ value: 'male', label: 'Male' },
 	{ value: 'female', label: 'Female' },
-	{ value: 'other', label: 'Other' },
 ];
 
 const INTERNATIONAL_DOCUMENT_TYPES = [
@@ -200,7 +199,7 @@ export function PassengerForm({
 				<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 					Gender <span className="ml-1 text-primary">*</span>
 				</label>
-				<div className="mt-1 grid grid-cols-3 gap-2">
+				<div className="mt-1 grid grid-cols-2 gap-2">
 					{GENDER_OPTIONS.map((opt) => (
 						<button
 							key={opt.value}

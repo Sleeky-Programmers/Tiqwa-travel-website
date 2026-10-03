@@ -72,8 +72,21 @@ export function getFlightStops(flight: Flight): number {
 	return 0;
 }
 
+function getInboundStops(flight: Flight): number | undefined {
+	const fromInbound = parseStopCount(flight.inbound_stops);
+	if (fromInbound !== undefined) return fromInbound;
+	return parseStopCount(flight.inboundStops);
+}
+
+// For round trips, a stop constraint like "Non-stop" only holds if BOTH legs satisfy it —
+// filtering on the outbound leg alone can keep flights whose return leg actually has stops.
 export function matchesStopsFilter(flight: Flight, filter: StopsFilter): boolean {
-	const stops = getFlightStops(flight);
+	if (filter === 'any') return true;
+
+	const outboundStops = getFlightStops(flight);
+	const inboundStops = getInboundStops(flight);
+	const stops = inboundStops !== undefined ? Math.max(outboundStops, inboundStops) : outboundStops;
+
 	if (filter === 'nonstop') return stops === 0;
 	if (filter === 'one-stop-max') return stops <= 1;
 	return true;

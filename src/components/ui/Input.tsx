@@ -9,11 +9,12 @@ interface InputProps extends React.ComponentProps<'input'> {
 	label?: string;
 	error?: string;
 	helperText?: string;
+	endAdornment?: React.ReactNode;
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type, label, error, id, helperText, required, ...props }, ref) => {
+const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type, label, error, id, helperText, required, endAdornment, ...props }, ref) => {
 	const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
-	const field = (
+	const input = (
 		<InputPrimitive
 			ref={ref}
 			id={inputId}
@@ -22,11 +23,22 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type,
 			data-slot="input"
 			className={cn(
 				'h-12 w-full min-w-0 rounded-md border border-border/80 bg-background-card px-4 text-sm text-foreground shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition-all duration-200 outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 hover:shadow-[0_3px_12px_rgba(15,23,42,0.06)] focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:shadow-[0_0_0_1px_var(--primary),0_4px_14px_rgba(255,90,54,0.12)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/5',
+				endAdornment && 'pr-10',
 				error && 'border-destructive',
 				className
 			)}
 			{...props}
 		/>
+	);
+	// Centering the adornment against this wrapper (not the outer label/helper block) keeps it
+	// aligned to the input itself regardless of whether helper/error text is present below.
+	const field = endAdornment ? (
+		<div className="relative flex items-center">
+			{input}
+			<div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center justify-center">{endAdornment}</div>
+		</div>
+	) : (
+		input
 	);
 	if (!label && !error && !helperText) return field;
 	return (

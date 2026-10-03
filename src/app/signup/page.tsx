@@ -1,8 +1,8 @@
 'use client';
 
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,8 @@ import { Link } from '@/components/ui/Link';
 import { signup } from '@/services/auth';
 import { imageFixes } from '@/utils/images';
 import { formatPhoneNumber } from '@/utils/phone';
+
+const SUCCESS_REDIRECT_MS = 1500;
 
 export default function SignupPage() {
 	const router = useRouter();
@@ -25,6 +27,7 @@ export default function SignupPage() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [isSuccess, setIsSuccess] = useState(false);
 
 	const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) });
@@ -34,13 +37,35 @@ export default function SignupPage() {
 		e.preventDefault();
 		setError(null);
 
-		if (formData.password !== formData.confirmPassword) {
-			setError('Passwords do not match');
+		// Validate all required signup fields are populated before triggering the API call.
+		// This prevents the API from returning a generic "Some required fields are missing or empty!" error.
+		if (!formData.first_name.trim()) {
+			setError('First name is required.');
+			return;
+		}
+
+		if (!formData.last_name.trim()) {
+			setError('Last name is required.');
+			return;
+		}
+
+		if (!formData.email.trim()) {
+			setError('Email address is required.');
+			return;
+		}
+
+		if (!formData.password) {
+			setError('Password is required.');
 			return;
 		}
 
 		if (formData.password.length < 6) {
-			setError('Password must be at least 6 characters');
+			setError('Password must be at least 6 characters.');
+			return;
+		}
+
+		if (formData.password !== formData.confirmPassword) {
+			setError('Passwords do not match.');
 			return;
 		}
 
@@ -53,13 +78,25 @@ export default function SignupPage() {
 		const result = await signup(payload);
 
 		if (result.success) {
-			router.push(`/email-verification?email=${encodeURIComponent(formData.email)}`);
-		} else {
-			setError(result.error ?? 'Signup failed. Please try again.');
+			setIsSuccess(true);
+			return;
 		}
 
+		setError(result.error ?? 'Signup failed. Please try again.');
 		setIsLoading(false);
 	};
+
+	// Briefly confirm success, then hand off to the router. Prefetching /login up front
+	// means the navigation itself is instant once this timer fires.
+	useEffect(() => {
+		router.prefetch('/login');
+	}, [router]);
+
+	useEffect(() => {
+		if (!isSuccess) return;
+		const timer = setTimeout(() => router.push('/login'), SUCCESS_REDIRECT_MS);
+		return () => clearTimeout(timer);
+	}, [isSuccess, router]);
 
 	const authLayoutProps = {
 		image: imageFixes.createAccount,
@@ -67,6 +104,20 @@ export default function SignupPage() {
 		subtext: 'Join a community of smart travelers saving on global routes. Create your free account in less than a minute.',
 		badges: ['Best Price Guarantee', '500+ Airlines'],
 	};
+
+	if (isSuccess) {
+		return (
+			<AuthLayout {...authLayoutProps}>
+				<div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-300">
+					<div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+						<CheckCircle2 className="h-8 w-8" />
+					</div>
+					<h1 className="text-3xl font-extrabold">Account Created!</h1>
+					<p className="mt-3 text-muted-foreground">Taking you to sign in…</p>
+				</div>
+			</AuthLayout>
+		);
+	}
 
 	return (
 		<AuthLayout
@@ -122,7 +173,7 @@ export default function SignupPage() {
 							type={showPassword ? 'text' : 'password'}
 							value={formData.password}
 							onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-							placeholder="Minimum 8 characters"
+							placeholder="Minimum 6 characters"
 							required
 						/>
 						<button

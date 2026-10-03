@@ -5,6 +5,8 @@ const USER_ROLE_KEY = 'tiqwa_user_role';
 
 import type { AuthApiResponse, AuthApiUser, AuthUser, LoginCredentials, ProfileApiUser, SignupData, VerifyEmailData } from '@/types/auth';
 
+import { resolveCaughtError, resolveErrorMessage } from '@/lib/errorMessages';
+
 export type { AuthUser } from '@/types/auth';
 
 const AUTH_API_BASE = typeof window === 'undefined' ? process.env.TIQWA_API_URL ?? 'https://sandbox.premiumwhitelabel.com/api/v2' : '/api/proxy';
@@ -134,9 +136,9 @@ export async function login(credentials: LoginCredentials): Promise<{
 			};
 		}
 
-		return { success: false, error: data.message ?? 'Login failed' };
+		return { success: false, error: resolveErrorMessage(data.message, "We couldn't sign you in. Please check your email and password and try again.") };
 	} catch {
-		return { success: false, error: 'Network error. Please try again.' };
+		return { success: false, error: 'We couldn\'t reach the server. Please check your connection and try again.' };
 	}
 }
 
@@ -152,10 +154,10 @@ export async function signup(data: SignupData): Promise<{ success: boolean; erro
 		});
 		const result = (await response.json()) as AuthApiResponse<unknown>;
 		if (result.success) return { success: true };
-		return { success: false, error: result.message ?? 'Signup failed' };
+		return { success: false, error: resolveErrorMessage(result.message, "We couldn't create your account. Please check your details and try again.") };
 	} catch (error) {
 		console.error(error);
-		return { success: false, error: (error as Error).message ?? 'Network error. Please try again.' };
+		return { success: false, error: resolveCaughtError(error, 'We couldn\'t reach the server. Please check your connection and try again.') };
 	}
 }
 
@@ -202,10 +204,10 @@ export async function forgotPassword(email: string): Promise<ForgotPasswordResul
 		return {
 			success: false,
 			status: response.status,
-			error: result.message ?? 'Password reset request failed',
+			error: resolveErrorMessage(result.message, "We couldn't send a reset code to that email. Please check the address and try again."),
 		};
 	} catch {
-		return { success: false, error: 'Network error. Please try again.' };
+		return { success: false, error: 'We couldn\'t reach the server. Please check your connection and try again.' };
 	}
 }
 
@@ -251,11 +253,11 @@ export async function resetPassword({ email, token, newPassword, confirmPassword
 		return {
 			success: false,
 			status: response.status,
-			error: tokenError ?? result.errors?.password?.[0] ?? result.message ?? 'Password reset failed',
+			error: tokenError ?? result.errors?.password?.[0] ?? resolveErrorMessage(result.message, "We couldn't reset your password. Please check the code and try again."),
 			invalidToken: Boolean(tokenError) || response.status === 401,
 		};
 	} catch {
-		return { success: false, error: 'Network error. Please try again.' };
+		return { success: false, error: 'We couldn\'t reach the server. Please check your connection and try again.' };
 	}
 }
 
@@ -314,9 +316,9 @@ export async function updateUserProfile(data: Partial<AuthUser>): Promise<{ succ
 			}
 			return { success: true };
 		}
-		return { success: false, error: result.message ?? 'Update failed' };
+		return { success: false, error: resolveErrorMessage(result.message, "We couldn't save your profile changes. Please try again.") };
 	} catch {
-		return { success: false, error: 'Network error' };
+		return { success: false, error: 'We couldn\'t reach the server. Please check your connection and try again.' };
 	}
 }
 

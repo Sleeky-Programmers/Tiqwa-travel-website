@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Container } from '@/components/ui/Container';
 import { Link } from '@/components/ui/Link';
+import { useAuth } from '@/contexts/AuthContext';
 import { formatFlightPrice, getBookingDetails } from '@/services/whitelabel-api';
 
 import type { BookingDetails } from '@/types/whitelabel';
 function BookingDetailsContent() {
 	const params = useParams();
 	const ref = params.ref as string;
+	const { isAuthenticated } = useAuth();
+	const backHref = isAuthenticated ? '/dashboard/bookings' : '/';
+	const backLabel = isAuthenticated ? 'Back to bookings' : 'Back to home';
 	const [details, setDetails] = useState<BookingDetails | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -49,8 +53,8 @@ function BookingDetailsContent() {
 				<Container className="py-28">
 					<div className="glossy-card mx-auto max-w-lg p-8 text-center">
 						<p className="text-destructive">{error ?? 'Booking not found'}</p>
-						<Button href="/dashboard/bookings" variant="outline" className="mt-4">
-							Back to Bookings
+						<Button href={backHref} variant="outline" className="mt-4">
+							{backLabel}
 						</Button>
 					</div>
 				</Container>
@@ -62,8 +66,8 @@ function BookingDetailsContent() {
 		<PublicLayout>
 			<div className="page-fade-in py-28">
 				<Container size="md">
-					<Link href="/dashboard/bookings" variant="back" className="mb-6">
-						Back to bookings
+					<Link href={backHref} variant="back" className="mb-6">
+						{backLabel}
 					</Link>
 
 					<Card

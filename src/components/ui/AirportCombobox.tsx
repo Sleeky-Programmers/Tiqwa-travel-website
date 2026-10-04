@@ -44,11 +44,12 @@ export function AirportCombobox({ label, value, selectedCode, onSelect, placehol
 	const [isLoading, setIsLoading] = useState(false);
 
 	// Keep the field's text mirroring the selected value whenever the user isn't actively editing it.
+	// Once a code is selected, show "City (CODE)" to match the dropdown row the user picked.
 	useEffect(() => {
 		if (!open) {
-			setQuery(value || '');
+			setQuery(value && selectedCode ? `${value} (${selectedCode})` : value || '');
 		}
-	}, [value, open]);
+	}, [value, selectedCode, open]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -76,7 +77,7 @@ export function AirportCombobox({ label, value, selectedCode, onSelect, placehol
 
 	const handleSelect = (airport: Airport) => {
 		onSelect(airport.iata_code, airport.city);
-		setQuery(airport.city);
+		setQuery(`${airport.city} (${airport.iata_code})`);
 		// Closing returns focus to the input (finalFocus below), which would otherwise
 		// immediately re-trigger onFocus and pop the suggestions back open.
 		suppressReopenRef.current = true;
@@ -115,6 +116,8 @@ export function AirportCombobox({ label, value, selectedCode, onSelect, placehol
 										suppressReopenRef.current = false;
 										return;
 									}
+									// Drop the "(CODE)" suffix so the field is ready to search again.
+									setQuery(value || '');
 									setOpen(true);
 								}}
 								className={cn(

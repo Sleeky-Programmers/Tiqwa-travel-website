@@ -24,42 +24,12 @@ import {
     readCachedFlightSearch, reserveBooking, saveActiveBooking, validateFlightCoupon
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
+import { formatPhoneNumber } from '@/utils/phone';
 
 import type { Flight } from '@/types/flight';
 import type { BankAccount, BookingPassengerPayload, PassengerType, Pricing, PriceSummary } from '@/types/whitelabel';
 
 export type BookingFlowVariant = 'guest' | 'account';
-
-function formatPhoneNumber(value: string): string {
-	const cleaned = value.replace(/[^\d+]/g, '');
-	if (!cleaned) return '';
-
-	if (cleaned.startsWith('+234')) {
-		const nationalNumber = cleaned.slice(4);
-		if (nationalNumber.length <= 3) return `+234 ${nationalNumber}`;
-		if (nationalNumber.length <= 6) {
-			return `+234 ${nationalNumber.slice(0, 3)} ${nationalNumber.slice(3)}`;
-		}
-		if (nationalNumber.length <= 10) {
-			return `+234 ${nationalNumber.slice(0, 3)} ${nationalNumber.slice(3, 6)} ${nationalNumber.slice(6)}`;
-		}
-		return `+234 ${nationalNumber.slice(0, 3)} ${nationalNumber.slice(3, 6)} ${nationalNumber.slice(6, 10)}`;
-	}
-
-	if (cleaned.startsWith('0') && cleaned.length <= 11) {
-		if (cleaned.length <= 4) return cleaned;
-		if (cleaned.length <= 7) return `${cleaned.slice(0, 4)} ${cleaned.slice(4)}`;
-		return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 11)}`;
-	}
-
-	const digits = cleaned.replace(/\D/g, '');
-	if (digits.length <= 3) return digits;
-	if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-	if (digits.length <= 10) {
-		return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-	}
-	return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)} ${digits.slice(10, 14)}`;
-}
 
 function formatRouteLabel(flight: NonNullable<ReturnType<typeof getFlightFromCache>>): string {
 	const routes = flight.multiCityRoutes;

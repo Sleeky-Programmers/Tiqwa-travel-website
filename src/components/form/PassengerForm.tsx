@@ -7,6 +7,7 @@ import { CountryDropdown } from '@/components/ui/CountryDropdown';
 import { DateOfBirthPicker } from '@/components/ui/DateOfBirthPicker';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
+import { formatPhoneNumber } from '@/utils/phone';
 
 import type { PassengerType } from '@/types/whitelabel';
 
@@ -56,6 +57,42 @@ const PASSENGER_TYPE_LABELS: Record<PassengerType, string> = {
 	infant: 'Infant',
 };
 
+const DOB_START_YEAR = 1920;
+
+/** Shifts `date` back by `years`, so e.g. subtractYears(today, 2) is "2 years ago". */
+function subtractYears(date: Date, years: number): Date {
+	const result = new Date(date);
+	result.setFullYear(result.getFullYear() - years);
+	return result;
+}
+
+/**
+ * Scopes the date-of-birth calendar to the age band each fare type actually allows —
+ * adult 12+, child 2-11, infant under 2 — matching the bands shown in the passenger-count
+ * picker. Falls back to the plain adult (12+) range when the type isn't known yet.
+ */
+function getDobRangeForPassengerType(passengerType: PassengerType | undefined): { minYear: number; maxYear: number; disabled: { after?: Date; before?: Date } } {
+	const today = new Date();
+	const currentYear = today.getFullYear();
+
+	if (passengerType === 'infant') {
+		// Under 2 years old: born after (today - 2 years).
+		const oldestAllowed = subtractYears(today, 2);
+		return { minYear: currentYear - 2, maxYear: currentYear, disabled: { after: today, before: oldestAllowed } };
+	}
+
+	if (passengerType === 'child') {
+		// 2 to 11 years old: born on/before (today - 2 years), and after (today - 12 years).
+		const youngestAllowed = subtractYears(today, 2);
+		const oldestAllowed = subtractYears(today, 12);
+		return { minYear: currentYear - 12, maxYear: currentYear - 2, disabled: { after: youngestAllowed, before: oldestAllowed } };
+	}
+
+	// Adult (12+ years old): born on/before (today - 12 years).
+	const youngestAllowed = subtractYears(today, 12);
+	return { minYear: DOB_START_YEAR, maxYear: currentYear - 12, disabled: { after: youngestAllowed } };
+}
+
 const TITLE_OPTIONS = [
 	{ value: 'mr', label: 'Mr' },
 	{ value: 'ms', label: 'Ms' },
@@ -98,6 +135,7 @@ export function PassengerForm({
 
 	const documentOptions = isDomestic ? DOMESTIC_DOCUMENT_TYPES : INTERNATIONAL_DOCUMENT_TYPES;
 	const isPrimaryContact = passengerNumber === 1 && passengerType === 'adult';
+	const dobRange = getDobRangeForPassengerType(passengerType);
 
 	return (
 		<div className="space-y-4">
@@ -241,17 +279,19 @@ export function PassengerForm({
 						label="Phone"
 						value={data.phone}
 						placeholder="+234 801 234 5678"
-						onChange={onPhoneChange || ((e) => update('phone', e.target.value))}
+						onChange={onPhoneChange || ((e) => update('phone', formatPhoneNumber(e.target.value)))}
 					/>
 				</div>
 			)}
 
-			{/* Date of Birth */}
+			{/* Date of Birth — scoped to the age band this passenger type allows */}
 			<DateOfBirthPicker
 				required
 				label="Date of Birth"
 				value={data.dateOfBirth}
-				disabled={{ after: new Date() }}
+				disabled={dobRange.disabled}
+				minYear={dobRange.minYear}
+				maxYear={dobRange.maxYear}
 				fieldDisabled={disabled}
 				placeholder="Select date of birth"
 				onChange={(date) => update('dateOfBirth', date)}

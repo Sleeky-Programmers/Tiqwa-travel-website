@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { sendContactMessage } from "@/services/whitelabel-api";
+import { formatPhoneNumber } from "@/utils/phone";
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -50,7 +51,14 @@ export function ContactForm() {
     <form onSubmit={handleSubmit} className="glossy space-y-4 rounded-2xl p-6">
       <Input label="Name" placeholder="Your name" value={form.name} onChange={handleChange("name")} required />
       <Input label="Email" type="email" placeholder="you@example.com" value={form.email} onChange={handleChange("email")} required />
-      <Input label="Phone" type="tel" placeholder="Your phone number" value={form.phone} onChange={handleChange("phone")} required />
+      <Input
+        label="Phone"
+        type="tel"
+        placeholder="+234 801 234 5678"
+        value={form.phone}
+        onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
+        required
+      />
       <Input label="Subject" placeholder="What is this about?" value={form.subject} onChange={handleChange("subject")} required />
       <div className="flex flex-col gap-1.5">
         <label htmlFor="message" className="text-sm font-medium">Message</label>

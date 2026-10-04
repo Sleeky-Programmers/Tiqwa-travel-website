@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { updateUserProfile } from '@/services/auth';
 import { getFlightBookings, getRewardsData } from '@/services/whitelabel-api';
+import { formatPhoneNumber } from '@/utils/phone';
 
 function getInitials(name: string): string {
 	return name
@@ -275,7 +276,7 @@ export default function ProfilePage() {
 								label="Phone Number"
 								type="tel"
 								value={formData.phone}
-								onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+								onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
 								disabled={!isEditing}
 								placeholder="+234 801 234 5678"
 								className={cn('transition-all', !isEditing && 'bg-muted/30 cursor-not-allowed')}

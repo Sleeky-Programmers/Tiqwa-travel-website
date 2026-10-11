@@ -401,12 +401,12 @@ export function FlightSearchForm({ defaultValues }: FlightSearchFormProps) {
 							placeholder="Lagos, Nigeria"
 							required
 						/>
-						{/* Swap button - visible on all devices, positioned between From and To */}
+						{/* Swap button - visible on all devices, centered in the gap between From and To */}
 						<button
 							type="button"
 							onClick={handleSwap}
 							aria-label="Swap cities"
-							className="hidden absolute -right-5 top-[calc(50%+0.75rem)] z-10 md:flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all hover:bg-primary-hover">
+							className="hidden absolute -right-[20px] top-1/2 z-10 md:flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white shadow-md transition-all hover:bg-primary-hover">
 							<ArrowRightLeft className="h-4 w-4" />
 						</button>
 					</div>

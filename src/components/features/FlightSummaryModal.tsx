@@ -121,6 +121,19 @@ function FlightLeg({ title, segments }: { title: string; segments: OutboundSegme
 	);
 }
 
+/**
+ * Some providers stuff a raw Python-repr dump of the penalty structure into a fare rule
+ * string (e.g. `Penalties [{'amounts': [...], 'description': 'Cancel allowed with a
+ * maximum penalty amount fee of 50.00 USD before departure', ...}]`) instead of a plain
+ * sentence. Pull out just the human-readable `description` values when that happens, since
+ * those already read fine on their own.
+ */
+function extractPenaltyDescriptions(rule: string): string[] | null {
+	if (!/^\s*Penalties\s*\[/i.test(rule)) return null;
+	const descriptions = Array.from(rule.matchAll(/'description':\s*'([^']*)'/g)).map((match) => match[1].trim());
+	return descriptions.length > 0 ? descriptions : null;
+}
+
 function passengerTypeLabel(type: string): string {
 	if (type === 'adult') return 'Adult';
 	if (type === 'child') return 'Child';
@@ -136,7 +149,9 @@ export function FlightSummaryModal({ flight, open, onOpenChange, onContinue, onC
 	const inbound = flight.inboundSegments ?? [];
 
 	const allSegments = multiCityRoutes ? multiCityRoutes.flat() : [...outbound, ...inbound];
-	const fareRules = Array.from(new Set(allSegments.flatMap((seg) => seg.fare_rules ?? [])));
+	const fareRules = Array.from(new Set(allSegments.flatMap((seg) => seg.fare_rules ?? []))).flatMap(
+		(rule) => extractPenaltyDescriptions(rule) ?? [rule]
+	);
 
 	const isRefundable = (multiCityRoutes ? multiCityRoutes[0]?.[0]?.refundable : outbound[0]?.refundable) ?? false;
 	const payable = flight.pricing?.payable;

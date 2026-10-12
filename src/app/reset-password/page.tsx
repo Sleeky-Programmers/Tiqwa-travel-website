@@ -18,7 +18,9 @@ function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const emailFromQuery = searchParams.get("email");
+  const [email, setEmail] = useState(emailFromQuery ?? "");
+  const isEmailLocked = Boolean(emailFromQuery);
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -142,6 +144,8 @@ function ResetPasswordContent() {
             }}
             placeholder="you@fly4cheaper.com"
             error={emailError ?? undefined}
+            disabled={isEmailLocked}
+            helperText={isEmailLocked ? "This is the address your verification code was sent to." : undefined}
             required
           />
 

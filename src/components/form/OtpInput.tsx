@@ -57,6 +57,7 @@ export function OtpInput({ length = 6, value, onChange, disabled }: OtpInputProp
 					aria-label={`Verification digit ${index + 1}`}
 					className="h-12 w-12 shrink-0 rounded-sm border border-border/80 bg-background-card text-center text-xl font-bold text-foreground shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-all duration-200 outline-none placeholder:text-muted-foreground/50 hover:border-foreground/25 hover:shadow-[0_3px_12px_rgba(15,23,42,0.08)] focus:border-primary focus:ring-4 focus:ring-primary/15 focus:shadow-[0_0_0_1px_var(--primary),0_4px_14px_rgba(255,90,54,0.12)] disabled:pointer-events-none disabled:opacity-50 sm:h-16 sm:w-16 sm:text-2xl"
 					inputMode="numeric"
+					autoComplete={index === 0 ? 'one-time-code' : 'off'}
 					maxLength={1}
 					placeholder="-"
 					value={value[index] ?? ''}

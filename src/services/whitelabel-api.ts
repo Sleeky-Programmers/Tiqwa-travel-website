@@ -26,6 +26,7 @@ import type {
 	PaymentGateway,
 	PaymentMethod,
 	BankAccount,
+	FlightAddon,
 	SiteSettings,
 	Country,
 } from '@/types/whitelabel';
@@ -633,10 +634,16 @@ export async function validateFlightCoupon(paymentAmount: number, couponCode: st
 	});
 }
 
-export async function createBooking(flightId: string, passengers: BookingPassengerPayload[], documentRequired: boolean) {
+export async function createBooking(
+	flightId: string,
+	passengers: BookingPassengerPayload[],
+	documentRequired: boolean,
+	flightAddonIds: number[] = []
+) {
 	return postJSON<CreateBookingData>(`/flight/book/create/${flightId}`, {
 		document_required: documentRequired,
 		passengers,
+		...(flightAddonIds.length > 0 && { flight_addons: flightAddonIds.map((id) => ({ id })) }),
 	});
 }
 
@@ -1134,6 +1141,10 @@ export async function getPaymentGateways(): Promise<{
 	}));
 
 	return { success: true, data: gateways };
+}
+
+export async function getEssentialAddons() {
+	return fetchAPIResult<FlightAddon[]>('/get/essential-addons');
 }
 
 export async function getBankAccounts() {

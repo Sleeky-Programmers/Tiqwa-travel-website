@@ -472,6 +472,17 @@ export interface PaymentMethod {
 	instalments: string | null;
 }
 
+export interface FlightAddon {
+	id: number;
+	name: string;
+	price: number;
+	passengers: number;
+	selected: number;
+	status: number;
+	for: string;
+	description: string | null;
+}
+
 export interface BankAccount {
 	bank_name: string;
 	account_name: string;

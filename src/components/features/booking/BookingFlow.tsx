@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { AddonsStep } from '@/components/features/booking/AddonsStep';
 import { PaymentOptions } from '@/components/features/booking/PaymentOptions';
 import { PassengerData, PassengerForm } from '@/components/form/PassengerForm';
 import { Button } from '@/components/ui/Button';
@@ -20,14 +21,14 @@ import { resolveCaughtError, resolveErrorMessage } from '@/lib/errorMessages';
 import { cn } from '@/lib/utils';
 import {
     confirmFlightPrice, createBooking, formatDuration, formatFlightPrice, getBankAccounts, getBookingDetails,
-    getFlightFromCache, initiatePayment, isBookingReservationExpired, readActiveBooking,
+    getEssentialAddons, getFlightFromCache, initiatePayment, isBookingReservationExpired, readActiveBooking,
     readCachedFlightSearch, reserveBooking, saveActiveBooking, validateFlightCoupon
 } from '@/services/whitelabel-api';
 import { getFlightStops } from '@/types/flight';
 import { formatPhoneNumber } from '@/utils/phone';
 
 import type { Flight } from '@/types/flight';
-import type { BankAccount, BookingPassengerPayload, PassengerType, Pricing, PriceSummary } from '@/types/whitelabel';
+import type { BankAccount, BookingPassengerPayload, FlightAddon, PassengerType, Pricing, PriceSummary } from '@/types/whitelabel';
 
 export type BookingFlowVariant = 'guest' | 'account';
 
@@ -265,6 +266,11 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	const [bookingSuccess, setBookingSuccess] = useState(false);
 	const [bookingReference, setBookingReference] = useState<string | null>(null);
 	const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+	const [showAddons, setShowAddons] = useState(false);
+	const [addons, setAddons] = useState<FlightAddon[]>([]);
+	const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
+	const [isLoadingAddons, setIsLoadingAddons] = useState(true);
+	const [addonsError, setAddonsError] = useState<string | null>(null);
 	const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 	const [, setSelectedPaymentGateway] = useState<string | null>(null);
 	const [, setSelectedInstalment] = useState<number | null>(null);
@@ -285,7 +291,10 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	const currency = flight?.currency ?? 'NGN';
 	const subtotal = unitPrice * passengersCount;
 	const [couponDiscount, setCouponDiscount] = useState(0);
-	const total = Math.max(0, subtotal - couponDiscount);
+	const selectedAddons = useMemo(() => addons.filter((addon) => selectedAddonIds.includes(addon.id)), [addons, selectedAddonIds]);
+	const addonsTotal = selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
+	// Coupons are validated against the fare only (see handleCouponApply), so add-ons sit outside the discount.
+	const total = Math.max(0, subtotal - couponDiscount) + addonsTotal;
 	const passengerBreakdown = useMemo(() => {
 		const counts = passengerTypes.reduce<Record<string, number>>((result, type) => {
 			result[type] = (result[type] ?? 0) + 1;
@@ -393,6 +402,23 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	}, []);
 
 	useEffect(() => {
+		async function fetchAddons() {
+			const result = await getEssentialAddons();
+			if (result.success) {
+				setAddons(result.data.filter((addon) => addon.for === 'flight' && addon.status === 1));
+			} else {
+				setAddonsError(resolveErrorMessage(result.error, "We couldn't load add-ons right now. You can continue without them."));
+			}
+			setIsLoadingAddons(false);
+		}
+		fetchAddons();
+	}, []);
+
+	const handleToggleAddon = (id: number) => {
+		setSelectedAddonIds((prev) => (prev.includes(id) ? prev.filter((existing) => existing !== id) : [...prev, id]));
+	};
+
+	useEffect(() => {
 		const active = readActiveBooking();
 		if (active && active.flightId === flightId && isBookingReservationExpired(active.createdAt)) {
 			setReservationWarning('Your previous booking hold may have expired. Submit again to create a new reservation.');
@@ -436,6 +462,11 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		}
 
 		setError(null);
+		setShowAddons(true);
+	};
+
+	const handleAddonsContinue = () => {
+		setShowAddons(false);
 		setShowPaymentOptions(true);
 	};
 
@@ -506,7 +537,7 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 		}));
 
 		try {
-			const createResult = await createBooking(flightId, passengerPayloads, documentRequired);
+			const createResult = await createBooking(flightId, passengerPayloads, documentRequired, selectedAddonIds);
 			if (!createResult.success) {
 				setError(resolveErrorMessage(createResult.error, "We couldn't create your booking. Please check your passenger details and try again."));
 				setIsProcessing(false);
@@ -692,6 +723,14 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 						<span className="font-medium text-emerald-600">-{formatFlightPrice(couponDiscount, 'NGN')}</span>
 					</div>
 				)}
+				{selectedAddons.map((addon) => (
+					<div
+						key={addon.id}
+						className="flex justify-between gap-3">
+						<span className="text-muted-foreground">{addon.name}</span>
+						<span className="font-medium">{formatFlightPrice(addon.price, 'NGN')}</span>
+					</div>
+				))}
 				<div className="flex justify-between border-t border-border/60 pt-3 text-lg font-bold">
 					<span>Total</span>
 					<span className="text-primary">{formatFlightPrice(total, 'NGN')}</span>
@@ -919,6 +958,44 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 	}
 
 	// ============================================
+	// ADD-ONS
+	// ============================================
+	if (showAddons) {
+		return (
+			<div className="space-y-7 page-fade-in">
+				<div>
+					<h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Choose Add-ons</h1>
+					<p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+						<Briefcase className="h-4 w-4" />
+						Make your trip more comfortable with optional extras.
+					</p>
+				</div>
+
+				<button
+					onClick={() => setShowAddons(false)}
+					className={cn(linkVariants({ variant: 'back' }), 'pt-2 hover:gap-3')}>
+					<ArrowLeft className="h-4 w-4" />
+					Back to passenger details
+				</button>
+
+				<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+					<div className="rounded-md border border-border/70 bg-white p-6 shadow-sm dark:bg-white/5 dark:backdrop-blur-xl dark:shadow-none">
+						<AddonsStep
+							addons={addons}
+							selectedIds={selectedAddonIds}
+							isLoading={isLoadingAddons}
+							error={addonsError}
+							onToggle={handleToggleAddon}
+							onContinue={handleAddonsContinue}
+						/>
+					</div>
+					<div className="lg:sticky lg:top-24">{paymentStepSummary}</div>
+				</div>
+			</div>
+		);
+	}
+
+	// ============================================
 	// PAYMENT OPTIONS
 	// ============================================
 	if (showPaymentOptions) {
@@ -933,10 +1010,13 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 				</div>
 
 				<button
-					onClick={() => setShowPaymentOptions(false)}
+					onClick={() => {
+						setShowPaymentOptions(false);
+						setShowAddons(true);
+					}}
 					className={cn(linkVariants({ variant: 'back' }), 'pt-2 hover:gap-3')}>
 					<ArrowLeft className="h-4 w-4" />
-					Back to passenger details
+					Back to add-ons
 				</button>
 
 				<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
@@ -1252,6 +1332,18 @@ export function BookingFlow({ variant }: { variant: BookingFlowVariant }) {
 											</div>
 										)}
 										{couponMessage && <p className={`mt-2 text-xs ${couponDiscount > 0 ? 'text-emerald-600' : 'text-destructive'}`}>{couponMessage}</p>}
+										{selectedAddons.length > 0 && (
+											<div className="mt-3 space-y-2 text-sm">
+												{selectedAddons.map((addon) => (
+													<div
+														key={addon.id}
+														className="flex justify-between gap-3">
+														<span className="text-muted-foreground">{addon.name}</span>
+														<span className="font-medium">{formatFlightPrice(addon.price, 'NGN')}</span>
+													</div>
+												))}
+											</div>
+										)}
 
 										<div className="mt-4 flex justify-between text-xl font-bold">
 											<span>Total</span>
